@@ -146,7 +146,7 @@ let db;
 try { firebase.initializeApp(window.FIREBASE_CONFIG); db = firebase.database(); }
 catch(e) { console.error("Firebase:",e); }
 
-let etat = { matchId:null, joueurId:null, nomJoueur:null, estArbitre:false, matchData:null, timerInterval:null, timersInitialises:false };
+let etat = { matchId:null, joueurId:null, nomJoueur:null, estArbitre:false, matchData:null, timerInterval:null, timersInitialises:false, courseAffichee:null };
 
 // ── API PMU via Cloudflare Worker ──────────────────
 // Format date attendu par l'API : JJMMAAAA (ex: 03032026)
@@ -403,7 +403,9 @@ function calculerVainqueur(courses,m1,m2) {
 function rendreMatch(data) {
   rendreScores(data); rendreProgramme(data);
   const courses=data.courses||[];
-  let idx=courses.findIndex(c=>c.statut==='ouverte');
+  // Garder la course actuellement affichée, sinon aller sur la première ouverte
+  let idx = etat.courseAffichee !== null ? etat.courseAffichee : -1;
+  if(idx===-1) idx=courses.findIndex(c=>c.statut==='ouverte');
   if(idx===-1) idx=courses.findIndex(c=>c.statut==='bloquee');
   if(idx===-1) idx=Math.max(0,courses.length-1);
   rendreZoneJeu(data,idx);
@@ -432,7 +434,7 @@ function rendreProgramme(data) {
   document.getElementById('liste-courses').innerHTML=html;
 }
 
-function afficherCourse(idx) { if(etat.matchData) rendreZoneJeu(etat.matchData,idx); }
+function afficherCourse(idx) { etat.courseAffichee=idx; if(etat.matchData) rendreZoneJeu(etat.matchData,idx); }
 
 function rendreZoneJeu(data,idx) {
   const c=data.courses[idx]; if(!c) return;
@@ -539,3 +541,4 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
