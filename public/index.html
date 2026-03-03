@@ -4,7 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🏇 Tournoi Hippique</title>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js">
+// ── AUTO-RESTAURATION AU CHARGEMENT ───────────────
+window.addEventListener('load', async () => {
+  const restored = await restaurerSession();
+  if (!restored) showPage('accueil');
+});
+</script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
   <style>
@@ -134,7 +140,7 @@
   <div class="card" style="max-width:560px;margin:40px auto;text-align:center;">
     <h2>🏆 Match terminé !</h2>
     <div id="fin-contenu" class="mt16"></div>
-    <button class="btn btn-or mt16" onclick="location.reload()">🔄 Nouveau match</button>
+    <button class="btn btn-or mt16" onclick="effacerSession();location.reload()">🔄 Nouveau match</button>
   </div>
 </div>
 
@@ -246,11 +252,38 @@ async function selectionnerReunion(reunion, pmuDate) {
 }
 
 // ── CRÉER / REJOINDRE ──────────────────────────────
+// ── SAUVEGARDE / RESTAURATION SESSION ─────────────
+function sauvegarderSession() {
+  localStorage.setItem('th_session', JSON.stringify({
+    matchId: etat.matchId, joueurId: etat.joueurId,
+    nomJoueur: etat.nomJoueur, estArbitre: etat.estArbitre
+  }));
+}
+function effacerSession() { localStorage.removeItem('th_session'); }
+async function restaurerSession() {
+  try {
+    const saved = localStorage.getItem('th_session');
+    if (!saved) return false;
+    const s = JSON.parse(saved);
+    if (!s.matchId || !s.joueurId) return false;
+    const snap = await db.ref('matchs/'+s.matchId).once('value');
+    const data = snap.val();
+    if (!data) { effacerSession(); return false; }
+    etat.matchId = s.matchId; etat.joueurId = s.joueurId;
+    etat.nomJoueur = s.nomJoueur; etat.estArbitre = s.estArbitre;
+    document.getElementById('lobby-code').textContent = s.matchId;
+    if (s.estArbitre) document.getElementById('bloc-arbitre').style.display = 'block';
+    ecouterMatch();
+    toast('🔄 Session restaurée — Match ' + s.matchId);
+    return true;
+  } catch(e) { effacerSession(); return false; }
+}
+
 async function creerMatch() {
   const nom=document.getElementById('input-nom').value.trim();
   if(!nom) { toast('⚠️ Entrez votre nom'); return; }
   const code=genCode();
-  etat.matchId=code; etat.joueurId='j1'; etat.nomJoueur=nom; etat.estArbitre=true;
+  etat.matchId=code; etat.joueurId='j1'; etat.nomJoueur=nom; etat.estArbitre=true; sauvegarderSession();
   await db.ref('matchs/'+code).set({ code, statut:'attente', j1:{nom,connecte:true}, j2:null, createdAt:Date.now() });
   document.getElementById('lobby-code').textContent=code;
   document.getElementById('bloc-arbitre').style.display='block';
@@ -266,7 +299,7 @@ async function rejoindreMatch() {
   const data=snap.val();
   if(!data) { toast('❌ Match introuvable'); return; }
   if(data.j2) { toast('❌ Match complet'); return; }
-  etat.matchId=code; etat.joueurId='j2'; etat.nomJoueur=nom; etat.estArbitre=false;
+  etat.matchId=code; etat.joueurId='j2'; etat.nomJoueur=nom; etat.estArbitre=false; sauvegarderSession();
   await db.ref('matchs/'+code+'/j2').set({nom,connecte:true});
   document.getElementById('lobby-code').textContent=code;
   showPage('lobby'); setHeaderStatus('Match '+code); ecouterMatch();
@@ -541,4 +574,5 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
