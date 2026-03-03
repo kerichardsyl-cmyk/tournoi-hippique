@@ -521,25 +521,17 @@ function formatRapport(val) {
 // API PMU — appel direct depuis le navigateur
 // ═══════════════════════════════════════════════════════════
 async function pmuGet(path) {
-  // URLs PMU à essayer dans l'ordre
-  const urls = [
-    `https://offline.pmu.fr/offline/rest/${path}`,
-    `https://turfinfo.api.pmu.fr/rest/client/1/${path}`,
-  ];
-
-  for (const url of urls) {
-    try {
-      const r = await fetch(url, {
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-      if (r.ok) return r.json();
-    } catch(e) {
-      continue;
-    }
+  // URL correcte de l'API PMU publique
+  const url = `https://offline.turfinfo.api.pmu.fr/rest/client/7/${path}`;
+  try {
+    const r = await fetch(url, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (r.ok) return r.json();
+    throw new Error(`PMU HTTP ${r.status}`);
+  } catch(e) {
+    throw new Error('API PMU inaccessible : ' + e.message);
   }
-  throw new Error('API PMU inaccessible — vérifiez votre connexion ou réessayez');
 }
 
 function dateToStr(date) {
