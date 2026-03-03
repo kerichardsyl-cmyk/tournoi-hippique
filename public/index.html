@@ -4,367 +4,84 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🏇 Tournoi Hippique</title>
-
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
-  <!-- Config Firebase (à remplir par l'utilisateur) -->
   <script src="firebase-config.js"></script>
-
   <style>
-    :root {
-      --vert:    #1a6b3c;
-      --or:      #c9a94a;
-      --or-clair:#f0d98a;
-      --brun:    #2c1a0e;
-      --creme:   #fdf6e3;
-      --rouge:   #b03a2e;
-      --gris:    #5a5a5a;
-      --blanc:   #ffffff;
-      --ombre:   rgba(0,0,0,.18);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Georgia', serif;
-      background: var(--brun);
-      color: var(--creme);
-      min-height: 100vh;
-    }
-
-    /* ── HEADER ── */
-    header {
-      background: linear-gradient(135deg, #0f3d20 0%, var(--vert) 60%, #0f3d20 100%);
-      border-bottom: 3px solid var(--or);
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    header h1 {
-      font-size: 1.5rem;
-      color: var(--or-clair);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-    #header-status {
-      font-size: .85rem;
-      color: var(--or);
-      font-style: italic;
-    }
-
-    /* ── PAGES ── */
-    .page { display: none; padding: 24px; max-width: 960px; margin: 0 auto; }
-    .page.active { display: block; }
-
-    /* ── CARTES ── */
-    .card {
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(201,169,74,.3);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 16px;
-    }
-    .card h2 {
-      color: var(--or-clair);
-      font-size: 1.1rem;
-      margin-bottom: 14px;
-      border-bottom: 1px solid rgba(201,169,74,.3);
-      padding-bottom: 8px;
-    }
-
-    /* ── BOUTONS ── */
-    .btn {
-      display: inline-block;
-      padding: 10px 22px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-size: .95rem;
-      font-family: Georgia, serif;
-      font-weight: bold;
-      transition: all .2s;
-    }
-    .btn-or {
-      background: linear-gradient(135deg, var(--or), #a07830);
-      color: var(--brun);
-    }
-    .btn-or:hover { filter: brightness(1.15); transform: translateY(-1px); }
-    .btn-vert {
-      background: linear-gradient(135deg, var(--vert), #0d4020);
-      color: var(--or-clair);
-      border: 1px solid var(--or);
-    }
-    .btn-vert:hover { filter: brightness(1.15); }
-    .btn-rouge {
-      background: linear-gradient(135deg, var(--rouge), #7a2020);
-      color: white;
-    }
-    .btn-rouge:hover { filter: brightness(1.15); }
-    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; filter: none; }
-
-    /* ── INPUTS ── */
-    input[type=text], select {
-      background: rgba(255,255,255,.1);
-      border: 1px solid rgba(201,169,74,.4);
-      border-radius: 6px;
-      color: var(--creme);
-      padding: 8px 12px;
-      font-size: .95rem;
-      width: 100%;
-      margin-bottom: 10px;
-    }
-    input[type=text]::placeholder { color: rgba(253,246,227,.4); }
-    label { font-size: .85rem; color: var(--or); display: block; margin-bottom: 4px; }
-
-    /* ── GRILLE CHEVAUX ── */
-    .chevaux-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 8px;
-      margin-top: 12px;
-    }
-    .cheval-btn {
-      padding: 10px 8px;
-      border-radius: 8px;
-      border: 2px solid transparent;
-      background: rgba(255,255,255,.07);
-      color: var(--creme);
-      cursor: pointer;
-      font-size: .85rem;
-      text-align: center;
-      transition: all .15s;
-      position: relative;
-    }
-    .cheval-btn:hover { border-color: var(--or); background: rgba(201,169,74,.12); }
-    .cheval-btn.selectionne {
-      background: rgba(26,107,60,.5);
-      border-color: var(--or-clair);
-      color: var(--or-clair);
-      font-weight: bold;
-    }
-    .cheval-btn.selectionne .ordre-badge {
-      display: inline-block;
-    }
-    .cheval-btn.verrouille {
-      background: rgba(176,58,46,.2);
-      border-color: rgba(176,58,46,.4);
-      color: rgba(253,246,227,.4);
-      cursor: not-allowed;
-    }
-    .ordre-badge {
-      display: none;
-      position: absolute;
-      top: 4px; right: 4px;
-      background: var(--or);
-      color: var(--brun);
-      border-radius: 50%;
-      width: 18px; height: 18px;
-      font-size: .7rem;
-      font-weight: bold;
-      line-height: 18px;
-    }
-    .num-cheval {
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: var(--or);
-      display: block;
-    }
-
-    /* ── TIMER ── */
-    .timer-bloc {
-      text-align: center;
-      padding: 12px;
-      background: rgba(0,0,0,.3);
-      border-radius: 8px;
-      margin-bottom: 12px;
-    }
-    .timer-valeur {
-      font-size: 2rem;
-      font-weight: bold;
-      font-family: monospace;
-    }
-    .timer-valeur.urgent { color: var(--rouge); animation: pulse 1s infinite; }
-    .timer-valeur.normal { color: var(--or-clair); }
+    :root { --vert:#1a6b3c; --or:#c9a94a; --or-clair:#f0d98a; --brun:#2c1a0e; --creme:#fdf6e3; --rouge:#b03a2e; --gris:#5a5a5a; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Georgia',serif; background:var(--brun); color:var(--creme); min-height:100vh; }
+    header { background:linear-gradient(135deg,#0f3d20 0%,var(--vert) 60%,#0f3d20 100%); border-bottom:3px solid var(--or); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:1.5rem; color:var(--or-clair); letter-spacing:2px; text-transform:uppercase; }
+    #header-status { font-size:.85rem; color:var(--or); font-style:italic; }
+    .page { display:none; padding:24px; max-width:960px; margin:0 auto; }
+    .page.active { display:block; }
+    .card { background:rgba(255,255,255,.06); border:1px solid rgba(201,169,74,.3); border-radius:12px; padding:20px; margin-bottom:16px; }
+    .card h2 { color:var(--or-clair); font-size:1.1rem; margin-bottom:14px; border-bottom:1px solid rgba(201,169,74,.3); padding-bottom:8px; }
+    .btn { display:inline-block; padding:10px 22px; border-radius:8px; border:none; cursor:pointer; font-size:.95rem; font-family:Georgia,serif; font-weight:bold; transition:all .2s; }
+    .btn-or { background:linear-gradient(135deg,var(--or),#a07830); color:var(--brun); }
+    .btn-or:hover { filter:brightness(1.15); transform:translateY(-1px); }
+    .btn-vert { background:linear-gradient(135deg,var(--vert),#0d4020); color:var(--or-clair); border:1px solid var(--or); }
+    .btn-vert:hover { filter:brightness(1.15); }
+    .btn:disabled { opacity:.4; cursor:not-allowed; transform:none; filter:none; }
+    input[type=text] { background:rgba(255,255,255,.1); border:1px solid rgba(201,169,74,.4); border-radius:6px; color:var(--creme); padding:8px 12px; font-size:.95rem; width:100%; margin-bottom:10px; }
+    input[type=text]::placeholder { color:rgba(253,246,227,.4); }
+    label { font-size:.85rem; color:var(--or); display:block; margin-bottom:4px; }
+    .chevaux-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; margin-top:12px; }
+    .cheval-btn { padding:10px 8px; border-radius:8px; border:2px solid transparent; background:rgba(255,255,255,.07); color:var(--creme); cursor:pointer; font-size:.85rem; text-align:center; transition:all .15s; position:relative; }
+    .cheval-btn:hover { border-color:var(--or); background:rgba(201,169,74,.12); }
+    .cheval-btn.selectionne { background:rgba(26,107,60,.5); border-color:var(--or-clair); color:var(--or-clair); font-weight:bold; }
+    .cheval-btn.verrouille { background:rgba(176,58,46,.2); border-color:rgba(176,58,46,.4); color:rgba(253,246,227,.4); cursor:not-allowed; }
+    .ordre-badge { display:none; position:absolute; top:4px; right:4px; background:var(--or); color:var(--brun); border-radius:50%; width:18px; height:18px; font-size:.7rem; font-weight:bold; line-height:18px; }
+    .cheval-btn.selectionne .ordre-badge { display:inline-block; }
+    .num-cheval { font-size:1.1rem; font-weight:bold; color:var(--or); display:block; }
+    .timer-bloc { text-align:center; padding:12px; background:rgba(0,0,0,.3); border-radius:8px; margin-bottom:12px; }
+    .timer-valeur { font-size:2rem; font-weight:bold; font-family:monospace; }
+    .timer-valeur.urgent { color:var(--rouge); animation:pulse 1s infinite; }
+    .timer-valeur.normal { color:var(--or-clair); }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-    .timer-label { font-size: .8rem; color: var(--gris); margin-top: 4px; }
-
-    /* ── SCORES ── */
-    .score-ligne {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 12px;
-      border-radius: 6px;
-      margin-bottom: 6px;
-      background: rgba(255,255,255,.05);
-    }
-    .score-ligne.gagnant { background: rgba(26,107,60,.3); border-left: 3px solid var(--vert); }
-    .score-ligne.perdant { background: rgba(176,58,46,.15); }
-    .score-pts { font-size: 1.4rem; font-weight: bold; color: var(--or-clair); }
-
-    /* ── COURSES LIST ── */
-    .course-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 14px;
-      border-radius: 8px;
-      margin-bottom: 6px;
-      background: rgba(255,255,255,.05);
-      border-left: 3px solid transparent;
-      cursor: pointer;
-      transition: all .15s;
-    }
-    .course-item:hover { background: rgba(255,255,255,.09); }
-    .course-item.active { border-left-color: var(--or); background: rgba(201,169,74,.1); }
-    .course-item.terminee { border-left-color: var(--vert); opacity: .7; }
-    .course-num {
-      background: var(--or);
-      color: var(--brun);
-      border-radius: 50%;
-      width: 28px; height: 28px;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: bold; font-size: .85rem; flex-shrink: 0;
-    }
-    .course-info { flex: 1; }
-    .course-info strong { display: block; font-size: .9rem; }
-    .course-info span { font-size: .78rem; color: var(--or); }
-    .course-statut {
-      font-size: .75rem;
-      padding: 3px 8px;
-      border-radius: 12px;
-    }
-    .statut-attente { background: rgba(255,255,255,.1); color: var(--gris); }
-    .statut-ouverte { background: rgba(26,107,60,.4); color: #6fffa0; }
-    .statut-bloquee { background: rgba(176,58,46,.4); color: #ffaaaa; }
-    .statut-terminee { background: rgba(201,169,74,.2); color: var(--or); }
-
-    /* ── BANDEAU JOUEUR ── */
-    .bandeau-joueur {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
-      border-radius: 8px;
-      margin-bottom: 14px;
-    }
-    .bandeau-main { background: rgba(201,169,74,.15); border: 1px solid var(--or); }
-    .bandeau-second { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.15); }
-    .role-badge {
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: .78rem;
-      font-weight: bold;
-    }
-    .role-main { background: var(--or); color: var(--brun); }
-    .role-second { background: rgba(255,255,255,.2); color: var(--creme); }
-
-    /* ── RÉSULTATS ── */
-    .resultat-cheval {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 10px;
-      border-radius: 6px;
-      margin-bottom: 4px;
-      font-size: .85rem;
-    }
-    .resultat-cheval.gagnant-course { background: rgba(201,169,74,.2); }
-    .rapport-val { color: var(--or-clair); font-weight: bold; }
-
-    /* ── TABS ── */
-    .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
-    .tab {
-      padding: 8px 18px;
-      border-radius: 6px 6px 0 0;
-      border: 1px solid rgba(201,169,74,.3);
-      border-bottom: none;
-      background: rgba(255,255,255,.04);
-      color: var(--or);
-      cursor: pointer;
-      font-size: .88rem;
-    }
-    .tab.active { background: rgba(201,169,74,.15); color: var(--or-clair); font-weight: bold; }
-
-    /* ── TOAST ── */
-    #toast {
-      position: fixed;
-      bottom: 24px; left: 50%;
-      transform: translateX(-50%);
-      background: rgba(26,107,60,.95);
-      color: var(--or-clair);
-      padding: 12px 24px;
-      border-radius: 8px;
-      border: 1px solid var(--or);
-      font-size: .95rem;
-      z-index: 9999;
-      display: none;
-      max-width: 90vw;
-      text-align: center;
-    }
-
-    /* ── MODAL ── */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.7);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-overlay.active { display: flex; }
-    .modal {
-      background: #1a2e1a;
-      border: 2px solid var(--or);
-      border-radius: 14px;
-      padding: 28px;
-      max-width: 480px;
-      width: 90%;
-    }
-    .modal h3 { color: var(--or-clair); font-size: 1.2rem; margin-bottom: 16px; }
-
-    /* ── UTILS ── */
-    .flex { display: flex; gap: 10px; flex-wrap: wrap; }
-    .mt8 { margin-top: 8px; }
-    .mt16 { margin-top: 16px; }
-    .text-or { color: var(--or-clair); }
-    .text-sm { font-size: .82rem; color: rgba(253,246,227,.6); }
-    .badge-vert { background: rgba(26,107,60,.5); color: #6fffa0; padding: 2px 8px; border-radius: 10px; font-size: .78rem; }
-    .badge-rouge { background: rgba(176,58,46,.5); color: #ffaaaa; padding: 2px 8px; border-radius: 10px; font-size: .78rem; }
-    .separator { border: none; border-top: 1px solid rgba(201,169,74,.2); margin: 14px 0; }
-    .spinner {
-      display: inline-block;
-      width: 20px; height: 20px;
-      border: 2px solid rgba(201,169,74,.3);
-      border-top-color: var(--or);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    @media (max-width: 600px) {
-      .chevaux-grid { grid-template-columns: repeat(3, 1fr); }
-      header h1 { font-size: 1.1rem; }
-    }
+    .score-ligne { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:6px; margin-bottom:6px; background:rgba(255,255,255,.05); }
+    .score-ligne.gagnant { background:rgba(26,107,60,.3); border-left:3px solid var(--vert); }
+    .score-ligne.perdant { background:rgba(176,58,46,.15); }
+    .score-pts { font-size:1.4rem; font-weight:bold; color:var(--or-clair); }
+    .course-item { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; margin-bottom:6px; background:rgba(255,255,255,.05); border-left:3px solid transparent; cursor:pointer; transition:all .15s; }
+    .course-item:hover { background:rgba(255,255,255,.09); }
+    .course-item.terminee { border-left-color:var(--vert); opacity:.7; }
+    .course-num { background:var(--or); color:var(--brun); border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:.85rem; flex-shrink:0; }
+    .course-info { flex:1; }
+    .course-info strong { display:block; font-size:.9rem; }
+    .course-info span { font-size:.78rem; color:var(--or); }
+    .course-statut { font-size:.75rem; padding:3px 8px; border-radius:12px; }
+    .statut-ouverte { background:rgba(26,107,60,.4); color:#6fffa0; }
+    .statut-bloquee { background:rgba(176,58,46,.4); color:#ffaaaa; }
+    .statut-terminee { background:rgba(201,169,74,.2); color:var(--or); }
+    .bandeau-joueur { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; margin-bottom:14px; flex-wrap:wrap; }
+    .bandeau-main { background:rgba(201,169,74,.15); border:1px solid var(--or); }
+    .bandeau-second { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15); }
+    .role-badge { padding:3px 10px; border-radius:12px; font-size:.78rem; font-weight:bold; }
+    .role-main { background:var(--or); color:var(--brun); }
+    .role-second { background:rgba(255,255,255,.2); color:var(--creme); }
+    .resultat-cheval { display:flex; justify-content:space-between; padding:6px 10px; border-radius:6px; margin-bottom:4px; font-size:.85rem; }
+    .resultat-cheval.gagnant-course { background:rgba(201,169,74,.2); }
+    .rapport-val { color:var(--or-clair); font-weight:bold; }
+    .flex { display:flex; gap:10px; flex-wrap:wrap; }
+    .mt8 { margin-top:8px; } .mt16 { margin-top:16px; }
+    .text-or { color:var(--or-clair); }
+    .text-sm { font-size:.82rem; color:rgba(253,246,227,.6); }
+    .badge-vert { background:rgba(26,107,60,.5); color:#6fffa0; padding:2px 8px; border-radius:10px; font-size:.78rem; }
+    .separator { border:none; border-top:1px solid rgba(201,169,74,.2); margin:14px 0; }
+    .spinner { display:inline-block; width:20px; height:20px; border:2px solid rgba(201,169,74,.3); border-top-color:var(--or); border-radius:50%; animation:spin .8s linear infinite; vertical-align:middle; margin-right:8px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(26,107,60,.95); color:var(--or-clair); padding:12px 24px; border-radius:8px; border:1px solid var(--or); font-size:.95rem; z-index:9999; display:none; max-width:90vw; text-align:center; }
+    @media (max-width:600px) { .chevaux-grid { grid-template-columns:repeat(3,1fr); } header h1 { font-size:1.1rem; } }
   </style>
 </head>
 <body>
-
 <header>
   <h1>🏇 Tournoi Hippique</h1>
   <div id="header-status">Chargement…</div>
 </header>
 
-<!-- ══════════════════════════════════════════
-     PAGE 1 — ACCUEIL / CONNEXION
-══════════════════════════════════════════ -->
 <div id="page-accueil" class="page active">
   <div class="card" style="max-width:480px;margin:40px auto;">
     <h2>⚡ Rejoindre ou créer un match</h2>
@@ -381,16 +98,12 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     PAGE 2 — LOBBY (Arbitre = J1 créateur)
-══════════════════════════════════════════ -->
 <div id="page-lobby" class="page">
   <div class="card">
-    <h2>🎯 Salle d'attente — Code du match : <span id="lobby-code" class="text-or"></span></h2>
+    <h2>🎯 Salle d'attente — Code : <span id="lobby-code" class="text-or"></span></h2>
     <p class="text-sm" style="margin-bottom:14px;">Partagez ce code avec votre adversaire.</p>
     <div id="lobby-joueurs"></div>
   </div>
-
   <div id="bloc-arbitre" class="card" style="display:none;">
     <h2>⚙️ Configuration du match (Arbitre)</h2>
     <label>Date de la réunion</label>
@@ -399,7 +112,7 @@
       <button class="btn btn-vert" onclick="setDateRapide(1)">📅 Demain</button>
       <button class="btn btn-vert" onclick="setDateRapide(2)">📅 J+2</button>
     </div>
-    <input type="text" id="input-date" placeholder="Ou saisir manuellement : JJ/MM/AAAA" />
+    <input type="text" id="input-date" placeholder="Ou saisir : JJ/MM/AAAA" />
     <div class="flex">
       <button class="btn btn-or" onclick="chargerReunions()">🔍 Charger les réunions PMU</button>
     </div>
@@ -407,32 +120,16 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     PAGE 3 — MATCH EN COURS
-══════════════════════════════════════════ -->
 <div id="page-match" class="page">
   <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
-    <!-- Colonne gauche : scores + courses -->
     <div style="flex:0 0 260px;">
-      <div class="card">
-        <h2>📊 Scores</h2>
-        <div id="scores-display"></div>
-      </div>
-      <div class="card">
-        <h2>🏁 Programme</h2>
-        <div id="liste-courses"></div>
-      </div>
+      <div class="card"><h2>📊 Scores</h2><div id="scores-display"></div></div>
+      <div class="card"><h2>🏁 Programme</h2><div id="liste-courses"></div></div>
     </div>
-    <!-- Colonne droite : zone de jeu -->
-    <div style="flex:1;min-width:280px;">
-      <div id="zone-jeu"></div>
-    </div>
+    <div style="flex:1;min-width:280px;"><div id="zone-jeu"></div></div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     PAGE 4 — FIN DE MATCH
-══════════════════════════════════════════ -->
 <div id="page-fin" class="page">
   <div class="card" style="max-width:560px;margin:40px auto;text-align:center;">
     <h2>🏆 Match terminé !</h2>
@@ -441,946 +138,404 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     MODAL — Résultats d'une course
-══════════════════════════════════════════ -->
-<div id="modal-resultats" class="modal-overlay">
-  <div class="modal">
-    <h3 id="modal-titre">Résultats</h3>
-    <div id="modal-contenu"></div>
-    <button class="btn btn-or mt16" onclick="fermerModal()">Fermer</button>
-  </div>
-</div>
-
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
-// INITIALISATION FIREBASE
-// ═══════════════════════════════════════════════════════════
+// ── FIREBASE ──────────────────────────────────────
 let db;
-try {
-  firebase.initializeApp(window.FIREBASE_CONFIG);
-  db = firebase.database();
-} catch(e) {
-  console.error("Firebase non configuré:", e);
-}
+try { firebase.initializeApp(window.FIREBASE_CONFIG); db = firebase.database(); }
+catch(e) { console.error("Firebase:",e); }
 
-// ═══════════════════════════════════════════════════════════
-// ÉTAT LOCAL
-// ═══════════════════════════════════════════════════════════
-let etat = {
-  matchId: null,
-  joueurId: null,  // 'j1' ou 'j2'
-  nomJoueur: null,
-  estArbitre: false,
-  matchData: null,
-  timerInterval: null,
-  pollInterval: null,
-};
+let etat = { matchId:null, joueurId:null, nomJoueur:null, estArbitre:false, matchData:null, timerInterval:null, timersInitialises:false };
 
-// ═══════════════════════════════════════════════════════════
-// UTILITAIRES
-// ═══════════════════════════════════════════════════════════
-function genCode() {
-  return Math.random().toString(36).substring(2,6).toUpperCase();
-}
+// ── API PMU via Cloudflare Worker ──────────────────
+// Format date attendu par l'API : JJMMAAAA (ex: 03032026)
+const PMU_WORKER = 'https://pmu-proxy.kerichardsyl.workers.dev';
 
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-}
-
-function toast(msg, duree=3000) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', duree);
-}
-
-function setHeaderStatus(txt) {
-  document.getElementById('header-status').textContent = txt;
-}
-
-function fermerModal() {
-  document.getElementById('modal-resultats').classList.remove('active');
-}
-
-function formatHeure(ts) {
-  if (!ts) return '--:--';
-  const d = new Date(ts);
-  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-}
-
-function formatRapport(val) {
-  if (!val || val === 0) return '—';
-  return (val / 100).toFixed(1) + '€';
-}
-
-// ═══════════════════════════════════════════════════════════
-// API PMU — appel direct depuis le navigateur
-// ═══════════════════════════════════════════════════════════
 async function pmuGet(path) {
-  // URL correcte de l'API PMU publique
-  const url = `https://offline.turfinfo.api.pmu.fr/rest/client/7/${path}`;
-  try {
-    const r = await fetch(url, {
-      headers: { 'Accept': 'application/json' }
-    });
-    if (r.ok) return r.json();
-    throw new Error(`PMU HTTP ${r.status}`);
-  } catch(e) {
-    throw new Error('API PMU inaccessible : ' + e.message);
-  }
+  const url = `${PMU_WORKER}/?path=${encodeURIComponent(path)}`;
+  const r = await fetch(url, { headers:{'Accept':'application/json'} });
+  if (!r.ok) throw new Error('PMU HTTP ' + r.status);
+  const data = await r.json();
+  if (data.code && data.label) throw new Error('PMU: ' + data.label);
+  return data;
 }
 
-function dateToStr(date) {
-  // date = "DD/MM/YYYY" → "YYYYMMDD"
-  const [d, m, y] = date.split('/');
-  return y + m + d;
-}
+// JJ/MM/AAAA → JJMMAAAA
+function dateToStr(date) { const [d,m,y]=date.split('/'); return d+m+y; }
 
-function setDateRapide(joursEnPlus) {
-  const d = new Date();
-  d.setDate(d.getDate() + joursEnPlus);
-  const jour = d.getDate().toString().padStart(2, '0');
-  const mois = (d.getMonth() + 1).toString().padStart(2, '0');
-  const annee = d.getFullYear();
-  document.getElementById('input-date').value = `${jour}/${mois}/${annee}`;
-  // Lancer le chargement automatiquement
+// ── UTILITAIRES ────────────────────────────────────
+function genCode() { return Math.random().toString(36).substring(2,6).toUpperCase(); }
+function showPage(id) { document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); }
+function toast(msg,dur=3000) { const el=document.getElementById('toast'); el.textContent=msg; el.style.display='block'; setTimeout(()=>el.style.display='none',dur); }
+function setHeaderStatus(t) { document.getElementById('header-status').textContent=t; }
+function formatHeure(ts) { if(!ts) return '--:--'; const d=new Date(ts); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
+function formatRapport(val) { if(!val||val===0) return '—'; return (val/100).toFixed(1)+'€'; }
+function msToHMS(ms) { if(ms<=0) return '00:00'; const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60); if(h>0) return `${h}h${(m%60).toString().padStart(2,'0')}`; return `${m.toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; }
+
+function setDateRapide(j) {
+  const d=new Date(); d.setDate(d.getDate()+j);
+  document.getElementById('input-date').value=`${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`;
   chargerReunions();
 }
 
+// ── CHARGEMENT RÉUNIONS ────────────────────────────
 async function chargerReunions() {
-  const dateStr = document.getElementById('input-date').value.trim();
-  if (!dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-    toast('⚠️ Format de date invalide (JJ/MM/AAAA)');
-    return;
-  }
-  const container = document.getElementById('liste-reunions');
-  container.innerHTML = '<span class="spinner"></span> Chargement des réunions…';
+  const dateStr=document.getElementById('input-date').value.trim();
+  if(!dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) { toast('⚠️ Format JJ/MM/AAAA requis'); return; }
+  const container=document.getElementById('liste-reunions');
+  container.innerHTML='<span class="spinner"></span> Chargement des réunions…';
   try {
-    const pmuDate = dateToStr(dateStr);
-    const data = await pmuGet(`programme/2/${pmuDate}`);
-    const reunions = data.programme?.reunions || [];
-    if (!reunions.length) {
-      container.innerHTML = '<p class="text-sm">Aucune réunion trouvée pour cette date.</p>';
-      return;
-    }
-    container.innerHTML = '<label>Choisir une réunion :</label>';
+    const pmuDate=dateToStr(dateStr);
+    const data=await pmuGet('programme/'+pmuDate);
+    const reunions=data.programme?.reunions||[];
+    if(!reunions.length) { container.innerHTML='<p class="text-sm">Aucune réunion pour cette date.</p>'; return; }
+    container.innerHTML='<label>Choisir une réunion :</label>';
     reunions.forEach(r => {
-      const btn = document.createElement('button');
-      const nbCourses = r.courses?.length || 0;
-      btn.className = 'btn btn-vert mt8';
-      btn.style.width = '100%';
-      btn.style.textAlign = 'left';
-      btn.style.marginBottom = '6px';
-      btn.innerHTML = `R${r.numOrdre} — ${r.hippodrome?.libelleLong || r.hippodrome?.libelleCourt || '?'} (${nbCourses} courses)`;
-      btn.onclick = () => selectionnerReunion(r, pmuDate);
+      const btn=document.createElement('button');
+      btn.className='btn btn-vert mt8';
+      btn.style.cssText='width:100%;text-align:left;margin-bottom:6px;';
+      btn.innerHTML=`R${r.numOrdre} — ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'} (${r.courses?.length||0} courses)`;
+      btn.onclick=()=>selectionnerReunion(r,pmuDate);
       container.appendChild(btn);
     });
   } catch(e) {
-    container.innerHTML = '<p style="color:var(--rouge);">Erreur chargement PMU : ' + e.message + '</p>';
+    container.innerHTML=`<p style="color:var(--rouge);">Erreur PMU : ${e.message}</p>`;
   }
 }
 
+// ── SÉLECTION RÉUNION ──────────────────────────────
 async function selectionnerReunion(reunion, pmuDate) {
-  const allCourses = reunion.courses || [];
-  // Nombre pair de courses (abandon dernière si impair)
-  const nbCourses = allCourses.length % 2 === 0 ? allCourses.length : allCourses.length - 1;
-  const courses = allCourses.slice(0, nbCourses);
+  const allCourses=reunion.courses||[];
+  const nbCourses=allCourses.length%2===0?allCourses.length:allCourses.length-1;
+  const courses=allCourses.slice(0,nbCourses);
+  const container=document.getElementById('liste-reunions');
+  container.innerHTML=`<span class="spinner"></span> Chargement partants… 0/${courses.length}`;
 
-  const container = document.getElementById('liste-reunions');
-  container.innerHTML = `<span class="spinner"></span> Chargement des partants pour ${nbCourses} courses…`;
-
-  // ── Charger TOUS les partants avant de permettre le lancement ──
-  const coursesSerialisees = [];
-  const erreurs = [];
-
-  for (let i = 0; i < courses.length; i++) {
-    const c = courses[i];
-    container.innerHTML = `<span class="spinner"></span> Chargement partants… Course ${i+1}/${courses.length}`;
+  const coursesSerialisees=[], erreurs=[];
+  for(let i=0;i<courses.length;i++) {
+    const c=courses[i];
+    container.innerHTML=`<span class="spinner"></span> Chargement partants… ${i+1}/${courses.length}`;
     try {
-      const pData = await pmuGet(`programme/2/${pmuDate}/R${reunion.numOfficiel}/C${c.numOrdre}`);
-      const partants = (pData.course?.partants || []).map(p => ({
-        numero: p.numPmu,
-        nom: p.nom || `Cheval ${p.numPmu}`,
-        corde: p.placeCorde || null,
-      }));
-      if (!partants.length) {
-        erreurs.push(`C${c.numOrdre} — ${c.libelle || ''} : aucun partant`);
-      }
-      coursesSerialisees.push({
-        numOrdre: c.numOrdre,
-        libelle: c.libelle || `Course ${c.numOrdre}`,
-        heureDepart: c.heureDepart || null,
-        numReunion: reunion.numOfficiel,
-        pmuDate,
-        statut: 'ouverte',
-        partants,
-        choixJ1: [],
-        choixJ2: [],
-        choixFinalJ1: [],
-        choixFinalJ2: [],
-        arrivee: [],
-        rapports: {},
-        pointsJ1: 0,
-        pointsJ2: 0,
-        mancheGagnant: null,
-      });
+      const pData=await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${c.numOrdre}`);
+      const partants=(pData.course?.partants||[]).map(p=>({ numero:p.numPmu, nom:p.nom||`Cheval ${p.numPmu}`, corde:p.placeCorde||null }));
+      if(!partants.length) erreurs.push(`C${c.numOrdre} : aucun partant`);
+      coursesSerialisees.push({ numOrdre:c.numOrdre, libelle:c.libelle||`Course ${c.numOrdre}`, heureDepart:c.heureDepart||null, numReunion:reunion.numOfficiel, pmuDate, statut:'ouverte', partants, choixJ1:[], choixJ2:[], choixFinalJ1:[], choixFinalJ2:[], arrivee:[], rapports:{}, pointsJ1:0, pointsJ2:0, mancheGagnant:null });
     } catch(e) {
-      erreurs.push(`C${c.numOrdre} : erreur (${e.message})`);
-      coursesSerialisees.push({
-        numOrdre: c.numOrdre,
-        libelle: c.libelle || `Course ${c.numOrdre}`,
-        heureDepart: c.heureDepart || null,
-        numReunion: reunion.numOfficiel,
-        pmuDate,
-        statut: 'ouverte',
-        partants: [],
-        choixJ1: [], choixJ2: [],
-        choixFinalJ1: [], choixFinalJ2: [],
-        arrivee: [], rapports: {},
-        pointsJ1: 0, pointsJ2: 0, mancheGagnant: null,
-      });
+      erreurs.push(`C${c.numOrdre} : ${e.message}`);
+      coursesSerialisees.push({ numOrdre:c.numOrdre, libelle:c.libelle||`Course ${c.numOrdre}`, heureDepart:c.heureDepart||null, numReunion:reunion.numOfficiel, pmuDate, statut:'ouverte', partants:[], choixJ1:[], choixJ2:[], choixFinalJ1:[], choixFinalJ2:[], arrivee:[], rapports:{}, pointsJ1:0, pointsJ2:0, mancheGagnant:null });
     }
   }
 
-  // Bloquer si des partants manquent
-  if (erreurs.length > 0) {
-    container.innerHTML = `
-      <div style="color:var(--rouge);padding:12px;background:rgba(176,58,46,.15);border-radius:8px;">
-        <strong>⚠️ Partants indisponibles — lancement impossible</strong>
-        <ul style="margin-top:8px;padding-left:18px;">
-          ${erreurs.map(e => `<li style="font-size:.85rem;">${e}</li>`).join('')}
-        </ul>
-        <p style="font-size:.82rem;margin-top:8px;color:rgba(253,246,227,.6);">
-          Les partants sont normalement disponibles à J-2. Réessayez plus tard ou choisissez une autre réunion.
-        </p>
-      </div>
-    `;
+  if(erreurs.length>0) {
+    container.innerHTML=`<div style="color:var(--rouge);padding:12px;background:rgba(176,58,46,.15);border-radius:8px;">
+      <strong>⚠️ Partants indisponibles — lancement impossible</strong>
+      <ul style="margin-top:8px;padding-left:18px;">${erreurs.map(e=>`<li style="font-size:.85rem;">${e}</li>`).join('')}</ul>
+      <p class="text-sm" style="margin-top:8px;">Partants disponibles à J-2. Réessayez plus tard.</p></div>`;
     return;
   }
 
-  // Tout est OK → enregistrer en base
-  const premierMain = Math.random() < 0.5 ? 'j1' : 'j2';
-
-  await db.ref('matchs/' + etat.matchId).update({
-    reunion: {
-      hippodrome: reunion.hippodrome?.libelleLong || reunion.hippodrome?.libelleCourt,
-      numReunion: reunion.numOfficiel,
-      pmuDate,
-    },
-    courses: coursesSerialisees,
-    courseActuelle: 0,
-    premierMain,
-    statut: 'pret',
+  const premierMain=Math.random()<0.5?'j1':'j2';
+  await db.ref('matchs/'+etat.matchId).update({
+    reunion:{ hippodrome:reunion.hippodrome?.libelleLong||reunion.hippodrome?.libelleCourt, numReunion:reunion.numOfficiel, pmuDate },
+    courses:coursesSerialisees, courseActuelle:0, premierMain, statut:'pret'
   });
-
-  const hippo = reunion.hippodrome?.libelleLong || reunion.hippodrome?.libelleCourt || '';
-  container.innerHTML = `
-    <div style="color:#6fffa0;padding:12px;background:rgba(26,107,60,.2);border-radius:8px;">
-      ✅ <strong>${nbCourses} courses chargées</strong> — ${hippo}<br/>
-      <span style="font-size:.82rem;">Partants disponibles pour toutes les courses.</span>
-    </div>
-  `;
-  toast('✅ Réunion prête ! En attente du 2ème joueur…');
+  const hippo=reunion.hippodrome?.libelleLong||reunion.hippodrome?.libelleCourt||'';
+  container.innerHTML=`<div style="color:#6fffa0;padding:12px;background:rgba(26,107,60,.2);border-radius:8px;">✅ <strong>${nbCourses} courses chargées</strong> — ${hippo}</div>`;
+  toast('✅ Réunion prête !');
 }
 
-// ═══════════════════════════════════════════════════════════
-// GESTION DU MATCH — CRÉATION / REJOINDRE
-// ═══════════════════════════════════════════════════════════
+// ── CRÉER / REJOINDRE ──────────────────────────────
 async function creerMatch() {
-  const nom = document.getElementById('input-nom').value.trim();
-  if (!nom) { toast('⚠️ Entrez votre nom'); return; }
-
-  const code = genCode();
-  etat.matchId = code;
-  etat.joueurId = 'j1';
-  etat.nomJoueur = nom;
-  etat.estArbitre = true;
-
-  await db.ref('matchs/' + code).set({
-    code,
-    statut: 'attente',
-    j1: { nom, connecte: true },
-    j2: null,
-    createdAt: Date.now(),
-  });
-
-  document.getElementById('lobby-code').textContent = code;
-  document.getElementById('input-code').value = code;
-  document.getElementById('bloc-arbitre').style.display = 'block';
-  showPage('lobby');
-  setHeaderStatus('Match ' + code + ' — En attente de l\'adversaire');
-  ecouterMatch();
+  const nom=document.getElementById('input-nom').value.trim();
+  if(!nom) { toast('⚠️ Entrez votre nom'); return; }
+  const code=genCode();
+  etat.matchId=code; etat.joueurId='j1'; etat.nomJoueur=nom; etat.estArbitre=true;
+  await db.ref('matchs/'+code).set({ code, statut:'attente', j1:{nom,connecte:true}, j2:null, createdAt:Date.now() });
+  document.getElementById('lobby-code').textContent=code;
+  document.getElementById('bloc-arbitre').style.display='block';
+  showPage('lobby'); setHeaderStatus('Match '+code+' — En attente'); ecouterMatch();
 }
 
 async function rejoindreMatch() {
-  const nom = document.getElementById('input-nom').value.trim();
-  const code = document.getElementById('input-code').value.trim().toUpperCase();
-  if (!nom) { toast('⚠️ Entrez votre nom'); return; }
-  if (code.length !== 4) { toast('⚠️ Code à 4 lettres'); return; }
-
-  const snap = await db.ref('matchs/' + code).once('value');
-  const data = snap.val();
-  if (!data) { toast('❌ Match introuvable'); return; }
-  if (data.j2) { toast('❌ Match complet'); return; }
-
-  etat.matchId = code;
-  etat.joueurId = 'j2';
-  etat.nomJoueur = nom;
-  etat.estArbitre = false;
-
-  await db.ref('matchs/' + code + '/j2').set({ nom, connecte: true });
-
-  document.getElementById('lobby-code').textContent = code;
-  showPage('lobby');
-  setHeaderStatus('Match ' + code);
-  ecouterMatch();
+  const nom=document.getElementById('input-nom').value.trim();
+  const code=document.getElementById('input-code').value.trim().toUpperCase();
+  if(!nom) { toast('⚠️ Entrez votre nom'); return; }
+  if(code.length!==4) { toast('⚠️ Code à 4 lettres'); return; }
+  const snap=await db.ref('matchs/'+code).once('value');
+  const data=snap.val();
+  if(!data) { toast('❌ Match introuvable'); return; }
+  if(data.j2) { toast('❌ Match complet'); return; }
+  etat.matchId=code; etat.joueurId='j2'; etat.nomJoueur=nom; etat.estArbitre=false;
+  await db.ref('matchs/'+code+'/j2').set({nom,connecte:true});
+  document.getElementById('lobby-code').textContent=code;
+  showPage('lobby'); setHeaderStatus('Match '+code); ecouterMatch();
 }
 
-// ═══════════════════════════════════════════════════════════
-// ÉCOUTE FIREBASE EN TEMPS RÉEL
-// ═══════════════════════════════════════════════════════════
+// ── FIREBASE ÉCOUTE ────────────────────────────────
 function ecouterMatch() {
-  db.ref('matchs/' + etat.matchId).on('value', snap => {
-    const data = snap.val();
-    if (!data) return;
-    etat.matchData = data;
-    rendreEtat(data);
+  db.ref('matchs/'+etat.matchId).on('value',snap=>{
+    const data=snap.val(); if(!data) return;
+    etat.matchData=data; rendreEtat(data);
   });
 }
 
 function rendreEtat(data) {
-  // Mise à jour header
-  const nomJ1 = data.j1?.nom || 'J1';
-  const nomJ2 = data.j2?.nom || '?';
-  setHeaderStatus(`${nomJ1} vs ${nomJ2} — Match ${etat.matchId}`);
-
-  if (data.statut === 'attente' || data.statut === 'pret') {
-    rendrelobby(data);
-  } else if (data.statut === 'en_cours') {
-    // Si c'est la première fois qu'on passe en "en_cours", démarrer les timers
-    if (!etat.timersInitialises) {
-      etat.timersInitialises = true;
-      reprendreTimers(data);
-    }
-    showPage('match');
-    rendreMatch(data);
-  } else if (data.statut === 'termine') {
-    showPage('fin');
-    rendreFin(data);
-  }
+  setHeaderStatus(`${data.j1?.nom||'J1'} vs ${data.j2?.nom||'?'} — Match ${etat.matchId}`);
+  if(data.statut==='attente'||data.statut==='pret') { rendrelobby(data); }
+  else if(data.statut==='en_cours') {
+    if(!etat.timersInitialises) { etat.timersInitialises=true; reprendreTimers(data); }
+    showPage('match'); rendreMatch(data);
+  } else if(data.statut==='termine') { showPage('fin'); rendreFin(data); }
 }
 
 function rendrelobby(data) {
-  const j1 = data.j1?.nom || '—';
-  const j2 = data.j2?.nom;
-  const html = `
-    <div class="score-ligne ${j2 ? 'gagnant' : ''}">
-      <span>🟢 Joueur 1 : <strong>${j1}</strong></span>
-      <span class="badge-vert">Connecté</span>
-    </div>
-    <div class="score-ligne">
-      <span>⏳ Joueur 2 : <strong>${j2 || 'En attente…'}</strong></span>
-      ${j2 ? '<span class="badge-vert">Connecté</span>' : ''}
-    </div>
-  `;
-  document.getElementById('lobby-joueurs').innerHTML = html;
-
-  // Si les deux joueurs sont là et que la réunion est configurée → bouton Lancer
-  if (data.j2 && data.statut === 'pret' && etat.estArbitre) {
-    const existing = document.getElementById('btn-lancer');
-    if (!existing) {
-      const btn = document.createElement('button');
-      btn.id = 'btn-lancer';
-      btn.className = 'btn btn-or mt16';
-      btn.textContent = '🚀 Lancer le match !';
-      btn.onclick = lancerMatch;
-      document.getElementById('bloc-arbitre').appendChild(btn);
-    }
+  const j1=data.j1?.nom||'—', j2=data.j2?.nom;
+  document.getElementById('lobby-joueurs').innerHTML=`
+    <div class="score-ligne ${j2?'gagnant':''}"><span>🟢 J1 : <strong>${j1}</strong></span><span class="badge-vert">Connecté</span></div>
+    <div class="score-ligne"><span>⏳ J2 : <strong>${j2||'En attente…'}</strong></span>${j2?'<span class="badge-vert">Connecté</span>':''}</div>`;
+  if(data.j2&&data.statut==='pret'&&etat.estArbitre&&!document.getElementById('btn-lancer')) {
+    const btn=document.createElement('button');
+    btn.id='btn-lancer'; btn.className='btn btn-or mt16';
+    btn.textContent='🚀 Lancer le match !'; btn.onclick=lancerMatch;
+    document.getElementById('bloc-arbitre').appendChild(btn);
   }
 }
 
 async function lancerMatch() {
-  const data = etat.matchData;
-  const courses = data.courses || [];
-
-  await db.ref('matchs/' + etat.matchId).update({ statut: 'en_cours' });
-
-  // Programmer le blocage automatique de toutes les courses dès le lancement
-  courses.forEach((course, idx) => {
-    programmerBlocageCourse(idx, course);
-  });
-
-  toast('🚀 Match lancé ! Les deux joueurs peuvent maintenant pronostiquer.');
+  await db.ref('matchs/'+etat.matchId).update({statut:'en_cours'});
+  toast('🚀 Match lancé !');
 }
 
-// ═══════════════════════════════════════════════════════════
-// LOGIQUE DE COURSE — Les partants sont déjà en base au lancement
-// ═══════════════════════════════════════════════════════════
-function programmerBlocageCourse(idx, course) {
-  // Les partants sont déjà chargés — on programme juste les blocages horaires
-  const departTs = course.heureDepart;
-  if (!departTs) return;
-
-  const msAvantBlocageMain   = departTs - Date.now() - 10 * 60 * 1000;
-  const msAvantBlocageSecond = departTs - Date.now() -  5 * 60 * 1000;
-
-  if (msAvantBlocageMain > 0) {
-    setTimeout(() => bloquerChoixMain(idx), msAvantBlocageMain);
-  } else {
-    // Heure déjà dépassée → bloquer immédiatement si pas encore bloqué
-    bloquerChoixMain(idx);
-  }
-
-  if (msAvantBlocageSecond > 0) {
-    setTimeout(() => bloquerEtValider(idx), msAvantBlocageSecond);
-  } else {
-    bloquerEtValider(idx);
-  }
-}
-
-// Appelé aussi quand un joueur se reconnecte en cours de match
+// ── TIMERS ─────────────────────────────────────────
 function reprendreTimers(data) {
-  const courses = data.courses || [];
-  courses.forEach((course, idx) => {
-    if (course.statut === 'ouverte') {
-      programmerBlocageCourse(idx, course);
-    } else if (course.statut === 'bloquee') {
-      // Relancer le polling résultats si pas encore terminée
-      demarrerPollingResultats(idx);
-    }
+  (data.courses||[]).forEach((c,i)=>{
+    if(c.statut==='ouverte') programmerBlocageCourse(i,c);
+    else if(c.statut==='bloquee') demarrerPollingResultats(i);
   });
+}
+
+function programmerBlocageCourse(idx,course) {
+  const ts=course.heureDepart; if(!ts) return;
+  const msM=ts-Date.now()-10*60*1000, msS=ts-Date.now()-5*60*1000;
+  if(msM>0) setTimeout(()=>bloquerChoixMain(idx),msM); else bloquerChoixMain(idx);
+  if(msS>0) setTimeout(()=>bloquerEtValider(idx),msS); else bloquerEtValider(idx);
 }
 
 function getMainPourCourse(idx) {
-  const data = etat.matchData;
-  const premierMain = data.premierMain; // 'j1' ou 'j2'
-  // Alternance : course 0 → premierMain, course 1 → l'autre, etc.
-  return idx % 2 === 0 ? premierMain : (premierMain === 'j1' ? 'j2' : 'j1');
+  const pm=etat.matchData?.premierMain||'j1';
+  return idx%2===0?pm:(pm==='j1'?'j2':'j1');
 }
 
 async function bloquerChoixMain(idx) {
-  // Le joueur avec la main ne peut plus choisir
-  const data = (await db.ref('matchs/' + etat.matchId).once('value')).val();
-  const course = data.courses[idx];
-  if (course.statut !== 'ouverte') return;
-  await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({ mainBloquee: true });
+  const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
+  if(data.courses[idx].statut!=='ouverte') return;
+  await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({mainBloquee:true});
 }
 
 async function bloquerEtValider(idx) {
-  const data = (await db.ref('matchs/' + etat.matchId).once('value')).val();
-  const course = data.courses[idx];
-  if (course.statut === 'bloquee' || course.statut === 'terminee') return;
-
-  const mainRole = getMainPourCourse(idx);
-  const secondRole = mainRole === 'j1' ? 'j2' : 'j1';
-
-  // Calcul des choix finaux du second
-  const choixMain = course['choix' + mainRole.toUpperCase()] || [];
-  const choixSecond = course['choix' + secondRole.toUpperCase()] || [];
-
-  // Les 3 premiers du second qui ne figurent pas dans les choix du main
-  const choixFinalSecond = choixSecond
-    .filter(num => !choixMain.includes(num))
-    .slice(0, 3);
-
-  const update = {
-    statut: 'bloquee',
-    [`choixFinal${mainRole.toUpperCase()}`]: choixMain.slice(0, 3),
-    [`choixFinal${secondRole.toUpperCase()}`]: choixFinalSecond,
-  };
-
-  await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update(update);
-  await demarrerPollingResultats(idx);
-}
-
-// ═══════════════════════════════════════════════════════════
-// POLLING RÉSULTATS PMU
-// ═══════════════════════════════════════════════════════════
-async function demarrerPollingResultats(idx) {
-  const poll = setInterval(async () => {
-    try {
-      const data = etat.matchData;
-      const course = data.courses[idx];
-      const res = await pmuGet(
-        `resultats/2/${course.pmuDate}/R${course.numReunion}/C${course.numOrdre}`
-      );
-
-      const statuts = ['ARRIVEE_DEFINITIVE', 'RAPPORTS_DEFINITIFS'];
-      const statutCourse = res.course?.statut;
-
-      if (statuts.includes(statutCourse)) {
-        clearInterval(poll);
-        await traiterResultats(idx, res);
-      }
-    } catch(e) {
-      // On continue à poller silencieusement
-    }
-  }, 30000); // toutes les 30 secondes
-}
-
-async function traiterResultats(idx, pmuData) {
-  const data = (await db.ref('matchs/' + etat.matchId).once('value')).val();
-  const course = data.courses[idx];
-
-  // Extraire l'arrivée
-  const arrivee = (pmuData.course?.arrivee || []).map(ch => ch.numPmu || ch.numero);
-
-  // Extraire les rapports gagnant et placés
-  const rapports = {};
-  const listeRapports = pmuData.rapports || pmuData.course?.rapports || [];
-  listeRapports.forEach(r => {
-    if (r.type === 'SIMPLE_GAGNANT' || r.type === 'GAGNANT') {
-      r.combinaisons?.forEach(c => {
-        rapports[c.numerosParticipants[0]] = {
-          gagnant: c.rapport || 0,
-          place: 0,
-        };
-      });
-    }
-    if (r.type === 'SIMPLE_PLACE' || r.type === 'PLACE') {
-      r.combinaisons?.forEach(c => {
-        const num = c.numerosParticipants[0];
-        if (!rapports[num]) rapports[num] = { gagnant: 0, place: 0 };
-        rapports[num].place = c.rapport || 0;
-      });
-    }
-  });
-
-  // Calculer les points de chaque joueur
-  const calcScore = (choix) => {
-    let total = 0;
-    choix.forEach(num => {
-      const r = rapports[num];
-      if (r) total += (r.gagnant || 0) + (r.place || 0);
-    });
-    return total;
-  };
-
-  const scoreJ1 = calcScore(course.choixFinalJ1 || []);
-  const scoreJ2 = calcScore(course.choixFinalJ2 || []);
-  const mancheGagnant = scoreJ1 > scoreJ2 ? 'j1' : scoreJ2 > scoreJ1 ? 'j2' : 'egal';
-
+  const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
+  const c=data.courses[idx];
+  if(c.statut==='bloquee'||c.statut==='terminee') return;
+  const mr=getMainPourCourse(idx), sr=mr==='j1'?'j2':'j1';
+  const cm=c['choix'+mr.toUpperCase()]||[], cs=c['choix'+sr.toUpperCase()]||[];
+  const cfs=cs.filter(n=>!cm.includes(n)).slice(0,3);
   await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({
-    statut: 'terminee',
-    arrivee,
-    rapports,
-    pointsJ1: scoreJ1,
-    pointsJ2: scoreJ2,
-    mancheGagnant,
+    statut:'bloquee',
+    [`choixFinal${mr.toUpperCase()}`]:cm.slice(0,3),
+    [`choixFinal${sr.toUpperCase()}`]:cfs
   });
-
-  // Mettre à jour les scores globaux et passer à la course suivante
-  await mettreAJourScoresEtSuivant(idx);
+  demarrerPollingResultats(idx);
 }
 
-async function mettreAJourScoresEtSuivant(idxTerminee) {
-  const data = (await db.ref('matchs/' + etat.matchId).once('value')).val();
-  const courses = data.courses || [];
-
-  // Recalculer les scores globaux
-  let manchesJ1 = 0, manchesJ2 = 0;
-  courses.forEach(c => {
-    if (c.mancheGagnant === 'j1') manchesJ1++;
-    else if (c.mancheGagnant === 'j2') manchesJ2++;
-  });
-
-  // Vérifier si toutes les courses sont terminées
-  const toutesTerminees = courses.every(c => c.statut === 'terminee');
-
-  const update = {
-    manchesJ1,
-    manchesJ2,
-    courseActuelle: idxTerminee, // On reste sur la course qui vient de se terminer
-  };
-
-  if (toutesTerminees) {
-    update.statut = 'termine';
-    update.vainqueur = calculerVainqueur(courses, manchesJ1, manchesJ2);
-  }
-
-  await db.ref('matchs/' + etat.matchId).update(update);
+// ── POLLING RÉSULTATS ──────────────────────────────
+async function demarrerPollingResultats(idx) {
+  const poll=setInterval(async()=>{
+    try {
+      const c=etat.matchData.courses[idx];
+      const res=await pmuGet(`resultats/${c.pmuDate}/R${c.numReunion}/C${c.numOrdre}`);
+      if(['ARRIVEE_DEFINITIVE','RAPPORTS_DEFINITIFS'].includes(res.course?.statut)) {
+        clearInterval(poll); await traiterResultats(idx,res);
+      }
+    } catch(e) {}
+  },30000);
 }
 
-function calculerVainqueur(courses, manchesJ1, manchesJ2) {
-  if (manchesJ1 !== manchesJ2) return manchesJ1 > manchesJ2 ? 'j1' : 'j2';
+async function traiterResultats(idx,pmuData) {
+  const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
+  const c=data.courses[idx];
+  const arrivee=(pmuData.course?.arrivee||[]).map(ch=>ch.numPmu||ch.numero);
+  const rapports={};
+  (pmuData.rapports||pmuData.course?.rapports||[]).forEach(r=>{
+    if(['SIMPLE_GAGNANT','GAGNANT'].includes(r.type)) r.combinaisons?.forEach(c=>{rapports[c.numerosParticipants[0]]={gagnant:c.rapport||0,place:0};});
+    if(['SIMPLE_PLACE','PLACE'].includes(r.type)) r.combinaisons?.forEach(c=>{ const n=c.numerosParticipants[0]; if(!rapports[n]) rapports[n]={gagnant:0,place:0}; rapports[n].place=c.rapport||0; });
+  });
+  const score=ch=>ch.reduce((s,n)=>{const r=rapports[n];return s+(r?(r.gagnant||0)+(r.place||0):0);},0);
+  const s1=score(c.choixFinalJ1||[]),s2=score(c.choixFinalJ2||[]);
+  await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({ statut:'terminee',arrivee,rapports,pointsJ1:s1,pointsJ2:s2,mancheGagnant:s1>s2?'j1':s2>s1?'j2':'egal' });
+  await mettreAJourScores();
+}
 
-  // Départage 1 : somme totale des points
-  const totalJ1 = courses.reduce((s, c) => s + (c.pointsJ1 || 0), 0);
-  const totalJ2 = courses.reduce((s, c) => s + (c.pointsJ2 || 0), 0);
-  if (totalJ1 !== totalJ2) return totalJ1 > totalJ2 ? 'j1' : 'j2';
+async function mettreAJourScores() {
+  const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
+  const courses=data.courses||[];
+  let m1=0,m2=0;
+  courses.forEach(c=>{if(c.mancheGagnant==='j1')m1++;else if(c.mancheGagnant==='j2')m2++;});
+  const update={manchesJ1:m1,manchesJ2:m2};
+  if(courses.every(c=>c.statut==='terminee')) { update.statut='termine'; update.vainqueur=calculerVainqueur(courses,m1,m2); }
+  await db.ref('matchs/'+etat.matchId).update(update);
+}
 
-  // Départage 2 : nombre de gagnants trouvés
-  const gagnants = (courses, jId) => courses.reduce((s, c) => {
-    const choix = c['choixFinal' + jId.toUpperCase()] || [];
-    const g = c.arrivee?.[0];
-    return s + (choix.includes(g) ? 1 : 0);
-  }, 0);
-  const g1 = gagnants(courses, 'j1'), g2 = gagnants(courses, 'j2');
-  if (g1 !== g2) return g1 > g2 ? 'j1' : 'j2';
-
-  // Départage 3 : nombre de placés (arrivee 2 et 3)
-  const places = (courses, jId) => courses.reduce((s, c) => {
-    const choix = c['choixFinal' + jId.toUpperCase()] || [];
-    const placed = (c.arrivee || []).slice(1, 3);
-    return s + placed.filter(n => choix.includes(n)).length;
-  }, 0);
-  const p1 = places(courses, 'j1'), p2 = places(courses, 'j2');
-  if (p1 !== p2) return p1 > p2 ? 'j1' : 'j2';
-
-  // Départage 4 : plus gros rapport trouvé
-  const maxRapport = (courses, jId) => {
-    let max = 0;
-    courses.forEach(c => {
-      const choix = c['choixFinal' + jId.toUpperCase()] || [];
-      choix.forEach(num => {
-        const r = c.rapports?.[num];
-        if (r) max = Math.max(max, (r.gagnant || 0) + (r.place || 0));
-      });
-    });
-    return max;
-  };
-  const mr1 = maxRapport(courses, 'j1'), mr2 = maxRapport(courses, 'j2');
-  if (mr1 !== mr2) return mr1 > mr2 ? 'j1' : 'j2';
-
+function calculerVainqueur(courses,m1,m2) {
+  if(m1!==m2) return m1>m2?'j1':'j2';
+  const t1=courses.reduce((s,c)=>s+(c.pointsJ1||0),0),t2=courses.reduce((s,c)=>s+(c.pointsJ2||0),0);
+  if(t1!==t2) return t1>t2?'j1':'j2';
+  const nbG=j=>courses.reduce((s,c)=>s+((c['choixFinal'+j.toUpperCase()]||[]).includes(c.arrivee?.[0])?1:0),0);
+  const g1=nbG('j1'),g2=nbG('j2'); if(g1!==g2) return g1>g2?'j1':'j2';
+  const nbP=j=>courses.reduce((s,c)=>s+(c.arrivee||[]).slice(1,3).filter(n=>(c['choixFinal'+j.toUpperCase()]||[]).includes(n)).length,0);
+  const p1=nbP('j1'),p2=nbP('j2'); if(p1!==p2) return p1>p2?'j1':'j2';
+  const maxR=j=>{let mx=0;courses.forEach(c=>(c['choixFinal'+j.toUpperCase()]||[]).forEach(n=>{const r=c.rapports?.[n];if(r)mx=Math.max(mx,(r.gagnant||0)+(r.place||0));}));return mx;};
+  const r1=maxR('j1'),r2=maxR('j2'); if(r1!==r2) return r1>r2?'j1':'j2';
   return 'egal';
 }
 
-// ═══════════════════════════════════════════════════════════
-// RENDU MATCH EN COURS
-// ═══════════════════════════════════════════════════════════
+// ── RENDU MATCH ────────────────────────────────────
 function rendreMatch(data) {
-  rendreScores(data);
-  rendreProgramme(data);
-  // Afficher la première course non terminée par défaut, ou la dernière course
-  const courses = data.courses || [];
-  let idxAffiche = data.courseActuelle || 0;
-  // Trouver la première course ouverte (non terminée, non bloquée)
-  const idxOuverte = courses.findIndex(c => c.statut === 'ouverte');
-  if (idxOuverte !== -1) idxAffiche = idxOuverte;
-  rendreZoneJeu(data, idxAffiche);
+  rendreScores(data); rendreProgramme(data);
+  const courses=data.courses||[];
+  let idx=courses.findIndex(c=>c.statut==='ouverte');
+  if(idx===-1) idx=courses.findIndex(c=>c.statut==='bloquee');
+  if(idx===-1) idx=Math.max(0,courses.length-1);
+  rendreZoneJeu(data,idx);
 }
 
 function rendreScores(data) {
-  const j1 = data.j1?.nom || 'J1';
-  const j2 = data.j2?.nom || 'J2';
-  const m1 = data.manchesJ1 || 0;
-  const m2 = data.manchesJ2 || 0;
-  const g1 = m1 > m2, g2 = m2 > m1;
-  document.getElementById('scores-display').innerHTML = `
-    <div class="score-ligne ${g1 ? 'gagnant' : g2 ? 'perdant' : ''}">
-      <span>${etat.joueurId === 'j1' ? '👤 ' : ''}${j1}</span>
-      <span class="score-pts">${m1}</span>
-    </div>
-    <div class="score-ligne ${g2 ? 'gagnant' : g1 ? 'perdant' : ''}">
-      <span>${etat.joueurId === 'j2' ? '👤 ' : ''}${j2}</span>
-      <span class="score-pts">${m2}</span>
-    </div>
-    <p class="text-sm" style="text-align:center;margin-top:8px;">manches remportées</p>
-  `;
+  const j1=data.j1?.nom||'J1',j2=data.j2?.nom||'J2',m1=data.manchesJ1||0,m2=data.manchesJ2||0;
+  document.getElementById('scores-display').innerHTML=`
+    <div class="score-ligne ${m1>m2?'gagnant':m2>m1?'perdant':''}"><span>${etat.joueurId==='j1'?'👤 ':''}${j1}</span><span class="score-pts">${m1}</span></div>
+    <div class="score-ligne ${m2>m1?'gagnant':m1>m2?'perdant':''}"><span>${etat.joueurId==='j2'?'👤 ':''}${j2}</span><span class="score-pts">${m2}</span></div>
+    <p class="text-sm" style="text-align:center;margin-top:8px;">manches remportées</p>`;
 }
 
 function rendreProgramme(data) {
-  const courses = data.courses || [];
-  let html = '<p class="text-sm" style="margin-bottom:8px;">Cliquez sur une course pour pronostiquer :</p>';
-  courses.forEach((c, i) => {
-    const terminee = c.statut === 'terminee' ? 'terminee' : '';
-    const statutLabel = {
-      ouverte:  '<span class="course-statut statut-ouverte">Ouverte</span>',
-      bloquee:  '<span class="course-statut statut-bloquee">Bloquée</span>',
-      terminee: '<span class="course-statut statut-terminee">Terminée</span>',
-    }[c.statut] || '<span class="course-statut statut-attente">—</span>';
-
-    // Indicateur de progression des choix
-    const monRole = etat.joueurId;
-    const mesChoix = c['choix' + monRole.toUpperCase()] || [];
-    const maxChoix = getMainPourCourse(i) === monRole ? 3 : 6;
-    let checkmark = '';
-    if (c.statut === 'ouverte') {
-      checkmark = mesChoix.length === maxChoix
-        ? ' <span style="color:#6fffa0;">✅</span>'
-        : mesChoix.length > 0
-          ? ` <span style="color:var(--or);font-size:.75rem;">(${mesChoix.length}/${maxChoix})</span>`
-          : '';
-    }
-
-    html += `
-      <div class="course-item ${terminee}" onclick="afficherCourse(${i})">
-        <div class="course-num">${c.numOrdre}</div>
-        <div class="course-info">
-          <strong>${c.libelle}${checkmark}</strong>
-          <span>${formatHeure(c.heureDepart)}</span>
-        </div>
-        ${statutLabel}
-      </div>
-    `;
+  const courses=data.courses||[];
+  let html='<p class="text-sm" style="margin-bottom:8px;">Cliquez pour pronostiquer :</p>';
+  courses.forEach((c,i)=>{
+    const sl={ouverte:'<span class="course-statut statut-ouverte">Ouverte</span>',bloquee:'<span class="course-statut statut-bloquee">Bloquée</span>',terminee:'<span class="course-statut statut-terminee">Terminée</span>'}[c.statut]||'';
+    const mr=etat.joueurId,mc=c['choix'+mr.toUpperCase()]||[],mx=getMainPourCourse(i)===mr?3:6;
+    const ck=c.statut==='ouverte'?(mc.length===mx?'<span style="color:#6fffa0;">✅</span>':mc.length>0?`<span style="color:var(--or);font-size:.75rem;">(${mc.length}/${mx})</span>`:''):'';
+    html+=`<div class="course-item ${c.statut==='terminee'?'terminee':''}" onclick="afficherCourse(${i})">
+      <div class="course-num">${c.numOrdre}</div>
+      <div class="course-info"><strong>${c.libelle} ${ck}</strong><span>${formatHeure(c.heureDepart)}</span></div>
+      ${sl}</div>`;
   });
-  document.getElementById('liste-courses').innerHTML = html;
+  document.getElementById('liste-courses').innerHTML=html;
 }
 
-function rendreZoneJeu(data, idx) {
-  const course = data.courses[idx];
-  if (!course) return;
+function afficherCourse(idx) { if(etat.matchData) rendreZoneJeu(etat.matchData,idx); }
 
-  const mainRole = getMainPourCourse(idx);
-  const monRole = etat.joueurId;
-  const estMain = monRole === mainRole;
-  const adversaireRole = monRole === 'j1' ? 'j2' : 'j1';
-  const nomAdv = data[adversaireRole]?.nom || 'Adversaire';
-  const nomMoi = data[monRole]?.nom || 'Moi';
+function rendreZoneJeu(data,idx) {
+  const c=data.courses[idx]; if(!c) return;
+  const mr=getMainPourCourse(idx),estMain=etat.joueurId===mr;
+  let html=`<div class="card"><h2>C${c.numOrdre} — ${c.libelle}</h2>
+    <div class="bandeau-joueur ${estMain?'bandeau-main':'bandeau-second'}">
+      <span class="role-badge ${estMain?'role-main':'role-second'}">${estMain?'⭐ Vous avez la main':'2ème joueur'}</span>
+      <span style="font-size:.85rem;">${estMain?'Choisissez <strong>3 chevaux</strong> (fermeture à -10 min)':'Choisissez <strong>6 chevaux</strong> en ordre (fermeture à -5 min)'}</span>
+    </div>`;
 
-  let html = `
-    <div class="card">
-      <h2>C${course.numOrdre} — ${course.libelle}</h2>
-      <div class="bandeau-joueur ${estMain ? 'bandeau-main' : 'bandeau-second'}">
-        <span class="role-badge ${estMain ? 'role-main' : 'role-second'}">
-          ${estMain ? '⭐ Vous avez la main' : '2ème joueur'}
-        </span>
-        <span style="font-size:.85rem;">
-          ${estMain ? 'Choisissez <strong>3 chevaux</strong> (avant départ -10 min)' : 'Choisissez <strong>6 chevaux</strong> en ordre (avant départ -5 min)'}
-        </span>
-      </div>
-  `;
-
-  // Timer
-  if (course.heureDepart) {
-    const msRestants = course.heureDepart - Date.now();
-    const limite = estMain ? 10 * 60 * 1000 : 5 * 60 * 1000;
-    html += rendreTimer(msRestants, limite, course.statut);
+  if(c.heureDepart&&c.statut==='ouverte') {
+    const ms=c.heureDepart-Date.now(),lim=estMain?10*60*1000:5*60*1000,urg=ms<lim+60000&&ms>0;
+    html+=`<div class="timer-bloc"><div id="timer-val" class="timer-valeur ${urg?'urgent':'normal'}">${ms<=0?'00:00':msToHMS(ms)}</div><div class="text-sm">avant le départ</div></div>`;
   }
 
-  // Statut terminée → afficher résultats
-  if (course.statut === 'terminee') {
-    html += rendreResultatsCourse(course, data, idx);
-  } else if (course.statut === 'bloquee') {
-    html += `<p style="color:var(--rouge);text-align:center;padding:12px;">🔒 Pronostics bloqués — En attente des résultats…</p>`;
-    html += rendreChoixValides(course, monRole, estMain);
-  } else if (course.statut === 'ouverte') {
-    html += rendreSelecteurChevaux(course, idx, estMain, monRole);
-  } else {
-    html += `<p class="text-sm" style="text-align:center;padding:20px;">⏳ Course pas encore ouverte</p>`;
-  }
+  if(c.statut==='terminee') html+=rendreResultatsCourse(c,data,idx);
+  else if(c.statut==='bloquee') html+=`<p style="color:var(--rouge);text-align:center;padding:12px;">🔒 Pronostics bloqués — En attente des résultats…</p>`+rendreChoixValides(c,etat.joueurId);
+  else if(c.statut==='ouverte') html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId);
+  html+='</div>';
+  document.getElementById('zone-jeu').innerHTML=html;
 
-  html += '</div>';
-  document.getElementById('zone-jeu').innerHTML = html;
-
-  // Relancer le timer dynamique
-  if (etat.timerInterval) clearInterval(etat.timerInterval);
-  if (course.heureDepart && course.statut === 'ouverte') {
-    etat.timerInterval = setInterval(() => {
-      const el = document.getElementById('timer-val');
-      if (!el) { clearInterval(etat.timerInterval); return; }
-      const ms = course.heureDepart - Date.now();
-      const limite = estMain ? 10 * 60 * 1000 : 5 * 60 * 1000;
-      const restantStr = msToHMS(ms);
-      const urgent = ms < limite + 60000 && ms > 0;
-      el.textContent = ms <= 0 ? '00:00' : restantStr;
-      el.className = 'timer-valeur ' + (urgent ? 'urgent' : 'normal');
-    }, 1000);
+  if(etat.timerInterval) clearInterval(etat.timerInterval);
+  if(c.heureDepart&&c.statut==='ouverte') {
+    etat.timerInterval=setInterval(()=>{
+      const el=document.getElementById('timer-val'); if(!el){clearInterval(etat.timerInterval);return;}
+      const ms=c.heureDepart-Date.now(),lim=estMain?10*60*1000:5*60*1000;
+      el.textContent=ms<=0?'00:00':msToHMS(ms);
+      el.className='timer-valeur '+(ms<lim+60000&&ms>0?'urgent':'normal');
+    },1000);
   }
 }
 
-function rendreTimer(msRestants, limite, statut) {
-  if (statut !== 'ouverte') return '';
-  const val = msRestants <= 0 ? '00:00' : msToHMS(msRestants);
-  const urgent = msRestants < limite + 60000 && msRestants > 0;
-  return `
-    <div class="timer-bloc">
-      <div id="timer-val" class="timer-valeur ${urgent ? 'urgent' : 'normal'}">${val}</div>
-      <div class="timer-label">avant le départ</div>
-    </div>
-  `;
-}
-
-function msToHMS(ms) {
-  if (ms <= 0) return '00:00';
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  if (h > 0) return `${h}h${(m%60).toString().padStart(2,'0')}`;
-  return `${m.toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
-}
-
-function rendreSelecteurChevaux(course, idx, estMain, monRole) {
-  const partants = course.partants || [];
-  const maxChoix = estMain ? 3 : 6;
-  const mesChoix = course['choix' + monRole.toUpperCase()] || [];
-  const bloque = estMain ? course.mainBloquee : false;
-
-  if (!partants.length) {
-    return '<p class="text-sm" style="text-align:center;padding:12px;">Chargement des partants…</p>';
-  }
-
-  let html = `<p class="text-sm" style="margin-bottom:8px;">Sélectionnez ${maxChoix} cheval${maxChoix > 1 ? 'x' : ''} ${!estMain ? '(dans l\'ordre de préférence)' : ''} :</p>`;
-  html += '<div class="chevaux-grid">';
-
-  partants.forEach(p => {
-    const idx2 = mesChoix.indexOf(p.numero);
-    const selectionne = idx2 !== -1;
-    const verrouille = bloque || (!selectionne && mesChoix.length >= maxChoix);
-    html += `
-      <button
-        class="cheval-btn ${selectionne ? 'selectionne' : ''} ${verrouille && !selectionne ? 'verrouille' : ''}"
-        onclick="toggleCheval(${idx}, ${p.numero}, ${maxChoix}, '${monRole}')"
-        ${verrouille && !selectionne ? 'disabled' : ''}
-      >
-        <span class="num-cheval">${p.numero}</span>
-        <span style="font-size:.75rem;">${p.nom}</span>
-        <span class="ordre-badge">${selectionne ? idx2 + 1 : ''}</span>
-      </button>
-    `;
+function rendreSelecteurChevaux(c,idx,estMain,monRole) {
+  const partants=c.partants||[],maxC=estMain?3:6,mc=c['choix'+monRole.toUpperCase()]||[],bl=estMain?c.mainBloquee:false;
+  if(!partants.length) return '<p class="text-sm" style="text-align:center;padding:12px;">Chargement…</p>';
+  let html=`<p class="text-sm" style="margin-bottom:8px;">Sélectionnez ${maxC} cheval${maxC>1?'x':''} ${!estMain?'(dans l\'ordre)':''} :</p><div class="chevaux-grid">`;
+  partants.forEach(p=>{
+    const i2=mc.indexOf(p.numero),sel=i2!==-1,ver=bl||(!sel&&mc.length>=maxC);
+    html+=`<button class="cheval-btn ${sel?'selectionne':''} ${ver&&!sel?'verrouille':''}"
+      onclick="toggleCheval(${idx},${p.numero},${maxC},'${monRole}')" ${ver&&!sel?'disabled':''}>
+      <span class="num-cheval">${p.numero}</span>
+      <span style="font-size:.75rem;">${p.nom}</span>
+      <span class="ordre-badge">${sel?i2+1:''}</span></button>`;
   });
-
-  html += '</div>';
-  if (mesChoix.length > 0) {
-    html += `<p class="text-sm mt8" style="text-align:center;">✅ ${mesChoix.length}/${maxChoix} cheval${mesChoix.length > 1 ? 'x' : ''} sélectionné${mesChoix.length > 1 ? 's' : ''}</p>`;
-  }
+  html+='</div>';
+  if(mc.length>0) html+=`<p class="text-sm mt8" style="text-align:center;">✅ ${mc.length}/${maxC} sélectionné${mc.length>1?'s':''}</p>`;
   return html;
 }
 
-async function toggleCheval(courseIdx, numero, maxChoix, monRole) {
-  const data = etat.matchData;
-  const course = data.courses[courseIdx];
-  if (course.statut !== 'ouverte') return;
-  if (course.mainBloquee && getMainPourCourse(courseIdx) === monRole) return;
-
-  let choix = [...(course['choix' + monRole.toUpperCase()] || [])];
-  const pos = choix.indexOf(numero);
-
-  if (pos !== -1) {
-    choix.splice(pos, 1);
-  } else {
-    if (choix.length >= maxChoix) return;
-    choix.push(numero);
-  }
-
-  await db.ref(`matchs/${etat.matchId}/courses/${courseIdx}`).update({
-    ['choix' + monRole.toUpperCase()]: choix,
-  });
+async function toggleCheval(courseIdx,numero,maxC,monRole) {
+  const c=etat.matchData.courses[courseIdx];
+  if(c.statut!=='ouverte') return;
+  if(c.mainBloquee&&getMainPourCourse(courseIdx)===monRole) return;
+  let mc=[...(c['choix'+monRole.toUpperCase()]||[])];
+  const pos=mc.indexOf(numero);
+  if(pos!==-1) mc.splice(pos,1); else { if(mc.length>=maxC) return; mc.push(numero); }
+  await db.ref(`matchs/${etat.matchId}/courses/${courseIdx}`).update({['choix'+monRole.toUpperCase()]:mc});
 }
 
-function rendreChoixValides(course, monRole, estMain) {
-  const choix = course['choixFinal' + monRole.toUpperCase()] || [];
-  const partants = course.partants || [];
-  const getNom = num => partants.find(p => p.numero === num)?.nom || `#${num}`;
-
-  if (!choix.length) return '<p class="text-sm" style="text-align:center;">Aucun choix enregistré.</p>';
-
-  return `
-    <div style="margin-top:12px;">
-      <p class="text-sm" style="margin-bottom:8px;">Vos choix validés :</p>
-      ${choix.map((num, i) => `
-        <div class="resultat-cheval">
-          <span>${i+1}. N°${num} — ${getNom(num)}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
+function rendreChoixValides(c,monRole) {
+  const choix=c['choixFinal'+monRole.toUpperCase()]||[],pts=c.partants||[];
+  const gN=n=>pts.find(p=>p.numero===n)?.nom||`#${n}`;
+  if(!choix.length) return '<p class="text-sm" style="text-align:center;">Aucun choix enregistré.</p>';
+  return `<div style="margin-top:12px;"><p class="text-sm" style="margin-bottom:8px;">Vos choix validés :</p>
+    ${choix.map((n,i)=>`<div class="resultat-cheval"><span>${i+1}. N°${n} — ${gN(n)}</span></div>`).join('')}</div>`;
 }
 
-function rendreResultatsCourse(course, data, idx) {
-  const arrivee = course.arrivee || [];
-  const rapports = course.rapports || {};
-  const partants = course.partants || [];
-  const getNom = num => partants.find(p => p.numero === num)?.nom || `#${num}`;
-
-  const joueurNom = (jId) => data[jId]?.nom || jId;
-  const j1gagne = course.mancheGagnant === 'j1';
-  const j2gagne = course.mancheGagnant === 'j2';
-
-  const rendreChoixJoueur = (jId) => {
-    const choix = course['choixFinal' + jId.toUpperCase()] || [];
-    return choix.map(num => {
-      const r = rapports[num] || {};
-      const estArrivee = arrivee.includes(num);
-      const pos = arrivee.indexOf(num) + 1;
-      return `
-        <div class="resultat-cheval ${pos === 1 ? 'gagnant-course' : ''}">
-          <span>${pos > 0 ? pos+'er ' : ''}N°${num} ${getNom(num)}</span>
-          <span class="rapport-val">
-            ${r.gagnant ? 'G: ' + formatRapport(r.gagnant) : ''}
-            ${r.place ? ' P: ' + formatRapport(r.place) : ''}
-            ${!r.gagnant && !r.place ? '—' : ''}
-          </span>
-        </div>
-      `;
-    }).join('');
-  };
-
-  return `
-    <hr class="separator" />
+function rendreResultatsCourse(c,data,idx) {
+  const arr=c.arrivee||[],rp=c.rapports||{},pts=c.partants||[];
+  const gN=n=>pts.find(p=>p.numero===n)?.nom||`#${n}`;
+  const jN=j=>data[j]?.nom||j;
+  const rC=j=>(c['choixFinal'+j.toUpperCase()]||[]).map(n=>{
+    const r=rp[n]||{},pos=arr.indexOf(n)+1;
+    return `<div class="resultat-cheval ${pos===1?'gagnant-course':''}">
+      <span>${pos>0?pos+'er ':''} N°${n} ${gN(n)}</span>
+      <span class="rapport-val">${r.gagnant?'G:'+formatRapport(r.gagnant):''}${r.place?' P:'+formatRapport(r.place):''}${!r.gagnant&&!r.place?'—':''}</span></div>`;
+  }).join('');
+  return `<hr class="separator"/>
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:180px;">
-        <p class="text-sm" style="margin-bottom:6px;">🏅 ${joueurNom('j1')} ${j1gagne ? '✅' : ''}</p>
-        ${rendreChoixJoueur('j1')}
-        <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Score: ${(course.pointsJ1/100).toFixed(1)}€</p>
-      </div>
-      <div style="flex:1;min-width:180px;">
-        <p class="text-sm" style="margin-bottom:6px;">🏅 ${joueurNom('j2')} ${j2gagne ? '✅' : ''}</p>
-        ${rendreChoixJoueur('j2')}
-        <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Score: ${(course.pointsJ2/100).toFixed(1)}€</p>
-      </div>
+      <div style="flex:1;min-width:180px;"><p class="text-sm" style="margin-bottom:6px;">🏅 ${jN('j1')} ${c.mancheGagnant==='j1'?'✅':''}</p>${rC('j1')}
+        <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Score: ${((c.pointsJ1||0)/100).toFixed(1)}€</p></div>
+      <div style="flex:1;min-width:180px;"><p class="text-sm" style="margin-bottom:6px;">🏅 ${jN('j2')} ${c.mancheGagnant==='j2'?'✅':''}</p>${rC('j2')}
+        <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Score: ${((c.pointsJ2||0)/100).toFixed(1)}€</p></div>
     </div>
     <p style="text-align:center;margin-top:10px;font-weight:bold;color:var(--or-clair);">
-      ${course.mancheGagnant === 'egal' ? '🤝 Égalité sur cette manche' : `🏆 Manche remportée par ${joueurNom(course.mancheGagnant)}`}
-    </p>
-    <p class="text-sm" style="text-align:center;margin-top:6px;">
-      Arrivée officielle : ${arrivee.slice(0,3).map((n,i)=>`${i+1}er N°${n}`).join(' | ')}
-    </p>
-  `;
+      ${c.mancheGagnant==='egal'?'🤝 Égalité':'🏆 Manche : '+jN(c.mancheGagnant)}</p>
+    <p class="text-sm" style="text-align:center;margin-top:6px;">Arrivée : ${arr.slice(0,3).map((n,i)=>`${i+1}er N°${n}`).join(' | ')}</p>`;
 }
 
-function afficherCourse(idx) {
-  if (!etat.matchData) return;
-  rendreZoneJeu(etat.matchData, idx);
-}
-
-// ═══════════════════════════════════════════════════════════
-// FIN DE MATCH
-// ═══════════════════════════════════════════════════════════
 function rendreFin(data) {
-  const j1 = data.j1?.nom || 'J1';
-  const j2 = data.j2?.nom || 'J2';
-  const v = data.vainqueur;
-  const vNom = v === 'j1' ? j1 : v === 'j2' ? j2 : null;
-
-  const courses = data.courses || [];
-  let detailHtml = '<table style="width:100%;border-collapse:collapse;font-size:.85rem;margin-top:16px;">';
-  detailHtml += `<tr style="color:var(--or);border-bottom:1px solid rgba(201,169,74,.3);">
-    <th style="padding:6px;text-align:left;">Course</th>
-    <th style="padding:6px;">${j1}</th>
-    <th style="padding:6px;">${j2}</th>
-    <th style="padding:6px;">Manche</th>
-  </tr>`;
-  courses.forEach(c => {
-    const g = c.mancheGagnant;
-    detailHtml += `<tr style="border-bottom:1px solid rgba(255,255,255,.07);">
-      <td style="padding:6px;">C${c.numOrdre}</td>
-      <td style="padding:6px;text-align:center;">${(c.pointsJ1/100||0).toFixed(1)}€</td>
-      <td style="padding:6px;text-align:center;">${(c.pointsJ2/100||0).toFixed(1)}€</td>
-      <td style="padding:6px;text-align:center;">${g==='j1'?'✅ '+j1:g==='j2'?'✅ '+j2:'🤝'}</td>
-    </tr>`;
-  });
-  detailHtml += `<tr style="font-weight:bold;color:var(--or-clair);">
-    <td style="padding:6px;">Total manches</td>
-    <td style="padding:6px;text-align:center;">${data.manchesJ1||0}</td>
-    <td style="padding:6px;text-align:center;">${data.manchesJ2||0}</td>
-    <td></td>
-  </tr>`;
-  detailHtml += '</table>';
-
-  document.getElementById('fin-contenu').innerHTML = `
-    <div style="font-size:3rem;margin-bottom:12px;">${v === 'egal' ? '🤝' : '🏆'}</div>
-    <h3 style="font-size:1.5rem;color:var(--or-clair);">
-      ${v === 'egal' ? 'Match nul !' : vNom + ' remporte le match !'}
-    </h3>
-    ${detailHtml}
-  `;
+  const j1=data.j1?.nom||'J1',j2=data.j2?.nom||'J2',v=data.vainqueur,cs=data.courses||[];
+  let t=`<table style="width:100%;border-collapse:collapse;font-size:.85rem;margin-top:16px;">
+    <tr style="color:var(--or);border-bottom:1px solid rgba(201,169,74,.3);"><th style="padding:6px;text-align:left;">Course</th><th style="padding:6px;">${j1}</th><th style="padding:6px;">${j2}</th><th style="padding:6px;">Manche</th></tr>`;
+  cs.forEach(c=>{t+=`<tr style="border-bottom:1px solid rgba(255,255,255,.07);">
+    <td style="padding:6px;">C${c.numOrdre}</td>
+    <td style="padding:6px;text-align:center;">${((c.pointsJ1||0)/100).toFixed(1)}€</td>
+    <td style="padding:6px;text-align:center;">${((c.pointsJ2||0)/100).toFixed(1)}€</td>
+    <td style="padding:6px;text-align:center;">${c.mancheGagnant==='j1'?'✅ '+j1:c.mancheGagnant==='j2'?'✅ '+j2:'🤝'}</td></tr>`;});
+  t+=`<tr style="font-weight:bold;color:var(--or-clair);"><td style="padding:6px;">Total manches</td><td style="padding:6px;text-align:center;">${data.manchesJ1||0}</td><td style="padding:6px;text-align:center;">${data.manchesJ2||0}</td><td></td></tr></table>`;
+  document.getElementById('fin-contenu').innerHTML=`
+    <div style="font-size:3rem;margin-bottom:12px;">${v==='egal'?'🤝':'🏆'}</div>
+    <h3 style="font-size:1.5rem;color:var(--or-clair);">${v==='egal'?'Match nul !':(v==='j1'?j1:j2)+' remporte le match !'}</h3>${t}`;
 }
 </script>
 </body>
 </html>
-
