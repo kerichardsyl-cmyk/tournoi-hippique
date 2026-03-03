@@ -574,7 +574,13 @@ async function demarrerPollingResultats(idx) {
       const res=await pmuGet(`programme/${c.pmuDate}/R${c.numReunion}/C${c.numOrdre}`);
       const statut=res.statut||res.course?.statut;
       if(['ARRIVEE_DEFINITIVE','RAPPORTS_DEFINITIFS','FIN_COURSE','ARRIVEE_DEFINITIVE_COMPLETE'].includes(statut)) {
-        clearInterval(poll); await traiterResultats(idx,res);
+        clearInterval(poll);
+        // Récupérer les rapports définitifs
+        try {
+          const raps=await pmuGet(`programme/${c.pmuDate}/R${c.numReunion}/C${c.numOrdre}/rapports-definitifs`);
+          res._rapportsDefinitifs=raps;
+        } catch(e) {}
+        await traiterResultats(idx,res);
       }
     } catch(e) {}
   },30000);
@@ -583,16 +589,28 @@ async function demarrerPollingResultats(idx) {
 async function traiterResultats(idx, pmuData) {
   const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
   const c=data.courses[idx];
-  // Arrivée : ordreArrivee est un tableau de tableaux [[3],[13],[10]...]
+  // Arrivée
   const arrivee=(pmuData.ordreArrivee||[]).flat();
-  // Rapports depuis paris[]
+  // Rapports depuis rapports-definitifs : [{typePari, rapports:[{combinaison:'1', dividende:450}]}]
   const rapports={};
-  (pmuData.paris||[]).forEach(p=>{
-    if(p.codePari==='SIMPLE_GAGNANT'&&p.combinaisons) p.combinaisons.forEach(cb=>{ rapports[cb.numerosParticipants[0]]={gagnant:cb.rapport||0,place:rapports[cb.numerosParticipants[0]]?.place||0}; });
-    if(p.codePari==='SIMPLE_PLACE'&&p.combinaisons) p.combinaisons.forEach(cb=>{ const n=cb.numerosParticipants[0]; if(!rapports[n]) rapports[n]={gagnant:0,place:0}; rapports[n].place=cb.rapport||0; });
+  const rapsData=pmuData._rapportsDefinitifs||[];
+  rapsData.forEach(r=>{
+    if(r.typePari==='SIMPLE_GAGNANT') r.rapports?.forEach(rap=>{
+      const n=parseInt(rap.combinaison);
+      if(!rapports[n]) rapports[n]={gagnant:0,place:0};
+      rapports[n].gagnant=rap.dividende||0; // en centimes (450 = 4.50€)
+    });
+    if(r.typePari==='SIMPLE_PLACE') r.rapports?.forEach(rap=>{
+      const n=parseInt(rap.combinaison);
+      if(!rapports[n]) rapports[n]={gagnant:0,place:0};
+      rapports[n].place=rap.dividende||0;
+    });
   });
-  // Score = position dans l'arrivée (1er=3pts, 2e=2pts, 3e=1pt)
-  const score=choix=>choix.reduce((s,n)=>{const pos=arrivee.indexOf(n);return s+(pos===0?3:pos===1?2:pos===2?1:0);},0);
+  // Score = somme des rapports gagnant + placé pour les chevaux sélectionnés
+  const score=choix=>choix.reduce((s,n)=>{
+    const r=rapports[n]||{};
+    return s+(r.gagnant||0)+(r.place||0);
+  },0);
   const s1=score(c.choixFinalJ1||[]),s2=score(c.choixFinalJ2||[]);
   await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({
     statut:'terminee', arrivee, rapports, pointsJ1:s1, pointsJ2:s2,
@@ -731,19 +749,25 @@ function rendreResultatsCourse(c,data) {
   const arr=c.arrivee||[],rp=c.rapports||{},pts=c.partants||[];
   const gN=n=>pts.find(p=>p.numero===n)?.nom||`#${n}`;
   const jN=j=>data[j]?.nom||j;
+  const fR=v=>v?(v/100).toFixed(1)+'€':'—';
   const rC=j=>(c['choixFinal'+j.toUpperCase()]||[]).map(n=>{
     const r=rp[n]||{},pos=arr.indexOf(n);
-    const pts_=pos===0?3:pos===1?2:pos===2?1:0;
+    const gagnant=r.gagnant||0, place=r.place||0;
+    const total=gagnant+place;
+    let rapportAff='—';
+    if(gagnant>0) rapportAff=`G:${fR(gagnant)}${place?' P:'+fR(place):''}`;
+    else if(place>0) rapportAff=`P:${fR(place)}`;
     return `<div class="resultat-cheval ${pos===0?'gagnant-course':''}">
       <span>${pos>=0?`${pos+1}er`:''} N°${n} ${gN(n)}</span>
-      <span class="rapport-val">${pts_>0?pts_+' pt'+(pts_>1?'s':''):'—'}</span></div>`;
+      <span class="rapport-val">${rapportAff}</span></div>`;
   }).join('');
+  const fScore=s=>s?(s/100).toFixed(1)+'€':'0€';
   return `<hr class="separator"/>
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:160px;"><p class="text-sm" style="margin-bottom:6px;">🏅 ${jN('j1')} ${c.mancheGagnant==='j1'?'✅':''}</p>${rC('j1')}
-        <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Score: ${c.pointsJ1||0} pts</p></div>
+        <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Total: ${fScore(c.pointsJ1)}</p></div>
       <div style="flex:1;min-width:160px;"><p class="text-sm" style="margin-bottom:6px;">🏅 ${jN('j2')} ${c.mancheGagnant==='j2'?'✅':''}</p>${rC('j2')}
-        <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Score: ${c.pointsJ2||0} pts</p></div>
+        <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Total: ${fScore(c.pointsJ2)}</p></div>
     </div>
     <p style="text-align:center;margin-top:10px;font-weight:bold;color:var(--or-clair);">
       ${c.mancheGagnant==='egal'?'🤝 Égalité':'🏆 Manche : '+jN(c.mancheGagnant)}</p>
@@ -756,8 +780,8 @@ function rendreFin(data) {
     <tr style="color:var(--or);border-bottom:1px solid rgba(201,169,74,.3);"><th style="padding:6px;text-align:left;">Course</th><th style="padding:6px;">${j1}</th><th style="padding:6px;">${j2}</th><th style="padding:6px;">Manche</th></tr>`;
   cs.forEach(c=>{t+=`<tr style="border-bottom:1px solid rgba(255,255,255,.07);">
     <td style="padding:6px;">C${c.numOrdre} ${c.libelle}</td>
-    <td style="padding:6px;text-align:center;">${c.pointsJ1||0} pts</td>
-    <td style="padding:6px;text-align:center;">${c.pointsJ2||0} pts</td>
+    <td style="padding:6px;text-align:center;">${c.pointsJ1?(c.pointsJ1/100).toFixed(1)+"€":"0€"}</td>
+    <td style="padding:6px;text-align:center;">${c.pointsJ2?(c.pointsJ2/100).toFixed(1)+"€":"0€"}</td>
     <td style="padding:6px;text-align:center;">${c.mancheGagnant==='j1'?'✅ '+j1:c.mancheGagnant==='j2'?'✅ '+j2:'🤝'}</td></tr>`;});
   t+=`<tr style="font-weight:bold;color:var(--or-clair);"><td style="padding:6px;">Total</td><td style="padding:6px;text-align:center;">${data.manchesJ1||0}</td><td style="padding:6px;text-align:center;">${data.manchesJ2||0}</td><td></td></tr></table>`;
   document.getElementById('fin-contenu').innerHTML=`
@@ -767,4 +791,5 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
