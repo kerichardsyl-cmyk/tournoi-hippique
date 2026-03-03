@@ -217,8 +217,8 @@ async function selectionnerReunion(reunion, pmuDate) {
     const c=courses[i];
     container.innerHTML=`<span class="spinner"></span> Chargement partants… ${i+1}/${courses.length}`;
     try {
-      const pData=await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${c.numOrdre}`);
-      const partants=(pData.course?.partants||[]).map(p=>({ numero:p.numPmu, nom:p.nom||`Cheval ${p.numPmu}`, corde:p.placeCorde||null }));
+      const pData=await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${c.numOrdre}/participants`);
+      const partants=(pData.participants||pData.partants||pData.course?.participants||pData.course?.partants||[]).map(p=>({ numero:p.numPmu||p.numero, nom:p.nom||p.nomCheval||`Cheval ${p.numPmu||p.numero}`, corde:p.placeCorde||null }));
       if(!partants.length) erreurs.push(`C${c.numOrdre} : aucun partant`);
       coursesSerialisees.push({ numOrdre:c.numOrdre, libelle:c.libelle||`Course ${c.numOrdre}`, heureDepart:c.heureDepart||null, numReunion:reunion.numOfficiel, pmuDate, statut:'ouverte', partants, choixJ1:[], choixJ2:[], choixFinalJ1:[], choixFinalJ2:[], arrivee:[], rapports:{}, pointsJ1:0, pointsJ2:0, mancheGagnant:null });
     } catch(e) {
