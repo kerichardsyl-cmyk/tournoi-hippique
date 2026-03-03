@@ -1,0 +1,8 @@
+{
+  "name": "tournoi-hippique",
+  "version": "1.0.0",
+  "description": "Tournoi de pronostics hippiques en temps réel",
+  "dependencies": {
+    "node-fetch": "^2.6.9"
+  }
+}
