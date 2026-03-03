@@ -4,13 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🏇 Tournoi Hippique</title>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js">
-// ── AUTO-RESTAURATION AU CHARGEMENT ───────────────
-window.addEventListener('load', async () => {
-  const restored = await restaurerSession();
-  if (!restored) showPage('accueil');
-});
-</script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
   <style>
@@ -88,7 +82,8 @@ window.addEventListener('load', async () => {
   <div id="header-status">Chargement…</div>
 </header>
 
-<div id="page-accueil" class="page active">
+<div id="page-chargement" style="display:flex;align-items:center;justify-content:center;height:60vh;"><span class="spinner"></span> Chargement…</div>
+<div id="page-accueil" class="page">
   <div class="card" style="max-width:480px;margin:40px auto;">
     <h2>⚡ Rejoindre ou créer un match</h2>
     <label>Votre nom</label>
@@ -571,6 +566,12 @@ function rendreFin(data) {
     <div style="font-size:3rem;margin-bottom:12px;">${v==='egal'?'🤝':'🏆'}</div>
     <h3 style="font-size:1.5rem;color:var(--or-clair);">${v==='egal'?'Match nul !':(v==='j1'?j1:j2)+' remporte le match !'}</h3>${t}`;
 }
+
+// ── AUTO-RESTAURATION AU CHARGEMENT ───────────────
+window.addEventListener('load', async () => {
+  const restored = await restaurerSession();
+  if (!restored) showPage('accueil');
+});
 </script>
 </body>
 </html>
