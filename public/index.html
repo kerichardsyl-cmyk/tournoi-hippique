@@ -674,9 +674,9 @@ async function toggleVisibiliteUser(uid, visible) {
 }
 
 async function supprimerUser(uid, prenom) {
-  if(!confirm('Supprimer '+prenom+' de l'annuaire ?')) return;
+  if(!confirm('Supprimer '+prenom+' de l\'annuaire ?')) return;
   await db.ref('utilisateurs/'+uid).remove();
-  toast('🗑 '+prenom+' supprimé de l'annuaire');
+  toast('🗑 '+prenom+' supprimé de l\'annuaire');
 }
 
 function retourAccueil() {
@@ -1059,4 +1059,3 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
-
