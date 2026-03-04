@@ -1155,7 +1155,7 @@ async function bloquerEtValider(idx) {
   if(c.statut==='bloquee'||c.statut==='terminee') return;
   const mr=getMainPourCourse(idx), sr=mr==='j1'?'j2':'j1';
   const cm=c['choix'+mr.toUpperCase()]||[], cs=c['choix'+sr.toUpperCase()]||[];
-  const cfs=cs.filter(n=>!cm.includes(n)).slice(0,4);
+  const cfs=cs.filter(n=>!cm.includes(n)).slice(0,2); // toujours 2 max, même si main n'a pas choisi
   await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({
     statut:'bloquee',
     [`choixFinal${mr.toUpperCase()}`]:cm.slice(0,2),
@@ -1448,5 +1448,8 @@ function rendreFin(data) {
     <h3 style="font-size:1.5rem;color:var(--or-clair);">${v==='egal'?'Match nul !':(v==='j1'?j1:j2)+' remporte le match !'}</h3>${t}`;
 }
 </script>
+</body>
+</html>
+
 </body>
 </html>
