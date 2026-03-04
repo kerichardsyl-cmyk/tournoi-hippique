@@ -101,10 +101,17 @@
   <h1>🏇 Tournoi Hippique</h1>
   <div id="header-right">
     <span id="header-user"></span>
-    <button type="button" class="btn btn-sm btn-gris" id="btn-admin" style="display:none;" onclick="showPage('admin');chargerAdmin()">⚙️ Admin</button>
+    <button type="button" class="btn btn-sm btn-gris" id="btn-admin" style="display:none;" onclick="navAdmin()">⚙️ Admin</button>
     <button type="button" class="btn btn-sm btn-gris" id="btn-deconnexion" style="display:none;" onclick="deconnexion()">Déconnexion</button>
   </div>
 </header>
+<nav id="main-nav" style="display:none;background:rgba(0,0,0,.25);border-bottom:1px solid rgba(201,169,74,.15);padding:0 24px;">
+  <div style="max-width:960px;margin:0 auto;display:flex;gap:4px;">
+    <button type="button" class="nav-btn" id="nav-accueil" onclick="navAccueil()">🏠 Accueil</button>
+    <button type="button" class="nav-btn" id="nav-matchs" onclick="navMatchs()">🎮 Mes matchs</button>
+    <button type="button" class="nav-btn" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
+  </div>
+</nav>
 
 <!-- PAGE AUTH -->
 <div id="page-auth" class="page active">
@@ -140,36 +147,49 @@
       <div class="card">
         <h2>🎮 Mes matchs en cours</h2>
         <div id="liste-matchs-cours"><p class="text-sm">Chargement…</p></div>
+        <button type="button" class="btn btn-or" style="width:100%;margin-top:12px;" onclick="creerMatch()">🏆 Créer un nouveau match</button>
       </div>
       <div class="card">
         <h2>📬 Invitations reçues</h2>
         <div id="liste-invitations"><p class="text-sm">Aucune invitation.</p></div>
       </div>
     </div>
-    <div style="flex:0 0 300px;">
-      <div class="card">
-        <h2>⚡ Nouveau match</h2>
-        <button class="btn btn-or" style="width:100%;" onclick="creerMatch()">🏆 Créer un match</button>
-        <hr class="separator" />
-        <p class="text-sm" style="margin-bottom:8px;">Inviter par email :</p>
-        <input type="email" id="invite-email" placeholder="adversaire@email.com" />
-        <button type="button" class="btn btn-vert" style="width:100%;" onclick="envoyerInvitation()">📧 Envoyer une invitation</button>
-      </div>
-      <div class="card">
-        <h2>👥 Annuaire des joueurs</h2>
-        <input type="text" id="recherche-joueur" placeholder="🔍 Rechercher un joueur…" oninput="filtrerJoueurs()" style="margin-bottom:10px;" />
-        <div id="liste-annuaire"><p class="text-sm">Chargement…</p></div>
-      </div>
-    </div>
+  </div>
+</div>
+
+<!-- PAGE ANNUAIRE -->
+<div id="page-annuaire" class="page">
+  <div class="card" style="max-width:700px;margin:0 auto;">
+    <h2>👥 Annuaire des joueurs</h2>
+    <input type="text" id="recherche-joueur" placeholder="🔍 Rechercher un joueur…" oninput="filtrerJoueurs()" style="margin-bottom:10px;" />
+    <div id="liste-annuaire"><p class="text-sm">Chargement…</p></div>
   </div>
 </div>
 
 <!-- PAGE LOBBY -->
 <div id="page-lobby" class="page">
+  <div class="page-header">
+    <button type="button" class="btn-back" onclick="navAccueil()">← Accueil</button>
+    <h2>🎯 Salle d'attente</h2>
+  </div>
   <div class="card">
-    <h2>🎯 Salle d'attente — Code : <span id="lobby-code" class="text-or"></span></h2>
+    <h2>Code : <span id="lobby-code" class="text-or"></span></h2>
     <p class="text-sm" style="margin-bottom:14px;">Partagez ce code ou invitez par email.</p>
     <div id="lobby-joueurs"></div>
+    <div id="bloc-invitation-lobby" style="margin-top:14px;">
+      <hr class="separator" />
+      <p class="text-sm" style="margin-bottom:8px;">Inviter un adversaire :</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <input type="email" id="lobby-invite-email" placeholder="Email de l'adversaire" />
+          <button type="button" class="btn btn-vert" style="width:100%;" onclick="envoyerInvitationLobby()">📧 Inviter par email</button>
+        </div>
+        <div style="flex:1;min-width:200px;">
+          <input type="text" id="lobby-search-joueur" placeholder="🔍 Chercher dans l'annuaire" oninput="filtrerJoueursLobby()" />
+          <div id="lobby-annuaire-results"></div>
+        </div>
+      </div>
+    </div>
   </div>
   <div id="bloc-arbitre" class="card" style="display:none;">
     <h2>⚙️ Configuration du match (Arbitre)</h2>
@@ -187,6 +207,10 @@
 
 <!-- PAGE MATCH -->
 <div id="page-match" class="page">
+  <div class="page-header">
+    <button type="button" class="btn-back" onclick="navAccueil()">← Accueil</button>
+    <h2 id="match-titre">Match en cours</h2>
+  </div>
   <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
     <div style="flex:0 0 260px;">
       <div class="card"><h2>📊 Scores</h2><div id="scores-display"></div></div>
@@ -251,6 +275,9 @@
 
 <!-- PAGE FIN -->
 <div id="page-fin" class="page">
+  <div class="page-header">
+    <button type="button" class="btn-back" onclick="navAccueil()">← Accueil</button>
+  </div>
   <div class="card" style="max-width:560px;margin:40px auto;text-align:center;">
     <h2>🏆 Match terminé !</h2>
     <div id="fin-contenu" class="mt16"></div>
@@ -298,6 +325,75 @@ function setDateRapide(j) {
   const d=new Date(); d.setDate(d.getDate()+j);
   document.getElementById('input-date').value=`${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`;
   chargerReunions();
+}
+
+
+// ── NAVIGATION ─────────────────────────────────────
+function setNavActive(id) {
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const el = document.getElementById('nav-'+id);
+  if(el) el.classList.add('active');
+}
+
+function navAccueil() {
+  showPage('accueil'); setNavActive('accueil');
+  chargerTableauBord();
+}
+
+function navMatchs() {
+  showPage('accueil'); setNavActive('matchs');
+  chargerTableauBord();
+}
+
+function navAnnuaire() {
+  showPage('annuaire'); setNavActive('annuaire');
+  chargerAnnuaire();
+}
+
+function navAdmin() {
+  showPage('admin'); setNavActive('');
+  chargerAdmin();
+}
+
+function afficherNav(visible) {
+  document.getElementById('main-nav').style.display = visible ? 'block' : 'none';
+}
+
+function filtrerJoueursLobby() {
+  const q = document.getElementById('lobby-search-joueur').value.trim().toLowerCase();
+  const container = document.getElementById('lobby-annuaire-results');
+  if(!q) { container.innerHTML=''; return; }
+  const filtre = tousLesJoueurs.filter(j=>j.prenom?.toLowerCase().includes(q)).slice(0,5);
+  if(!filtre.length) { container.innerHTML='<p class="text-sm" style="padding:4px 0;">Aucun joueur trouvé.</p>'; return; }
+  container.innerHTML = filtre.map(j=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(201,169,74,.1);">
+      <span style="font-size:.88rem;">${j.prenom}</span>
+      <button type="button" class="btn btn-vert btn-sm" onclick="inviterDepuisLobby('${j.uid}','${j.prenom}','${j.email||''}')">Inviter</button>
+    </div>`).join('');
+}
+
+async function envoyerInvitationLobby() {
+  const emailInvite = document.getElementById('lobby-invite-email').value.trim().toLowerCase();
+  if(!emailInvite) { toast('⚠️ Entrez un email',true); return; }
+  if(emailInvite === utilisateur.email) { toast('⚠️ Vous ne pouvez pas vous inviter vous-même',true); return; }
+  const monPrenom = utilisateur.displayName || utilisateur.email;
+  await db.ref('invitations').push({
+    matchId:etat.matchId, emailInvite, nomInviteur:monPrenom,
+    uidInviteur:utilisateur.uid, statut:'en_attente', createdAt:Date.now()
+  });
+  document.getElementById('lobby-invite-email').value='';
+  toast('📧 Invitation envoyée !');
+}
+
+async function inviterDepuisLobby(uid, prenom, email) {
+  const monPrenom = utilisateur.displayName || utilisateur.email;
+  await db.ref('invitations').push({
+    matchId:etat.matchId, uidInvite:uid, emailInvite:email, nomInviteur:monPrenom,
+    uidInviteur:utilisateur.uid, statut:'en_attente', createdAt:Date.now()
+  });
+  document.getElementById('lobby-search-joueur').value='';
+  document.getElementById('lobby-annuaire-results').innerHTML='';
+  toast('📧 Invitation envoyée à '+prenom+' !');
 }
 
 // ── AUTH ───────────────────────────────────────────
@@ -355,7 +451,7 @@ auth.onAuthStateChanged(async user => {
     setHeaderStatus('👤 ' + prenom);
     document.getElementById('btn-deconnexion').style.display='block';
     if(user.uid===ADMIN_UID) document.getElementById('btn-admin').style.display='block';
-    showPage('accueil');
+    showPage('accueil'); setNavActive('accueil'); afficherNav(true);
     chargerTableauBord();
     // Mettre statut en ligne
     db.ref('utilisateurs/'+user.uid+'/statut').set('disponible');
@@ -374,7 +470,7 @@ auth.onAuthStateChanged(async user => {
       el.innerHTML = '<div style="max-width:420px;margin:80px auto;text-align:center;"><div class="card"><div style="font-size:3rem;margin-bottom:16px;">🔧</div><h2 style="color:var(--or-clair);margin-bottom:12px;">Site en maintenance</h2><p id="msg-offline" style="color:rgba(253,246,227,.7);"></p></div></div>';
       document.getElementById('msg-offline').textContent = msg;
     }
-    showPage('auth');
+    afficherNav(false); showPage('auth');
   }
 });
 
@@ -401,9 +497,6 @@ function chargerTableauBord() {
         <span class="badge-${m.statut==='en_cours'?'vert':'or'}">${m.statut==='en_cours'?'En cours':m.statut==='pret'?'Prêt':'Attente'}</span>
       </div>`).join('');
   });
-
-  // Annuaire joueurs
-  chargerAnnuaire();
 
   // Invitations reçues
   // Invitations reçues (par UID ou email)
@@ -681,7 +774,7 @@ async function supprimerUser(uid, prenom) {
 
 function retourAccueil() {
   etat = { matchId:null, joueurId:null, matchData:null, timerInterval:null, timersInitialises:false, courseAffichee:null };
-  showPage('accueil'); chargerTableauBord();
+  navAccueil();
 }
 
 // ── PMU RÉUNIONS ────────────────────────────────────
@@ -764,6 +857,8 @@ function rendrelobby(data) {
   document.getElementById('lobby-joueurs').innerHTML=`
     <div class="score-ligne ${j2?'gagnant':''}"><span>🟢 ${j1}</span><span class="badge-vert">Connecté</span></div>
     <div class="score-ligne"><span>⏳ ${j2||'En attente d\'un adversaire…'}</span>${j2?'<span class="badge-vert">Connecté</span>':''}</div>`;
+  // Cacher bloc invitation si j2 déjà là ou si on est j2
+  if(data.j2) { const bi=document.getElementById('bloc-invitation-lobby'); if(bi) bi.style.display='none'; }
   if(data.j2&&data.statut==='pret'&&etat.joueurId==='j1'&&!document.getElementById('btn-lancer')) {
     const btn=document.createElement('button');
     btn.id='btn-lancer'; btn.className='btn btn-or mt16';
