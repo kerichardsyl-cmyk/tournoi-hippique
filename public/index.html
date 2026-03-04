@@ -1155,19 +1155,33 @@ function rendreZoneJeu(data,idx) {
   }
 }
 
+function avisIcon(a) {
+  if(a==='POSITIF') return '<span class="avis-pos" title="Avis positif">▲</span>';
+  if(a==='NEGATIF') return '<span class="avis-neg" title="Avis négatif">▼</span>';
+  return '<span style="color:rgba(253,246,227,.3);">—</span>';
+}
+function fGains(g) { if(!g) return '—'; return (g/100000).toFixed(0)+'k€'; }
 function rendreSelecteurChevaux(c,idx,estMain,monRole) {
   const partants=c.partants||[],maxC=estMain?2:4,mc=c['choix'+monRole.toUpperCase()]||[],bl=estMain&&c.mainBloquee;
   if(!partants.length) return '<p class="text-sm" style="text-align:center;padding:12px;">Aucun partant disponible.</p>';
-  let html=`<p class="text-sm" style="margin-bottom:8px;">Sélectionnez ${maxC} cheval${maxC>1?'x':''} ${!estMain?'(dans l\'ordre de préférence)':''} :</p><div class="chevaux-grid">`;
+  let html=`<p class="text-sm" style="margin-bottom:6px;">Sélectionnez <strong>${maxC} cheval${maxC>1?'x':''}</strong>${!estMain?' dans l\'ordre de préférence':''} :</p>
+  <div style="overflow-x:auto;"><table class="chevaux-table">
+  <thead><tr><th>N°</th><th>Cheval</th><th>Driver/Jockey</th><th>Entr.</th><th>Âge</th><th>Gains</th><th>Musique</th></tr></thead><tbody>`;
   partants.forEach(p=>{
     const i2=mc.indexOf(p.numero),sel=i2!==-1,ver=bl||(!sel&&mc.length>=maxC);
-    html+=`<button class="cheval-btn ${sel?'selectionne':''} ${ver&&!sel?'verrouille':''}"
-      onclick="toggleCheval(${idx},${p.numero},${maxC},'${monRole}')" ${ver&&!sel?'disabled':''}>
-      <span class="num-cheval">${p.numero}</span>
-      <span style="font-size:.75rem;">${p.nom}</span>
-      <span class="ordre-badge">${sel?i2+1:''}</span></button>`;
+    const ordreEl=sel?`<span class="ordre-num">${i2+1}</span>`:'';
+    html+=`<tr class="${sel?'selectionne':''} ${ver&&!sel?'verrouille':''}"
+      onclick="${ver&&!sel?'':'toggleCheval('+idx+','+p.numero+','+maxC+',\"'+monRole+'\"'}">
+      <td><span class="num-cercle">${p.numero}</span>${ordreEl}</td>
+      <td><strong style="font-size:.88rem;">${p.nom}</strong><br><span style="font-size:.72rem;color:rgba(253,246,227,.5);">${p.robe||''}</span></td>
+      <td style="font-size:.8rem;">${p.driver||'—'}<br><span style="font-size:.72rem;color:var(--or);">${avisIcon(p.avis)}</span></td>
+      <td style="font-size:.78rem;color:rgba(253,246,227,.7);">${p.entraineur||'—'}</td>
+      <td style="text-align:center;font-size:.8rem;">${p.age||'?'}<br><span style="font-size:.7rem;color:rgba(253,246,227,.5);">${p.sexe?p.sexe.charAt(0):''}</span></td>
+      <td style="text-align:right;font-size:.8rem;color:var(--or-clair);">${fGains(p.gainsCarriere)}</td>
+      <td class="musique-cell" title="${p.musique||''}"><span style="font-size:.72rem;">${(p.musique||'').substring(0,10)}</span></td>
+    </tr>`;
   });
-  html+='</div>';
+  html+='</tbody></table></div>';
   if(mc.length>0) html+=`<p class="text-sm mt8" style="text-align:center;">✅ ${mc.length}/${maxC} sélectionné${mc.length>1?'s':''}</p>`;
   return html;
 }
