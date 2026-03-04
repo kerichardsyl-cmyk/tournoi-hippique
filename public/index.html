@@ -1298,6 +1298,18 @@ function rendreProgramme(data) {
 
 function afficherCourse(idx) { etat.courseAffichee=idx; if(etat.matchData) rendreZoneJeu(etat.matchData,idx); }
 
+// Délégation d'événement pour les clics sur chevaux (une seule fois)
+let _zoneJeuListenerInit = false;
+function initZoneJeuListener() {
+  if(_zoneJeuListenerInit) return;
+  _zoneJeuListenerInit = true;
+  document.getElementById('zone-jeu').addEventListener('click', e => {
+    const tr = e.target.closest('tr[data-num]');
+    if(!tr || tr.dataset.disabled) return;
+    toggleCheval(parseInt(tr.dataset.idx), parseInt(tr.dataset.num), parseInt(tr.dataset.maxc), tr.dataset.role);
+  });
+}
+
 function rendreZoneJeu(data,idx) {
   const c=data.courses[idx]; if(!c) return;
   const mr=getMainPourCourse(idx),estMain=etat.joueurId===mr;
@@ -1315,6 +1327,7 @@ function rendreZoneJeu(data,idx) {
   else if(c.statut==='ouverte') html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId);
   html+='</div>';
   document.getElementById('zone-jeu').innerHTML=html;
+  initZoneJeuListener();
   if(etat.timerInterval) clearInterval(etat.timerInterval);
   if(c.heureDepart&&c.statut==='ouverte') {
     etat.timerInterval=setInterval(()=>{
@@ -1354,17 +1367,6 @@ function rendreSelecteurChevaux(c,idx,estMain,monRole) {
   });
   html+='</tbody></table></div>';
   if(mc.length>0) html+='<p class="text-sm mt8" style="text-align:center;">✅ '+mc.length+'/'+maxC+' sélectionné'+(mc.length>1?'s':'')+'</p>';
-  // Attacher les événements après rendu
-  setTimeout(()=>{
-    const tbl=document.getElementById('tbl-chevaux-'+idx);
-    if(!tbl) return;
-    tbl.querySelectorAll('tr[data-num]').forEach(tr=>{
-      if(tr.dataset.disabled) return;
-      tr.addEventListener('click',()=>{
-        toggleCheval(parseInt(tr.dataset.idx),parseInt(tr.dataset.num),parseInt(tr.dataset.maxc),tr.dataset.role);
-      });
-    });
-  },50);
   return html;
 }
 
@@ -1456,3 +1458,4 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
