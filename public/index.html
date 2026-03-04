@@ -675,7 +675,7 @@ async function chargerAccueil() {
   derniers.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const discIcon = d => d==='TROT'?'🔵 ':d==='GALOP'?'🟡 ':'';
   document.getElementById('home-derniers-matchs').innerHTML = derniers.length
-    ? derniers.slice(0,5).map(m=>`
+    ? derniers.slice(0,10).map(m=>`
       <div style="padding:8px 10px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.05);font-size:.85rem;">
         <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'?'}</strong>
         <span style="float:right;color:var(--or-clair);">🏆 ${m.vainqueur==='j1'?m.j1?.nom:m.vainqueur==='j2'?m.j2?.nom:'Nul'}</span>
@@ -760,16 +760,7 @@ async function chargerReunionsAvenir() {
     const labelJ = d===0?"Aujourd'hui":d===1?'Demain':`${dd}/${mm}`;
     try {
       const data = await pmuGet('programme/'+pmuDate);
-      const reunions = (data.programme?.reunions||[]).filter(r => {
-        // Garder seulement les réunions en France
-        const pays = r.hippodrome?.pays?.code || r.hippodrome?.pays || r.pays || '';
-        const lib = (r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'').toUpperCase();
-        // L'API PMU marque les réunions françaises avec pays 'FRA' ou pas de pays
-        if(pays && pays !== 'FRA' && pays !== 'FR') return false;
-        // Exclure les hippodromes étrangers connus par leur libellé
-        const etranger = ['BELGIQUE','ALLEMAGNE','ANGLETERRE','ITALIE','ESPAGNE','SUEDE','SUISSE','HONG KONG','DUBAI','AUSTRALIE','USA','JAPAN','IRLANDE'];
-        return !etranger.some(e => lib.includes(e));
-      });
+      const reunions = (data.programme?.reunions||[]).filter(estReunionFrance);
       if(reunions.length) {
         html += `<div style="margin-bottom:10px;">
           <div style="font-size:.78rem;font-weight:bold;color:var(--or);padding:3px 8px;background:rgba(255,204,0,.1);border-radius:4px;margin-bottom:5px;">${labelJ}</div>`;
@@ -1161,6 +1152,11 @@ function detecterDiscipline(reunion) {
   return 'MIXTE';
 }
 
+function estReunionFrance(r) {
+  const lib = (r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'').toUpperCase();
+  const etrangers = ['BELGIQUE','BRUXELLES','ALLEMAGNE','COLOGNE','HAMBOURG','ANGLETERRE','ASCOT','NEWMARKET','CHELTENHAM','EPSOM','GOODWOOD','HAYDOCK','SANDOWN','KEMPTON','WINDSOR','LINGFIELD','WOLVERHAMPTON','DUNDALK','CURRAGH','LEOPARDSTOWN','ITALIE','ROME','MILAN','SAN SIRO','ESPAGNE','MADRID','SUEDE','STOCKHOLM','SUISSE','BERNE','HONG KONG','DUBAI','AUSTRALIE','USA','JAPON','TOKYO','NAKAYAMA','IRLANDE','CORK'];
+  return !etrangers.some(e => lib.includes(e));
+}
 // ── PMU RÉUNIONS ────────────────────────────────────
 async function chargerReunions() {
   const dateStr=document.getElementById('input-date').value.trim();
@@ -1173,13 +1169,7 @@ async function chargerReunions() {
     const reunions=data.programme?.reunions||[];
     if(!reunions.length) { container.innerHTML='<p class="text-sm">Aucune réunion pour cette date.</p>'; return; }
     container.innerHTML='<label style="margin-top:12px;">Choisir une réunion :</label>';
-    const reunionsFrance = reunions.filter(r => {
-      const pays = r.hippodrome?.pays?.code || r.hippodrome?.pays || r.pays || '';
-      if(pays && pays !== 'FRA' && pays !== 'FR') return false;
-      const lib = (r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'').toUpperCase();
-      const etranger = ['BELGIQUE','ALLEMAGNE','ANGLETERRE','ITALIE','ESPAGNE','SUEDE','SUISSE','HONG KONG','DUBAI','AUSTRALIE','USA','JAPAN','IRLANDE'];
-      return !etranger.some(e => lib.includes(e));
-    });
+    const reunionsFrance = reunions.filter(estReunionFrance);
     if(!reunionsFrance.length) { container.innerHTML='<p class="text-sm">Aucune réunion en France pour cette date.</p>'; return; }
     reunionsFrance.forEach(r => {
       const disc = detecterDiscipline(r);
