@@ -362,6 +362,7 @@ function showPage(id, pushState=true) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   if(pushState) history.pushState({page:id}, '', '#'+id);
+  if(id!=='auth') localStorage.setItem('lastPage', id);
 }
 function toast(msg,err=false,dur=3500) { const el=document.getElementById('toast'); el.textContent=msg; el.className=err?'erreur':''; el.style.display='block'; setTimeout(()=>el.style.display='none',dur); }
 function setHeaderStatus(t) { document.getElementById('header-user').textContent=t; }
@@ -530,9 +531,21 @@ auth.onAuthStateChanged(async user => {
     setHeaderStatus('👤 ' + prenom);
     document.getElementById('btn-deconnexion').style.display='block';
     if(user.uid===ADMIN_UID) document.getElementById('btn-admin').style.display='block';
-    showPage('accueil'); setNavActive('accueil'); afficherNav(true);
-    chargerTableauBord();
+    afficherNav(true);
     chargerAnnuaire(); // charger en arrière-plan pour le lobby
+    const lastPage = localStorage.getItem('lastPage') || 'accueil';
+    if(lastPage === 'lobby' || lastPage === 'match' || lastPage === 'fin') {
+      // Pages de match : revenir à l'accueil (le match sera dans la liste)
+      showPage('accueil'); setNavActive('accueil'); chargerTableauBord();
+    } else if(lastPage === 'annuaire') {
+      showPage('annuaire'); setNavActive('annuaire'); chargerAnnuaire();
+    } else if(lastPage === 'admin' && user.uid===ADMIN_UID) {
+      showPage('admin'); setNavActive(''); chargerAdmin();
+    } else if(lastPage === 'reglement') {
+      showPage('reglement'); setNavActive('reglement');
+    } else {
+      showPage('accueil'); setNavActive('accueil'); chargerTableauBord();
+    }
     // Mettre statut en ligne
     db.ref('utilisateurs/'+user.uid+'/statut').set('disponible');
     window.addEventListener('beforeunload', ()=>db.ref('utilisateurs/'+user.uid+'/statut').set('absent'));
@@ -1210,26 +1223,39 @@ function fGains(g) { if(!g) return '—'; return (g/100000).toFixed(0)+'k€'; }
 function rendreSelecteurChevaux(c,idx,estMain,monRole) {
   const partants=c.partants||[],maxC=estMain?2:4,mc=c['choix'+monRole.toUpperCase()]||[],bl=estMain&&c.mainBloquee;
   if(!partants.length) return '<p class="text-sm" style="text-align:center;padding:12px;">Aucun partant disponible.</p>';
-  let html=`<p class="text-sm" style="margin-bottom:6px;">Sélectionnez <strong>${maxC} cheval${maxC>1?'x':''}</strong>${!estMain?' dans l\'ordre de préférence':''} :</p>
-  <div style="overflow-x:auto;"><table class="chevaux-table">
-  <thead><tr><th>N°</th><th>Cheval</th><th>Driver/Jockey</th><th>Entr.</th><th>Âge</th><th>Musique</th></tr></thead><tbody>`;
+  let html='<p class="text-sm" style="margin-bottom:6px;">Sélectionnez <strong>'+maxC+' cheval'+(maxC>1?'x':'')+'</strong>'+(estMain?'':' dans l\'ordre de préférence')+' :</p>';
+  html+='<div style="overflow-x:auto;"><table class="chevaux-table" id="tbl-chevaux-'+idx+'">';
+  html+='<thead><tr><th>N°</th><th>Cheval</th><th>Driver/Jockey</th><th>Entr.</th><th>Âge</th><th>Musique</th></tr></thead><tbody>';
   partants.forEach(p=>{
     const i2=mc.indexOf(p.numero),sel=i2!==-1,ver=bl||(!sel&&mc.length>=maxC);
-    const ordreEl=sel?`<span class="ordre-num">${i2+1}</span>`:'';
-    html+=`<tr class="${sel?'selectionne':''} ${ver&&!sel?'verrouille':''}"
-      onclick="${ver&&!sel?'':'toggleCheval('+idx+','+p.numero+','+maxC+',\"'+monRole+'\")'}">
-      <td><span class="num-cercle">${p.numero}</span>${ordreEl}</td>
-      <td><strong style="font-size:.88rem;">${p.nom}</strong><br><span style="font-size:.72rem;color:rgba(253,246,227,.5);">${p.robe||''}</span></td>
-      <td style="font-size:.8rem;">${p.driver||'—'}<br><span style="font-size:.72rem;color:var(--or);">${avisIcon(p.avis)}</span></td>
-      <td style="font-size:.78rem;color:rgba(253,246,227,.7);">${p.entraineur||'—'}</td>
-      <td style="text-align:center;font-size:.8rem;">${p.age||'?'}<br><span style="font-size:.7rem;color:rgba(253,246,227,.5);">${p.sexe?p.sexe.charAt(0):''}</span></td>
-      <td class="musique-cell" title="${p.musique||''}"><span style="font-size:.72rem;">${(p.musique||'').substring(0,10)}</span></td>
-    </tr>`;
+    const ordreEl=sel?'<span class="ordre-num">'+(i2+1)+'</span>':'';
+    const cls=(sel?'selectionne ':'')+((ver&&!sel)?'verrouille':'');
+    const disabled=ver&&!sel?'data-disabled="1"':'';
+    html+='<tr class="'+cls+'" data-idx="'+idx+'" data-num="'+p.numero+'" data-maxc="'+maxC+'" data-role="'+monRole+'" '+disabled+'>';
+    html+='<td><span class="num-cercle">'+p.numero+'</span>'+ordreEl+'</td>';
+    html+='<td><strong style="font-size:.88rem;">'+p.nom+'</strong><br><span style="font-size:.72rem;color:rgba(253,246,227,.5);">'+(p.robe||'')+'</span></td>';
+    html+='<td style="font-size:.8rem;">'+(p.driver||'—')+'<br><span style="font-size:.72rem;color:var(--or);">'+avisIcon(p.avis)+'</span></td>';
+    html+='<td style="font-size:.78rem;color:rgba(253,246,227,.7);">'+(p.entraineur||'—')+'</td>';
+    html+='<td style="text-align:center;font-size:.8rem;">'+(p.age||'?')+'<br><span style="font-size:.7rem;color:rgba(253,246,227,.5);">'+(p.sexe?p.sexe.charAt(0):'')+'</span></td>';
+    html+='<td class="musique-cell" title="'+(p.musique||'')+'"><span style="font-size:.72rem;">'+(p.musique||'').substring(0,10)+'</span></td>';
+    html+='</tr>';
   });
   html+='</tbody></table></div>';
-  if(mc.length>0) html+=`<p class="text-sm mt8" style="text-align:center;">✅ ${mc.length}/${maxC} sélectionné${mc.length>1?'s':''}</p>`;
+  if(mc.length>0) html+='<p class="text-sm mt8" style="text-align:center;">✅ '+mc.length+'/'+maxC+' sélectionné'+(mc.length>1?'s':'')+'</p>';
+  // Attacher les événements après rendu
+  setTimeout(()=>{
+    const tbl=document.getElementById('tbl-chevaux-'+idx);
+    if(!tbl) return;
+    tbl.querySelectorAll('tr[data-num]').forEach(tr=>{
+      if(tr.dataset.disabled) return;
+      tr.addEventListener('click',()=>{
+        toggleCheval(parseInt(tr.dataset.idx),parseInt(tr.dataset.num),parseInt(tr.dataset.maxc),tr.dataset.role);
+      });
+    });
+  },50);
   return html;
 }
+
 
 async function toggleCheval(courseIdx,numero,maxC,monRole) {
   const c=etat.matchData.courses[courseIdx];
@@ -1318,4 +1344,3 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
-
