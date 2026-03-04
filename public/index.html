@@ -27,13 +27,16 @@
     .btn-vert:hover { filter:brightness(1.15); }
     .btn-sm { padding:6px 14px; font-size:.82rem; }
     .btn-gris { background:rgba(255,255,255,.12); color:var(--creme); border:1px solid rgba(255,255,255,.2); }
+    .btn-nav { background:linear-gradient(135deg,#ffe566,#ffcc00,#e6a800); color:#111; font-weight:bold; }
+    .btn-nav:hover { filter:brightness(1.1); transform:translateY(-1px); }
+    .btn-nav.active { background:linear-gradient(135deg,#fff,#ffe566); box-shadow:0 0 8px rgba(255,204,0,.5); }
     .btn-gris:hover { background:rgba(255,255,255,.2); }
     .btn:disabled { opacity:.4; cursor:not-allowed; transform:none; filter:none; }
     input[type=text], input[type=email], input[type=password] { background:rgba(255,255,255,.1); border:1px solid rgba(201,169,74,.4); border-radius:6px; color:var(--creme); padding:9px 12px; font-size:.95rem; width:100%; margin-bottom:10px; outline:none; }
     input:focus { border-color:var(--or); }
     input::placeholder { color:rgba(253,246,227,.35); }
     label { font-size:.85rem; color:var(--or); display:block; margin-bottom:4px; }
-    .chevaux-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:.82rem; } .chevaux-table tr { border-bottom:1px solid rgba(201,169,74,.12); cursor:pointer; transition:background .12s; } .chevaux-table tr:hover { background:rgba(255,255,255,.06); } .chevaux-table tr.selectionne { background:rgba(26,107,60,.35); } .chevaux-table tr.verrouille { opacity:.4; cursor:not-allowed; } .chevaux-table td { padding:7px 8px; vertical-align:middle; } .chevaux-table th { padding:6px 8px; color:var(--or); font-size:.75rem; font-weight:normal; text-align:left; border-bottom:1px solid rgba(201,169,74,.3); } .num-cercle { background:var(--or); color:var(--brun); border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-weight:bold; font-size:.85rem; flex-shrink:0; } .avis-pos { color:#6fffa0; } .avis-neg { color:#ff8080; } .musique-cell { font-family:monospace; font-size:.75rem; color:rgba(253,246,227,.6); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .ordre-num { display:inline-flex; align-items:center; justify-content:center; background:var(--or); color:var(--brun); border-radius:50%; width:18px; height:18px; font-size:.72rem; font-weight:bold; margin-left:4px; }
+    .chevaux-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:.82rem; } .chevaux-table tr { border-bottom:1px solid rgba(201,169,74,.12); cursor:pointer; transition:background .12s; } .chevaux-table tr:hover { background:rgba(255,255,255,.06); } .chevaux-table tr.selectionne { background:rgba(255,204,0,.15); border-left:3px solid var(--or); } .chevaux-table tr.verrouille { opacity:.4; cursor:not-allowed; } .chevaux-table td { padding:7px 8px; vertical-align:middle; } .chevaux-table th { padding:6px 8px; color:var(--or); font-size:.75rem; font-weight:normal; text-align:left; border-bottom:1px solid rgba(201,169,74,.3); } .num-cercle { background:#cc2200; color:#fff; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-weight:bold; font-size:.85rem; flex-shrink:0; } .avis-pos { color:#6fffa0; } .avis-neg { color:#ff8080; } .musique-cell { font-family:monospace; font-size:.75rem; color:rgba(253,246,227,.6); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .ordre-num { display:inline-flex; align-items:center; justify-content:center; background:#ffcc00; color:#111; border-radius:50%; width:18px; height:18px; font-size:.72rem; font-weight:bold; margin-left:4px; }
     .cheval-btn { padding:10px 8px; border-radius:8px; border:2px solid transparent; background:rgba(255,255,255,.07); color:var(--creme); cursor:pointer; font-size:.85rem; text-align:center; transition:all .15s; position:relative; }
     .cheval-btn:hover { border-color:var(--or); background:rgba(201,169,74,.12); }
     .cheval-btn.selectionne { background:rgba(26,107,60,.5); border-color:var(--or-clair); color:var(--or-clair); font-weight:bold; }
@@ -100,10 +103,11 @@
 <header>
   <h1>🏇 Tournoi Hippique</h1>
   <div id="header-right" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-    <div id="header-nav" style="display:none;display:flex;gap:4px;">
-      <button type="button" class="nav-btn" id="nav-accueil" onclick="navAccueil()">🏠 Accueil</button>
-      <button type="button" class="nav-btn" id="nav-matchs" onclick="navMatchs()">🎮 Mes matchs</button>
-      <button type="button" class="nav-btn" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
+    <div id="header-nav" style="display:none;gap:4px;">
+      <button type="button" class="btn btn-sm btn-nav" id="nav-accueil" onclick="navAccueil()">🏠 Accueil</button>
+      <button type="button" class="btn btn-sm btn-nav" id="nav-matchs" onclick="navMatchs()">🎮 Mes matchs</button>
+      <button type="button" class="btn btn-sm btn-nav" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
+      <button type="button" class="btn btn-sm btn-nav" id="nav-reglement" onclick="navReglement()">📋 Règlement</button>
     </div>
     <span id="header-user" style="font-size:.82rem;color:var(--or);font-style:italic;"></span>
     <button type="button" class="btn btn-sm btn-gris" id="btn-admin" style="display:none;" onclick="navAdmin()">⚙️ Admin</button>
@@ -279,6 +283,40 @@
   </div>
 </div>
 
+
+<!-- PAGE RÈGLEMENT -->
+<div id="page-reglement" class="page">
+  <div class="card" style="max-width:700px;margin:0 auto;">
+    <h2>📋 Règlement du Tournoi Hippique</h2>
+    <div style="line-height:1.7;font-size:.92rem;">
+
+      <h3 style="color:var(--or-clair);margin:16px 0 8px;">🎯 Principe du jeu</h3>
+      <p>Deux joueurs s'affrontent sur une réunion PMU. Pour chaque course, chacun choisit des chevaux et marque des points selon les rapports officiels PMU. Le joueur avec le plus de points à la fin remporte la manche. Celui qui remporte le plus de manches gagne le match.</p>
+
+      <h3 style="color:var(--or-clair);margin:16px 0 8px;">⭐ Le joueur principal (la main)</h3>
+      <p>Pour chaque course, un joueur a <strong>la main</strong> (alternance à chaque course). Il choisit <strong>2 chevaux</strong> et ses choix se ferment <strong>10 minutes avant le départ</strong>.</p>
+
+      <h3 style="color:var(--or-clair);margin:16px 0 8px;">🎯 Le joueur secondaire</h3>
+      <p>Il choisit <strong>4 chevaux dans l'ordre de préférence</strong>, ses choix se ferment <strong>5 minutes avant le départ</strong>. Ses 4 chevaux sont ensuite filtrés : ceux déjà choisis par le joueur principal sont retirés, et il ne garde que les <strong>2 premiers restants</strong>.</p>
+
+      <h3 style="color:var(--or-clair);margin:16px 0 8px;">💰 Calcul des points</h3>
+      <p>Pour chaque cheval sélectionné, les points sont calculés ainsi :</p>
+      <ul style="padding-left:20px;margin-top:6px;">
+        <li style="margin-bottom:4px;"><strong>Gagnant :</strong> rapport officiel PMU × 10 (ex: cote 4.50€ → 45 pts)</li>
+        <li style="margin-bottom:4px;"><strong>Placé :</strong> rapport officiel PMU × 10 (ex: cote 1.90€ → 19 pts)</li>
+        <li>Si le cheval ne rapporte rien, il marque <strong>0 point</strong></li>
+      </ul>
+      <p style="margin-top:8px;">Le score total d'un joueur pour une course est la <strong>somme des points</strong> de ses 2 chevaux.</p>
+
+      <h3 style="color:var(--or-clair);margin:16px 0 8px;">🏆 Victoire</h3>
+      <p>Le joueur qui remporte le plus de <strong>manches</strong> (courses) gagne le match. En cas d'égalité de manches, c'est le total de points sur l'ensemble des courses qui départage. Si toujours égalité : match nul.</p>
+
+      <h3 style="color:var(--or-clair);margin:16px 0 8px;">⚙️ Organisation</h3>
+      <p>Le créateur du match est l'<strong>arbitre</strong> : il choisit la réunion PMU et lance le match une fois l'adversaire connecté. Les résultats sont récupérés automatiquement après chaque course.</p>
+    </div>
+  </div>
+</div>
+
 <!-- PAGE FIN -->
 <div id="page-fin" class="page">
   <div class="page-header">
@@ -351,7 +389,7 @@ window.addEventListener('popstate', e => {
 
 // ── NAVIGATION ─────────────────────────────────────
 function setNavActive(id) {
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.btn-nav').forEach(b=>b.classList.remove('active'));
   const el = document.getElementById('nav-'+id);
   if(el) el.classList.add('active');
 }
@@ -377,8 +415,12 @@ function navAdmin() {
   chargerAdmin();
 }
 
+function navReglement() {
+  showPage('reglement'); setNavActive('reglement');
+}
+
 function afficherNav(visible) {
-  document.getElementById('header-nav').style.display = visible ? 'flex' : 'none';
+  const hn=document.getElementById('header-nav'); hn.style.display=visible?'flex':'none';
 }
 
 function afficherListeLobby(joueurs) {
@@ -1031,19 +1073,20 @@ async function traiterResultats(idx, pmuData) {
   const c=data.courses[idx];
   // Arrivée
   const arrivee=(pmuData.ordreArrivee||[]).flat();
-  // Rapports depuis rapports-definitifs : [{typePari, rapports:[{combinaison:'1', dividende:450}]}]
+  // Rapports depuis rapports-definitifs
   const rapports={};
   const rapsData=pmuData._rapportsDefinitifs||[];
   rapsData.forEach(r=>{
-    if(r.typePari==='SIMPLE_GAGNANT') r.rapports?.forEach(rap=>{
+    if(r.typePari==='SIMPLE_GAGNANT') (r.rapports||[]).forEach(rap=>{
       const n=parseInt(rap.combinaison);
       if(!rapports[n]) rapports[n]={gagnant:0,place:0};
-      rapports[n].gagnant=rap.dividende||0; // en centimes (450 = 4.50€)
+      rapports[n].gagnant=rap.dividendePourUnEuro||rap.dividende||0;
     });
-    if(r.typePari==='SIMPLE_PLACE') r.rapports?.forEach(rap=>{
+    if(r.typePari==='SIMPLE_PLACE') (r.rapports||[]).forEach(rap=>{
       const n=parseInt(rap.combinaison);
       if(!rapports[n]) rapports[n]={gagnant:0,place:0};
-      rapports[n].place=rap.dividende||0;
+      const val=rap.dividendePourUnEuro||rap.dividende||0;
+      if(val > rapports[n].place) rapports[n].place=val;
     });
   });
   // Score = (rapport pour 1€ gagnant + rapport pour 1€ placé) × 10
@@ -1169,18 +1212,17 @@ function rendreSelecteurChevaux(c,idx,estMain,monRole) {
   if(!partants.length) return '<p class="text-sm" style="text-align:center;padding:12px;">Aucun partant disponible.</p>';
   let html=`<p class="text-sm" style="margin-bottom:6px;">Sélectionnez <strong>${maxC} cheval${maxC>1?'x':''}</strong>${!estMain?' dans l\'ordre de préférence':''} :</p>
   <div style="overflow-x:auto;"><table class="chevaux-table">
-  <thead><tr><th>N°</th><th>Cheval</th><th>Driver/Jockey</th><th>Entr.</th><th>Âge</th><th>Gains</th><th>Musique</th></tr></thead><tbody>`;
+  <thead><tr><th>N°</th><th>Cheval</th><th>Driver/Jockey</th><th>Entr.</th><th>Âge</th><th>Musique</th></tr></thead><tbody>`;
   partants.forEach(p=>{
     const i2=mc.indexOf(p.numero),sel=i2!==-1,ver=bl||(!sel&&mc.length>=maxC);
     const ordreEl=sel?`<span class="ordre-num">${i2+1}</span>`:'';
     html+=`<tr class="${sel?'selectionne':''} ${ver&&!sel?'verrouille':''}"
-      onclick="${ver&&!sel?'':'toggleCheval('+idx+','+p.numero+','+maxC+',\"'+monRole+'\"'}">
+      onclick="${ver&&!sel?'':'toggleCheval('+idx+','+p.numero+','+maxC+',\"'+monRole+'\")'}">
       <td><span class="num-cercle">${p.numero}</span>${ordreEl}</td>
       <td><strong style="font-size:.88rem;">${p.nom}</strong><br><span style="font-size:.72rem;color:rgba(253,246,227,.5);">${p.robe||''}</span></td>
       <td style="font-size:.8rem;">${p.driver||'—'}<br><span style="font-size:.72rem;color:var(--or);">${avisIcon(p.avis)}</span></td>
       <td style="font-size:.78rem;color:rgba(253,246,227,.7);">${p.entraineur||'—'}</td>
       <td style="text-align:center;font-size:.8rem;">${p.age||'?'}<br><span style="font-size:.7rem;color:rgba(253,246,227,.5);">${p.sexe?p.sexe.charAt(0):''}</span></td>
-      <td style="text-align:right;font-size:.8rem;color:var(--or-clair);">${fGains(p.gainsCarriere)}</td>
       <td class="musique-cell" title="${p.musique||''}"><span style="font-size:.72rem;">${(p.musique||'').substring(0,10)}</span></td>
     </tr>`;
   });
@@ -1200,21 +1242,32 @@ async function toggleCheval(courseIdx,numero,maxC,monRole) {
 }
 
 function rendreChoixValides(c,monRole) {
-  const choixFinal=c['choixFinal'+monRole.toUpperCase()]||[];
-  const choixEnCours=c['choix'+monRole.toUpperCase()]||[];
-  const choix=choixFinal.length?choixFinal:choixEnCours;
   const pts=c.partants||[];
   const gN=n=>pts.find(p=>p.numero===n)?.nom||`#${n}`;
-  const estMain=getMainPourCourse(etat.matchData?.courses?.indexOf(c)||0)===monRole;
-  let html=`<div style="padding:12px;background:rgba(176,58,46,.1);border-radius:8px;margin-bottom:12px;text-align:center;">
-    🔒 <strong>Pronostics bloqués</strong> — En attente des résultats</div>`;
-  if(choix.length) {
-    html+=`<div><p class="text-sm" style="margin-bottom:8px;">Vos ${estMain?'2':'4'} choix validés :</p>
-      ${choix.map((n,i)=>`<div class="resultat-cheval"><span>${i+1}. N°${n} — ${gN(n)}</span></div>`).join('')}</div>`;
-  } else {
-    html+='<p class="text-sm" style="text-align:center;">Aucun choix enregistré.</p>';
-  }
-  return html;
+  const courseIdx=etat.matchData?.courses?.findIndex(x=>x.numOrdre===c.numOrdre)??0;
+  const mainRole=getMainPourCourse(courseIdx);
+  const secRole=mainRole==='j1'?'j2':'j1';
+  const cfMain=c['choixFinal'+mainRole.toUpperCase()]||c['choix'+mainRole.toUpperCase()]||[];
+  const cfSec=c['choixFinal'+secRole.toUpperCase()]||[];
+  const cfSecAll=c['choix'+secRole.toUpperCase()]||[];
+  const cfSecEcartes=cfSecAll.filter(n=>!cfSec.includes(n));
+  const nomMain=etat.matchData?.[mainRole]?.nom||mainRole.toUpperCase();
+  const nomSec=etat.matchData?.[secRole]?.nom||secRole.toUpperCase();
+  const ligneGarde=n=>`<div style="padding:6px 10px;border-radius:6px;margin-bottom:4px;background:rgba(255,204,0,.15);border-left:3px solid var(--or);font-size:.85rem;">✅ N°${n} ${gN(n)}</div>`;
+  const ligneEcarte=n=>`<div style="padding:5px 10px;border-radius:6px;margin-bottom:4px;background:rgba(255,255,255,.04);font-size:.82rem;opacity:.5;">❌ N°${n} ${gN(n)}</div>`;
+  return `<div style="padding:10px 14px;background:rgba(204,34,0,.15);border:1px solid rgba(255,204,0,.2);border-radius:8px;margin-bottom:12px;text-align:center;">
+    🔒 <strong>Pronostics bloqués</strong> — En attente des résultats</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:140px;">
+      <p style="font-size:.8rem;color:var(--or);margin-bottom:6px;">⭐ ${nomMain} — 2 chevaux</p>
+      ${cfMain.length?cfMain.map(ligneGarde).join(''):'<p class="text-sm">Aucun choix</p>'}
+    </div>
+    <div style="flex:1;min-width:140px;">
+      <p style="font-size:.8rem;color:var(--or);margin-bottom:6px;">🎯 ${nomSec} — gardés</p>
+      ${cfSec.length?cfSec.map(ligneGarde).join(''):'<p class="text-sm">Aucun choix gardé</p>'}
+      ${cfSecEcartes.length?`<hr style="border-color:rgba(255,255,255,.1);margin:6px 0;"><p style="font-size:.75rem;color:rgba(255,255,255,.4);margin-bottom:4px;">Écartés :</p>${cfSecEcartes.map(ligneEcarte).join('')}`:''}
+    </div>
+  </div>`;
 }
 
 function rendreResultatsCourse(c,data) {
@@ -1245,7 +1298,7 @@ function rendreResultatsCourse(c,data) {
     </div>
     <p style="text-align:center;margin-top:10px;font-weight:bold;color:var(--or-clair);">
       ${c.mancheGagnant==='egal'?'🤝 Égalité':'🏆 Manche : '+jN(c.mancheGagnant)}</p>
-    <p class="text-sm" style="text-align:center;margin-top:6px;">Arrivée : ${arr.slice(0,3).map((n,i)=>`${i+1}er N°${n}`).join(' | ')}</p>`;
+    <p class="text-sm" style="text-align:center;margin-top:6px;">🏁 ${arr.slice(0,3).map((n,i)=>`${i+1}. N°${n} ${gN(n)}`).join(' · ')}</p>`;
 }
 
 function rendreFin(data) {
