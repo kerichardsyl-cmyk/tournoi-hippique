@@ -99,19 +99,18 @@
 <body>
 <header>
   <h1>🏇 Tournoi Hippique</h1>
-  <div id="header-right">
-    <span id="header-user"></span>
+  <div id="header-right" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+    <div id="header-nav" style="display:none;display:flex;gap:4px;">
+      <button type="button" class="nav-btn" id="nav-accueil" onclick="navAccueil()">🏠 Accueil</button>
+      <button type="button" class="nav-btn" id="nav-matchs" onclick="navMatchs()">🎮 Mes matchs</button>
+      <button type="button" class="nav-btn" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
+    </div>
+    <span id="header-user" style="font-size:.82rem;color:var(--or);font-style:italic;"></span>
     <button type="button" class="btn btn-sm btn-gris" id="btn-admin" style="display:none;" onclick="navAdmin()">⚙️ Admin</button>
     <button type="button" class="btn btn-sm btn-gris" id="btn-deconnexion" style="display:none;" onclick="deconnexion()">Déconnexion</button>
   </div>
 </header>
-<nav id="main-nav" style="display:none;background:rgba(0,0,0,.25);border-bottom:1px solid rgba(201,169,74,.15);padding:0 24px;">
-  <div style="max-width:960px;margin:0 auto;display:flex;gap:4px;">
-    <button type="button" class="nav-btn" id="nav-accueil" onclick="navAccueil()">🏠 Accueil</button>
-    <button type="button" class="nav-btn" id="nav-matchs" onclick="navMatchs()">🎮 Mes matchs</button>
-    <button type="button" class="nav-btn" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
-  </div>
-</nav>
+
 
 <!-- PAGE AUTH -->
 <div id="page-auth" class="page active">
@@ -185,8 +184,8 @@
           <button type="button" class="btn btn-vert" style="width:100%;" onclick="envoyerInvitationLobby()">📧 Inviter par email</button>
         </div>
         <div style="flex:1;min-width:200px;">
-          <input type="text" id="lobby-search-joueur" placeholder="🔍 Chercher dans l'annuaire" oninput="filtrerJoueursLobby()" />
-          <div id="lobby-annuaire-results"></div>
+          <input type="text" id="lobby-search-joueur" placeholder="🔍 Chercher un joueur…" oninput="filtrerJoueursLobby()" style="margin-bottom:6px;" />
+          <div id="lobby-annuaire-results" style="max-height:220px;overflow-y:auto;"></div>
         </div>
       </div>
     </div>
@@ -314,7 +313,11 @@ async function pmuGet(path) {
 // ── UTILITAIRES ────────────────────────────────────
 function dateToStr(d) { const [j,m,a]=d.split('/'); return j+m+a; }
 function genCode() { return Math.random().toString(36).substring(2,6).toUpperCase(); }
-function showPage(id) { document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); }
+function showPage(id, pushState=true) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(pushState) history.pushState({page:id}, '', '#'+id);
+}
 function toast(msg,err=false,dur=3500) { const el=document.getElementById('toast'); el.textContent=msg; el.className=err?'erreur':''; el.style.display='block'; setTimeout(()=>el.style.display='none',dur); }
 function setHeaderStatus(t) { document.getElementById('header-user').textContent=t; }
 function formatHeure(ts) { if(!ts) return '--:--'; const d=new Date(ts); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
@@ -328,6 +331,17 @@ function setDateRapide(j) {
 }
 
 
+// ── HISTORIQUE NAVIGATEUR ──────────────────────────
+window.addEventListener('popstate', e => {
+  const page = e.state?.page;
+  if(!page || page==='auth') { if(utilisateur) navAccueil(); return; }
+  if(page==='accueil') navAccueil();
+  else if(page==='annuaire') navAnnuaire();
+  else if(page==='admin') navAdmin();
+  else if(page==='lobby'||page==='match') { /* rester sur la page actuelle */ showPage(page, false); }
+  else navAccueil();
+});
+
 // ── NAVIGATION ─────────────────────────────────────
 function setNavActive(id) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -339,6 +353,7 @@ function navAccueil() {
   showPage('accueil'); setNavActive('accueil');
   chargerTableauBord();
 }
+
 
 function navMatchs() {
   showPage('accueil'); setNavActive('matchs');
@@ -356,20 +371,35 @@ function navAdmin() {
 }
 
 function afficherNav(visible) {
-  document.getElementById('main-nav').style.display = visible ? 'block' : 'none';
+  document.getElementById('header-nav').style.display = visible ? 'flex' : 'none';
+}
+
+function afficherListeLobby(joueurs) {
+  const container = document.getElementById('lobby-annuaire-results');
+  if(!container) return;
+  if(!joueurs.length) { container.innerHTML='<p class="text-sm" style="padding:6px 0;">Aucun joueur trouvé.</p>'; return; }
+  container.innerHTML = joueurs.map(j => {
+    const initiale = (j.prenom||'?').charAt(0).toUpperCase();
+    const dispo = j.statut==='disponible';
+    const statutHtml = dispo
+      ? '<span class="statut-dispo">● En ligne</span>'
+      : '<span class="statut-absent">● Hors ligne</span>';
+    const stats = j.stats||{};
+    return `<div class="joueur-ligne" style="padding:7px 8px;">
+      <div class="joueur-avatar" style="width:30px;height:30px;font-size:.82rem;">${initiale}</div>
+      <div style="flex:1;">
+        <div style="font-weight:bold;font-size:.87rem;">${j.prenom||'Joueur'}</div>
+        <div style="font-size:.72rem;color:rgba(253,246,227,.5);">${stats.matchsJoues||0} matchs · ${stats.victoires||0} victoires · ${statutHtml}</div>
+      </div>
+      <button type="button" class="btn btn-vert btn-sm" style="font-size:.78rem;" onclick="inviterDepuisLobby('${j.uid}','${j.prenom}','${j.email||''}')">Inviter</button>
+    </div>`;
+  }).join('');
 }
 
 function filtrerJoueursLobby() {
-  const q = document.getElementById('lobby-search-joueur').value.trim().toLowerCase();
-  const container = document.getElementById('lobby-annuaire-results');
-  if(!q) { container.innerHTML=''; return; }
-  const filtre = tousLesJoueurs.filter(j=>j.prenom?.toLowerCase().includes(q)).slice(0,5);
-  if(!filtre.length) { container.innerHTML='<p class="text-sm" style="padding:4px 0;">Aucun joueur trouvé.</p>'; return; }
-  container.innerHTML = filtre.map(j=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(201,169,74,.1);">
-      <span style="font-size:.88rem;">${j.prenom}</span>
-      <button type="button" class="btn btn-vert btn-sm" onclick="inviterDepuisLobby('${j.uid}','${j.prenom}','${j.email||''}')">Inviter</button>
-    </div>`).join('');
+  const q = document.getElementById('lobby-search-joueur')?.value.trim().toLowerCase()||'';
+  const filtre = q ? tousLesJoueurs.filter(j=>j.prenom?.toLowerCase().includes(q)) : tousLesJoueurs;
+  afficherListeLobby(filtre);
 }
 
 async function envoyerInvitationLobby() {
@@ -453,6 +483,7 @@ auth.onAuthStateChanged(async user => {
     if(user.uid===ADMIN_UID) document.getElementById('btn-admin').style.display='block';
     showPage('accueil'); setNavActive('accueil'); afficherNav(true);
     chargerTableauBord();
+    chargerAnnuaire(); // charger en arrière-plan pour le lobby
     // Mettre statut en ligne
     db.ref('utilisateurs/'+user.uid+'/statut').set('disponible');
     window.addEventListener('beforeunload', ()=>db.ref('utilisateurs/'+user.uid+'/statut').set('absent'));
@@ -853,6 +884,8 @@ function rendreEtat(data) {
 }
 
 function rendrelobby(data) {
+  // Afficher la liste joueurs dans le lobby
+  setTimeout(()=>{ if(document.getElementById('lobby-annuaire-results')) afficherListeLobby(tousLesJoueurs); },300);
   const j1=data.j1?.nom||'—', j2=data.j2?.nom;
   document.getElementById('lobby-joueurs').innerHTML=`
     <div class="score-ligne ${j2?'gagnant':''}"><span>🟢 ${j1}</span><span class="badge-vert">Connecté</span></div>
@@ -1154,3 +1187,4 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
