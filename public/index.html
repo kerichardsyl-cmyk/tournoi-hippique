@@ -33,7 +33,7 @@
     input:focus { border-color:var(--or); }
     input::placeholder { color:rgba(253,246,227,.35); }
     label { font-size:.85rem; color:var(--or); display:block; margin-bottom:4px; }
-    .chevaux-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; margin-top:12px; }
+    .chevaux-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:.82rem; } .chevaux-table tr { border-bottom:1px solid rgba(201,169,74,.12); cursor:pointer; transition:background .12s; } .chevaux-table tr:hover { background:rgba(255,255,255,.06); } .chevaux-table tr.selectionne { background:rgba(26,107,60,.35); } .chevaux-table tr.verrouille { opacity:.4; cursor:not-allowed; } .chevaux-table td { padding:7px 8px; vertical-align:middle; } .chevaux-table th { padding:6px 8px; color:var(--or); font-size:.75rem; font-weight:normal; text-align:left; border-bottom:1px solid rgba(201,169,74,.3); } .num-cercle { background:var(--or); color:var(--brun); border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-weight:bold; font-size:.85rem; flex-shrink:0; } .avis-pos { color:#6fffa0; } .avis-neg { color:#ff8080; } .musique-cell { font-family:monospace; font-size:.75rem; color:rgba(253,246,227,.6); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .ordre-num { display:inline-flex; align-items:center; justify-content:center; background:var(--or); color:var(--brun); border-radius:50%; width:18px; height:18px; font-size:.72rem; font-weight:bold; margin-left:4px; }
     .cheval-btn { padding:10px 8px; border-radius:8px; border:2px solid transparent; background:rgba(255,255,255,.07); color:var(--creme); cursor:pointer; font-size:.85rem; text-align:center; transition:all .15s; position:relative; }
     .cheval-btn:hover { border-color:var(--or); background:rgba(201,169,74,.12); }
     .cheval-btn.selectionne { background:rgba(26,107,60,.5); border-color:var(--or-clair); color:var(--or-clair); font-weight:bold; }
@@ -467,7 +467,7 @@ async function selectionnerReunion(reunion, pmuDate) {
     container.innerHTML=`<span class="spinner"></span> Chargement partants… ${i+1}/${courses.length}`;
     try {
       const pData=await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${c.numOrdre}/participants`);
-      const partants=(pData.participants||[]).map(p=>({ numero:p.numPmu, nom:p.nom||`Cheval ${p.numPmu}` }));
+      const partants=(pData.participants||[]).map(p=>({ numero:p.numPmu, nom:p.nom||`Cheval ${p.numPmu}`, driver:p.driver||p.jockey||"", entraineur:p.entraineur||"", age:p.age||"", sexe:p.sexe||"", robe:p.robe?.libelleCourt||"", musique:p.musique||"", avis:p.avisEntraineur||"NEUTRE", gainsCarriere:p.gainsParticipant?.gainsCarriere||0, nombreVictoires:p.nombreVictoires||0, nombreCourses:p.nombreCourses||0, urlCasaque:p.urlCasaque||"" }));
       if(!partants.length) erreurs.push(`C${c.numOrdre} : aucun partant`);
       coursesSerialisees.push({ numOrdre:c.numOrdre, libelle:c.libelle||`Course ${c.numOrdre}`, heureDepart:c.heureDepart||null, numReunion:reunion.numOfficiel, pmuDate, statut:'ouverte', partants, choixJ1:[], choixJ2:[], choixFinalJ1:[], choixFinalJ2:[], arrivee:[], rapports:{}, pointsJ1:0, pointsJ2:0, mancheGagnant:null });
     } catch(e) {
