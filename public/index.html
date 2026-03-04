@@ -1379,8 +1379,8 @@ function rendreChoixValides(c,monRole) {
   const courseIdx=etat.matchData?.courses?.findIndex(x=>x.numOrdre===c.numOrdre)??0;
   const mainRole=getMainPourCourse(courseIdx);
   const secRole=mainRole==='j1'?'j2':'j1';
-  const cfMain=c['choixFinal'+mainRole.toUpperCase()]||c['choix'+mainRole.toUpperCase()]||[];
-  const cfSec=c['choixFinal'+secRole.toUpperCase()]||[];
+  const cfMain=(c['choixFinal'+mainRole.toUpperCase()]||[]).slice(0,2);
+  const cfSec=(c['choixFinal'+secRole.toUpperCase()]||[]).slice(0,2);
   const cfSecAll=c['choix'+secRole.toUpperCase()]||[];
   const cfSecEcartes=cfSecAll.filter(n=>!cfSec.includes(n));
   const nomMain=etat.matchData?.[mainRole]?.nom||mainRole.toUpperCase();
@@ -1451,5 +1451,3 @@ function rendreFin(data) {
 </body>
 </html>
 
-</body>
-</html>
