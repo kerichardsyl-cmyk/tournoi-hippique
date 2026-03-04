@@ -566,22 +566,7 @@ function chargerTableauBord() {
 }
 
 async function reprendreMatchEnCours() {
-  if (!utilisateur) return;
-  const uid = utilisateur.uid;
-  const snap = await db.ref('matchs').orderByChild('uidJ1').equalTo(uid).once('value');
-  const snap2 = await db.ref('matchs').orderByChild('uidJ2').equalTo(uid).once('value');
-  let matchActif = null;
-  [snap, snap2].forEach(s => s.forEach(child => {
-    const d = child.val();
-    // Reprendre seulement si en_cours - pas attente/pret (géré via tableau de bord)
-    if (d.statut === 'en_cours' && !matchActif) matchActif = {id:child.key,...d};
-  }));
-  if (matchActif) {
-    etat.matchId = matchActif.id;
-    etat.joueurId = matchActif.uidJ1===uid ? 'j1' : 'j2';
-    ecouterMatch();
-    // Ne pas naviguer automatiquement - laisser l'utilisateur choisir depuis le tableau de bord
-  }
+  // Ne rien faire au login - l'utilisateur choisit son match depuis le tableau de bord
 }
 
 async function ouvrirMatch(matchId) {
@@ -667,9 +652,9 @@ function chargerAnnuaire() {
       }
     });
     afficherAnnuaire(tousLesJoueurs);
-    // Mettre à jour la liste du lobby si elle est visible
+    // Toujours mettre à jour la liste du lobby si elle existe
     const lobbyResults = document.getElementById('lobby-annuaire-results');
-    if(lobbyResults && lobbyResults.innerHTML !== '') afficherListeLobby(tousLesJoueurs);
+    if(lobbyResults) afficherListeLobby(tousLesJoueurs);
   });
 }
 
@@ -954,11 +939,12 @@ function rendreEtat(data) {
 }
 
 function rendrelobby(data) {
-  // Afficher la liste joueurs dans le lobby
-  setTimeout(()=>{
-    const el = document.getElementById('lobby-annuaire-results');
-    if(el) afficherListeLobby(tousLesJoueurs);
-  }, 100);
+  // Afficher liste joueurs - si vide, recharger l'annuaire d'abord
+  const el = document.getElementById('lobby-annuaire-results');
+  if(el) {
+    if(tousLesJoueurs.length > 0) afficherListeLobby(tousLesJoueurs);
+    else chargerAnnuaire(); // déclenchera afficherListeLobby via callback
+  }
   const j1=data.j1?.nom||'—', j2=data.j2?.nom;
   document.getElementById('lobby-joueurs').innerHTML=`
     <div class="score-ligne ${j2?'gagnant':''}"><span>🟢 ${j1}</span><span class="badge-vert">Connecté</span></div>
@@ -1260,4 +1246,3 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
-
