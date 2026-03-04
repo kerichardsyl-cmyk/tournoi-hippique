@@ -108,6 +108,7 @@
       <button type="button" class="btn btn-sm btn-nav" id="nav-matchs" onclick="navMatchs()">🎮 Mes matchs</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-reglement" onclick="navReglement()">📋 Règlement</button>
+      <button type="button" class="btn btn-sm btn-nav" id="nav-profil" onclick="navProfil()">👤 Profil</button>
     </div>
     <span id="header-user" style="font-size:.82rem;color:var(--or);font-style:italic;"></span>
     <button type="button" class="btn btn-sm btn-gris" id="btn-admin" style="display:none;" onclick="navAdmin()">⚙️ Admin</button>
@@ -119,10 +120,6 @@
 <!-- PAGE AUTH -->
 <div id="page-auth" class="page active">
   <div class="card" style="max-width:420px;margin:40px auto;">
-    <div class="tabs">
-      <button type="button" class="tab active" onclick="switchTab('connexion')">Connexion</button>
-      <button type="button" class="tab" onclick="switchTab('inscription')">Inscription</button>
-    </div>
     <div id="form-connexion">
       <label>Email</label>
       <input type="email" id="login-email" placeholder="votre@email.com" />
@@ -130,15 +127,6 @@
       <input type="password" id="login-mdp" placeholder="••••••••" />
       <button type="button" class="btn btn-or" style="width:100%;margin-top:4px;" onclick="seConnecter()">Se connecter</button>
       <p class="text-sm" style="text-align:center;margin-top:12px;cursor:pointer;color:var(--or);" onclick="motDePasseOublie()">Mot de passe oublié ?</p>
-    </div>
-    <div id="form-inscription" style="display:none;">
-      <label>Prénom / Pseudo</label>
-      <input type="text" id="reg-prenom" placeholder="Ex: Jean-Pierre" maxlength="20" />
-      <label>Email</label>
-      <input type="email" id="reg-email" placeholder="votre@email.com" />
-      <label>Mot de passe</label>
-      <input type="password" id="reg-mdp" placeholder="Minimum 6 caractères" />
-      <button type="button" class="btn btn-or" style="width:100%;margin-top:4px;" onclick="sInscrire()">Créer mon compte</button>
     </div>
   </div>
 </div>
@@ -306,6 +294,23 @@
       <div id="admin-liste-matchs"><p class="text-sm">Chargement…</p></div>
     </div>
 
+    <!-- Ajouter un joueur -->
+    <div class="card" style="margin-top:0;">
+      <h2>➕ Ajouter un joueur</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="flex:1;min-width:150px;">
+          <label>Prénom / Pseudo</label>
+          <input type="text" id="admin-new-prenom" placeholder="Jean-Pierre" maxlength="20" />
+        </div>
+        <div style="flex:2;min-width:200px;">
+          <label>Email</label>
+          <input type="email" id="admin-new-email" placeholder="joueur@email.com" />
+        </div>
+        <button type="button" class="btn btn-nav" onclick="adminCreerJoueur()">Créer le compte</button>
+      </div>
+      <div id="admin-new-result" style="margin-top:12px;"></div>
+    </div>
+
     <!-- Liste utilisateurs -->
     <div class="card" style="margin-top:0;">
       <h2>👥 Utilisateurs inscrits</h2>
@@ -315,6 +320,24 @@
   </div>
 </div>
 
+
+
+<!-- PAGE PROFIL -->
+<div id="page-profil" class="page">
+  <div class="card" style="max-width:480px;margin:0 auto;">
+    <h2>👤 Mon profil</h2>
+    <div id="profil-info" style="margin-bottom:20px;"></div>
+    <hr class="separator" />
+    <h2 style="margin-top:4px;">🔑 Changer mon mot de passe</h2>
+    <label>Mot de passe actuel</label>
+    <input type="password" id="profil-mdp-actuel" placeholder="••••••••" />
+    <label>Nouveau mot de passe</label>
+    <input type="password" id="profil-mdp-new" placeholder="Minimum 6 caractères" />
+    <label>Confirmer le nouveau mot de passe</label>
+    <input type="password" id="profil-mdp-confirm" placeholder="••••••••" />
+    <button type="button" class="btn btn-nav" style="width:100%;margin-top:8px;" onclick="changerMotDePasse()">Modifier le mot de passe</button>
+  </div>
+</div>
 
 <!-- PAGE RÈGLEMENT -->
 <div id="page-reglement" class="page">
@@ -520,11 +543,7 @@ async function inviterDepuisLobby(uid, prenom, email) {
 }
 
 // ── AUTH ───────────────────────────────────────────
-function switchTab(tab) {
-  document.getElementById('form-connexion').style.display = tab==='connexion'?'block':'none';
-  document.getElementById('form-inscription').style.display = tab==='inscription'?'block':'none';
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='connexion')||(i===1&&tab==='inscription')));
-}
+function switchTab(tab) { /* supprimé - inscription désactivée */ }
 
 async function seConnecter() {
   const email=document.getElementById('login-email').value.trim();
@@ -592,6 +611,8 @@ auth.onAuthStateChanged(async user => {
       showPage('admin'); setNavActive(''); chargerAdmin();
     } else if(lastPage === 'reglement') {
       showPage('reglement'); setNavActive('reglement');
+    } else if(lastPage === 'profil') {
+      navProfil();
     } else {
       showPage('accueil'); setNavActive('home'); chargerAccueil();
     }
@@ -673,6 +694,96 @@ async function chargerAccueil() {
         <div class="text-sm" style="margin-top:2px;">${m.reunion?.hippodrome||''} · ${m.manchesJ1||0}-${m.manchesJ2||0}</div>
       </div>`).join('')
     : '<p class="text-sm">Aucun match terminé encore.</p>';
+}
+
+
+// ── PROFIL ─────────────────────────────────────────
+function navProfil() {
+  showPage('profil'); setNavActive('profil');
+  const u = utilisateur;
+  const snap_p = db.ref('utilisateurs/'+u.uid).once('value').then(snap => {
+    const d = snap.val() || {};
+    document.getElementById('profil-info').innerHTML = `
+      <div class="score-ligne"><span>Prénom</span><strong>${d.prenom||'?'}</strong></div>
+      <div class="score-ligne"><span>Email</span><span>${u.email}</span></div>
+      <div class="score-ligne"><span>Matchs joués</span><strong>${d.stats?.matchsJoues||0}</strong></div>
+      <div class="score-ligne"><span>Victoires</span><strong>${d.stats?.victoires||0}</strong></div>`;
+  });
+}
+
+async function changerMotDePasse() {
+  const actuel = document.getElementById('profil-mdp-actuel').value;
+  const newMdp = document.getElementById('profil-mdp-new').value;
+  const confirm = document.getElementById('profil-mdp-confirm').value;
+  if(!actuel||!newMdp||!confirm) { toast('⚠️ Remplissez tous les champs', true); return; }
+  if(newMdp.length < 6) { toast('⚠️ Minimum 6 caractères', true); return; }
+  if(newMdp !== confirm) { toast('⚠️ Les mots de passe ne correspondent pas', true); return; }
+  try {
+    const cred = firebase.auth.EmailAuthProvider.credential(utilisateur.email, actuel);
+    await utilisateur.reauthenticateWithCredential(cred);
+    await utilisateur.updatePassword(newMdp);
+    document.getElementById('profil-mdp-actuel').value='';
+    document.getElementById('profil-mdp-new').value='';
+    document.getElementById('profil-mdp-confirm').value='';
+    toast('✅ Mot de passe modifié avec succès !');
+  } catch(e) {
+    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential') toast('❌ Mot de passe actuel incorrect', true);
+    else toast('❌ Erreur : '+e.message, true);
+  }
+}
+
+// ── ADMIN : CRÉER JOUEUR ────────────────────────────
+function genMdp() {
+  const chars='abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#';
+  let mdp='';
+  for(let i=0;i<10;i++) mdp+=chars[Math.floor(Math.random()*chars.length)];
+  return mdp;
+}
+
+async function adminCreerJoueur() {
+  const prenom = document.getElementById('admin-new-prenom').value.trim();
+  const email = document.getElementById('admin-new-email').value.trim().toLowerCase();
+  const resultEl = document.getElementById('admin-new-result');
+  if(!prenom||!email) { toast('⚠️ Remplissez prénom et email', true); return; }
+  const mdp = genMdp();
+  resultEl.innerHTML = '<span class="spinner"></span> Création en cours…';
+  try {
+    // Utiliser l'API REST Firebase pour créer sans déconnecter l'admin
+    const apiKey = window.FIREBASE_CONFIG.apiKey;
+    const res = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+apiKey, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password:mdp, returnSecureToken:true})
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error.message);
+    const newUid = data.localId;
+    // Mettre à jour le displayName via REST aussi
+    await fetch('https://identitytoolkit.googleapis.com/v1/accounts:update?key='+apiKey, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({idToken:data.idToken, displayName:prenom, returnSecureToken:false})
+    });
+    // Enregistrer dans la DB
+    await db.ref('utilisateurs/'+newUid).set({
+      prenom, email, createdAt: Date.now(), visible: true,
+      stats:{matchsJoues:0,victoires:0,defaites:0,egalites:0}, statut:'absent'
+    });
+    // Afficher le MDP sans déconnecter l'admin
+    resultEl.innerHTML = `<div style="padding:14px;background:rgba(255,204,0,.15);border:1px solid var(--or);border-radius:8px;">
+      <p style="font-weight:bold;color:var(--or-clair);margin-bottom:8px;">✅ Compte créé pour ${prenom}</p>
+      <p class="text-sm" style="margin-bottom:4px;">Email : <strong>${email}</strong></p>
+      <p class="text-sm" style="margin-bottom:12px;">Mot de passe temporaire :</p>
+      <div style="background:#111;border:2px solid var(--or);border-radius:8px;padding:12px;text-align:center;font-size:1.4rem;font-family:monospace;letter-spacing:4px;color:var(--or-clair);">${mdp}</div>
+      <p class="text-sm" style="margin-top:8px;color:rgba(255,248,232,.5);">Communiquez ces identifiants au joueur. Il pourra changer son mot de passe dans son profil.</p>
+    </div>`;
+    document.getElementById('admin-new-prenom').value='';
+    document.getElementById('admin-new-email').value='';
+    chargerAdmin(); // Rafraîchir la liste
+  } catch(e) {
+    const msg = e.message==='EMAIL_EXISTS'?'Cet email est déjà utilisé.':e.message;
+    resultEl.innerHTML='<p style="color:var(--rouge);">❌ '+msg+'</p>';
+  }
 }
 
 // ── TABLEAU DE BORD ────────────────────────────────
