@@ -170,6 +170,7 @@
   <div class="page-header">
     <button type="button" class="btn-back" onclick="navAccueil()">← Accueil</button>
     <h2>🎯 Salle d'attente</h2>
+    <button type="button" class="btn btn-gris btn-sm" onclick="supprimerMatchCourant()">🗑 Supprimer</button>
   </div>
   <div class="card">
     <h2>Code : <span id="lobby-code" class="text-or"></span></h2>
@@ -261,6 +262,12 @@
         <div id="admin-stats"><p class="text-sm">Chargement…</p></div>
       </div>
 
+    </div>
+
+    <!-- Liste matchs admin -->
+    <div class="card" style="margin-top:0;">
+      <h2>🎮 Tous les matchs</h2>
+      <div id="admin-liste-matchs"><p class="text-sm">Chargement…</p></div>
     </div>
 
     <!-- Liste utilisateurs -->
@@ -521,11 +528,12 @@ function chargerTableauBord() {
     if (!matchs.length) { container.innerHTML='<p class="text-sm">Aucun match en cours.</p>'; return; }
     container.innerHTML = matchs.map(m => `
       <div class="match-card" onclick="ouvrirMatch('${m.id}')">
-        <div>
+        <div style="flex:1;">
           <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'En attente'}</strong>
           <div class="text-sm" style="margin-top:2px;">Match ${m.id} · ${m.reunion?.hippodrome||'Non configuré'}</div>
         </div>
         <span class="badge-${m.statut==='en_cours'?'vert':'or'}">${m.statut==='en_cours'?'En cours':m.statut==='pret'?'Prêt':'Attente'}</span>
+        <button type="button" class="btn btn-gris btn-sm" style="font-size:.75rem;padding:4px 8px;" onclick="event.stopPropagation();supprimerMatch('${m.id}')">🗑</button>
       </div>`).join('');
   });
 
@@ -565,12 +573,14 @@ async function reprendreMatchEnCours() {
   let matchActif = null;
   [snap, snap2].forEach(s => s.forEach(child => {
     const d = child.val();
-    if (d.statut === 'en_cours') matchActif = {id:child.key,...d};
+    // Reprendre seulement si en_cours - pas attente/pret (géré via tableau de bord)
+    if (d.statut === 'en_cours' && !matchActif) matchActif = {id:child.key,...d};
   }));
   if (matchActif) {
     etat.matchId = matchActif.id;
     etat.joueurId = matchActif.uidJ1===uid ? 'j1' : 'j2';
     ecouterMatch();
+    // Ne pas naviguer automatiquement - laisser l'utilisateur choisir depuis le tableau de bord
   }
 }
 
@@ -657,6 +667,9 @@ function chargerAnnuaire() {
       }
     });
     afficherAnnuaire(tousLesJoueurs);
+    // Mettre à jour la liste du lobby si elle est visible
+    const lobbyResults = document.getElementById('lobby-annuaire-results');
+    if(lobbyResults && lobbyResults.innerHTML !== '') afficherListeLobby(tousLesJoueurs);
   });
 }
 
@@ -732,12 +745,36 @@ async function chargerAdmin() {
   ]);
   const nbUsers = usersSnap.numChildren();
   let enCours = 0, termines = 0;
-  matchsSnap.forEach(child => { const s = child.val().statut; if(s==='en_cours'||s==='pret'||s==='attente') enCours++; else if(s==='termine') termines++; });
+  const tousMatchsAdmin = [];
+  matchsSnap.forEach(child => {
+    const d = child.val(); const s = d.statut;
+    if(s==='en_cours'||s==='pret'||s==='attente') enCours++;
+    else if(s==='termine') termines++;
+    tousMatchsAdmin.push({id:child.key,...d});
+  });
   document.getElementById('admin-stats').innerHTML = `
     <div class="score-ligne"><span>Joueurs inscrits</span><span class="score-pts" style="font-size:1.1rem;">${nbUsers}</span></div>
-    <div class="score-ligne"><span>Matchs en cours</span><span class="score-pts" style="font-size:1.1rem;">${enCours}</span></div>
+    <div class="score-ligne"><span>Matchs actifs</span><span class="score-pts" style="font-size:1.1rem;">${enCours}</span></div>
     <div class="score-ligne"><span>Matchs terminés</span><span class="score-pts" style="font-size:1.1rem;">${termines}</span></div>
   `;
+  // Liste matchs admin
+  const matchsContainer = document.getElementById('admin-liste-matchs');
+  if(matchsContainer) {
+    if(!tousMatchsAdmin.length) { matchsContainer.innerHTML='<p class="text-sm">Aucun match.</p>'; }
+    else {
+      const sBadge = s => s==='en_cours'?'<span class="badge-vert">En cours</span>':s==='pret'||s==='attente'?'<span class="badge-or">'+s+'</span>':'<span style="color:rgba(253,246,227,.4);font-size:.78rem;">Terminé</span>';
+      matchsContainer.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.82rem;"><thead><tr style="color:var(--or);border-bottom:1px solid rgba(201,169,74,.3);"><th style="padding:6px 8px;text-align:left;">Code</th><th style="padding:6px 8px;">J1</th><th style="padding:6px 8px;">J2</th><th style="padding:6px 8px;">Statut</th><th style="padding:6px 8px;">Action</th></tr></thead><tbody>' +
+        tousMatchsAdmin.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(m =>
+          '<tr style="border-bottom:1px solid rgba(255,255,255,.06);">' +
+          '<td style="padding:6px 8px;font-family:monospace;">'+m.id+'</td>' +
+          '<td style="padding:6px 8px;text-align:center;">'+(m.j1?.nom||'—')+'</td>' +
+          '<td style="padding:6px 8px;text-align:center;">'+(m.j2?.nom||'—')+'</td>' +
+          '<td style="padding:6px 8px;text-align:center;">'+sBadge(m.statut)+'</td>' +
+          '<td style="padding:6px 8px;text-align:center;"><button type="button" class="btn btn-gris btn-sm" style="font-size:.72rem;padding:3px 8px;" onclick="supprimerMatchAdmin(\''+m.id+'\')">🗑</button></td>' +
+          '</tr>'
+        ).join('') + '</tbody></table>';
+    }
+  }
 
   // Users list
   tousUsersAdmin = [];
@@ -801,6 +838,39 @@ async function supprimerUser(uid, prenom) {
   if(!confirm('Supprimer '+prenom+' de l\'annuaire ?')) return;
   await db.ref('utilisateurs/'+uid).remove();
   toast('🗑 '+prenom+' supprimé de l\'annuaire');
+}
+
+
+// ── SUPPRESSION MATCHS ─────────────────────────────
+async function supprimerMatch(matchId) {
+  if(!confirm('Supprimer ce match ?')) return;
+  await db.ref('matchs/'+matchId).remove();
+  // Supprimer les invitations liées
+  const snap = await db.ref('invitations').orderByChild('matchId').equalTo(matchId).once('value');
+  const updates = {};
+  snap.forEach(child => { updates[child.key] = null; });
+  if(Object.keys(updates).length) await db.ref('invitations').update(updates);
+  toast('🗑 Match supprimé');
+  chargerTableauBord();
+}
+
+async function supprimerMatchCourant() {
+  if(!etat.matchId) return;
+  if(!confirm('Supprimer ce match ?')) return;
+  await supprimerMatch(etat.matchId);
+  etat = { matchId:null, joueurId:null, matchData:null, timerInterval:null, timersInitialises:false, courseAffichee:null };
+  navAccueil();
+}
+
+async function supprimerMatchAdmin(matchId) {
+  if(!confirm('Supprimer ce match ?')) return;
+  await db.ref('matchs/'+matchId).remove();
+  const snap = await db.ref('invitations').orderByChild('matchId').equalTo(matchId).once('value');
+  const updates = {};
+  snap.forEach(child => { updates[child.key] = null; });
+  if(Object.keys(updates).length) await db.ref('invitations').update(updates);
+  toast('🗑 Match supprimé');
+  chargerAdmin();
 }
 
 function retourAccueil() {
@@ -885,7 +955,10 @@ function rendreEtat(data) {
 
 function rendrelobby(data) {
   // Afficher la liste joueurs dans le lobby
-  setTimeout(()=>{ if(document.getElementById('lobby-annuaire-results')) afficherListeLobby(tousLesJoueurs); },300);
+  setTimeout(()=>{
+    const el = document.getElementById('lobby-annuaire-results');
+    if(el) afficherListeLobby(tousLesJoueurs);
+  }, 100);
   const j1=data.j1?.nom||'—', j2=data.j2?.nom;
   document.getElementById('lobby-joueurs').innerHTML=`
     <div class="score-ligne ${j2?'gagnant':''}"><span>🟢 ${j1}</span><span class="badge-vert">Connecté</span></div>
