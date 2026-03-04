@@ -108,7 +108,6 @@
       <button type="button" class="btn btn-sm btn-nav" id="nav-matchs" onclick="navMatchs()">🎮 Mes matchs</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-reglement" onclick="navReglement()">📋 Règlement</button>
-      <button type="button" class="btn btn-sm btn-nav" id="nav-profil" onclick="navProfil()">👤 Profil</button>
     </div>
     <span id="header-user" style="font-size:.82rem;color:var(--or);font-style:italic;"></span>
     <button type="button" class="btn btn-sm btn-gris" id="btn-admin" style="display:none;" onclick="navAdmin()">⚙️ Admin</button>
@@ -120,6 +119,10 @@
 <!-- PAGE AUTH -->
 <div id="page-auth" class="page active">
   <div class="card" style="max-width:420px;margin:40px auto;">
+    <div class="tabs">
+      <button type="button" class="tab active" onclick="switchTab('connexion')">Connexion</button>
+      <button type="button" class="tab" onclick="switchTab('inscription')">Inscription</button>
+    </div>
     <div id="form-connexion">
       <label>Email</label>
       <input type="email" id="login-email" placeholder="votre@email.com" />
@@ -127,6 +130,15 @@
       <input type="password" id="login-mdp" placeholder="••••••••" />
       <button type="button" class="btn btn-or" style="width:100%;margin-top:4px;" onclick="seConnecter()">Se connecter</button>
       <p class="text-sm" style="text-align:center;margin-top:12px;cursor:pointer;color:var(--or);" onclick="motDePasseOublie()">Mot de passe oublié ?</p>
+    </div>
+    <div id="form-inscription" style="display:none;">
+      <label>Prénom / Pseudo</label>
+      <input type="text" id="reg-prenom" placeholder="Ex: Jean-Pierre" maxlength="20" />
+      <label>Email</label>
+      <input type="email" id="reg-email" placeholder="votre@email.com" />
+      <label>Mot de passe</label>
+      <input type="password" id="reg-mdp" placeholder="Minimum 6 caractères" />
+      <button type="button" class="btn btn-or" style="width:100%;margin-top:4px;" onclick="sInscrire()">Créer mon compte</button>
     </div>
   </div>
 </div>
@@ -146,13 +158,24 @@
         <h2>📊 Mes statistiques</h2>
         <div id="home-stats-perso"><p class="text-sm">Chargement…</p></div>
       </div>
+      <div class="card">
+        <h2>📅 Réunions à venir <span style="font-size:.75rem;font-weight:normal;color:rgba(255,248,232,.5);">7 jours · France</span></h2>
+        <div id="home-reunions-avenir"><p class="text-sm"><span class="spinner"></span> Chargement…</p></div>
+      </div>
     </div>
 
     <!-- Classement + Derniers matchs -->
     <div style="flex:1;min-width:260px;">
       <div class="card">
-        <h2>🏆 Classement</h2>
+        <h2>🏆 Classement ELO</h2>
+        <div style="display:flex;gap:4px;margin-bottom:10px;">
+          <button class="tab active" id="tab-elo-gen" onclick="switchClassement('general')">Général</button>
+          <button class="tab" id="tab-elo-trot" onclick="switchClassement('trot')">🔵 Trot</button>
+          <button class="tab" id="tab-elo-galop" onclick="switchClassement('galop')">🟡 Galop</button>
+        </div>
         <div id="home-classement"><p class="text-sm">Chargement…</p></div>
+        <div id="home-classement-suite" style="display:none;"></div>
+        <button id="btn-voir-tout" type="button" class="btn btn-gris btn-sm" style="width:100%;margin-top:8px;display:none;" onclick="toggleClassementComplet()">▼ Voir le classement complet</button>
       </div>
       <div class="card">
         <h2>🕒 Derniers matchs</h2>
@@ -294,23 +317,6 @@
       <div id="admin-liste-matchs"><p class="text-sm">Chargement…</p></div>
     </div>
 
-    <!-- Ajouter un joueur -->
-    <div class="card" style="margin-top:0;">
-      <h2>➕ Ajouter un joueur</h2>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-        <div style="flex:1;min-width:150px;">
-          <label>Prénom / Pseudo</label>
-          <input type="text" id="admin-new-prenom" placeholder="Jean-Pierre" maxlength="20" />
-        </div>
-        <div style="flex:2;min-width:200px;">
-          <label>Email</label>
-          <input type="email" id="admin-new-email" placeholder="joueur@email.com" />
-        </div>
-        <button type="button" class="btn btn-nav" onclick="adminCreerJoueur()">Créer le compte</button>
-      </div>
-      <div id="admin-new-result" style="margin-top:12px;"></div>
-    </div>
-
     <!-- Liste utilisateurs -->
     <div class="card" style="margin-top:0;">
       <h2>👥 Utilisateurs inscrits</h2>
@@ -320,24 +326,6 @@
   </div>
 </div>
 
-
-
-<!-- PAGE PROFIL -->
-<div id="page-profil" class="page">
-  <div class="card" style="max-width:480px;margin:0 auto;">
-    <h2>👤 Mon profil</h2>
-    <div id="profil-info" style="margin-bottom:20px;"></div>
-    <hr class="separator" />
-    <h2 style="margin-top:4px;">🔑 Changer mon mot de passe</h2>
-    <label>Mot de passe actuel</label>
-    <input type="password" id="profil-mdp-actuel" placeholder="••••••••" />
-    <label>Nouveau mot de passe</label>
-    <input type="password" id="profil-mdp-new" placeholder="Minimum 6 caractères" />
-    <label>Confirmer le nouveau mot de passe</label>
-    <input type="password" id="profil-mdp-confirm" placeholder="••••••••" />
-    <button type="button" class="btn btn-nav" style="width:100%;margin-top:8px;" onclick="changerMotDePasse()">Modifier le mot de passe</button>
-  </div>
-</div>
 
 <!-- PAGE RÈGLEMENT -->
 <div id="page-reglement" class="page">
@@ -543,7 +531,11 @@ async function inviterDepuisLobby(uid, prenom, email) {
 }
 
 // ── AUTH ───────────────────────────────────────────
-function switchTab(tab) { /* supprimé - inscription désactivée */ }
+function switchTab(tab) {
+  document.getElementById('form-connexion').style.display = tab==='connexion'?'block':'none';
+  document.getElementById('form-inscription').style.display = tab==='inscription'?'block':'none';
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='connexion')||(i===1&&tab==='inscription')));
+}
 
 async function seConnecter() {
   const email=document.getElementById('login-email').value.trim();
@@ -611,8 +603,6 @@ auth.onAuthStateChanged(async user => {
       showPage('admin'); setNavActive(''); chargerAdmin();
     } else if(lastPage === 'reglement') {
       showPage('reglement'); setNavActive('reglement');
-    } else if(lastPage === 'profil') {
-      navProfil();
     } else {
       showPage('accueil'); setNavActive('home'); chargerAccueil();
     }
@@ -639,151 +629,163 @@ auth.onAuthStateChanged(async user => {
 
 
 // ── PAGE ACCUEIL ───────────────────────────────────
+let _joueursCache = [];
+let _classDiscipline = 'general';
+let _classementComplet = false;
+
 async function chargerAccueil() {
   if(!utilisateur) return;
   const uid = utilisateur.uid;
 
-  // Stats perso
+  // Stats perso + ELO
   const userSnap = await db.ref('utilisateurs/'+uid).once('value');
   const u = userSnap.val() || {};
   const s = u.stats || {};
+  const elo = u.elo || {general:1200, trot:1200, galop:1200};
   const pct = s.matchsJoues ? Math.round((s.victoires||0)/s.matchsJoues*100) : 0;
-  document.getElementById('home-stats-perso').innerHTML = `
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
-      <div style="flex:1;text-align:center;padding:10px;background:rgba(255,204,0,.1);border-radius:8px;">
-        <div style="font-size:1.6rem;font-weight:bold;color:var(--or-clair);">${s.matchsJoues||0}</div>
-        <div class="text-sm">Matchs</div>
-      </div>
-      <div style="flex:1;text-align:center;padding:10px;background:rgba(255,204,0,.1);border-radius:8px;">
-        <div style="font-size:1.6rem;font-weight:bold;color:var(--or-clair);">${s.victoires||0}</div>
-        <div class="text-sm">Victoires</div>
-      </div>
-      <div style="flex:1;text-align:center;padding:10px;background:rgba(255,204,0,.1);border-radius:8px;">
-        <div style="font-size:1.6rem;font-weight:bold;color:var(--or-clair);">${pct}%</div>
-        <div class="text-sm">Win rate</div>
-      </div>
+  const fEloBox = (val, label, color) =>
+    `<div style="flex:1;text-align:center;padding:8px;background:${color};border-radius:8px;">
+      <div style="font-size:1.15rem;font-weight:bold;color:var(--or-clair);">${val}</div>
+      <div class="text-sm">${label}</div>
+    </div>`;
+  document.getElementById('home-stats-perso').innerHTML =
+    `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+      ${fEloBox(s.matchsJoues||0,'Matchs','rgba(255,204,0,.1)')}
+      ${fEloBox(s.victoires||0,'Victoires','rgba(255,204,0,.1)')}
+      ${fEloBox(pct+'%','Win rate','rgba(255,204,0,.1)')}
+    </div>
+    <p style="font-size:.75rem;color:rgba(255,248,232,.5);margin-bottom:6px;text-align:center;">Mes ELO</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${fEloBox(elo.general||1200,'Général','rgba(150,150,255,.12)')}
+      ${fEloBox(elo.trot||1200,'🔵 Trot','rgba(50,120,255,.12)')}
+      ${fEloBox(elo.galop||1200,'🟡 Galop','rgba(255,200,0,.1)')}
     </div>`;
 
-  // Classement
+  // Charger tous les joueurs
   const usersSnap = await db.ref('utilisateurs').once('value');
-  const joueurs = [];
-  usersSnap.forEach(child => {
-    const d = child.val();
-    if(d.stats?.matchsJoues > 0) joueurs.push({uid:child.key, ...d});
-  });
-  joueurs.sort((a,b)=>(b.stats?.victoires||0)-(a.stats?.victoires||0)||(b.stats?.matchsJoues||0)-(a.stats?.matchsJoues||0));
-  const medals = ['🥇','🥈','🥉'];
-  document.getElementById('home-classement').innerHTML = joueurs.length
-    ? joueurs.slice(0,10).map((j,i)=>`
-      <div class="score-ligne ${j.uid===uid?'gagnant':''}">
-        <span>${medals[i]||'  '+(i+1)+'.'} ${j.prenom||'?'} ${j.uid===uid?'<span style="font-size:.72rem;color:var(--or);">(moi)</span>':''}</span>
-        <span style="font-size:.85rem;">${j.stats?.victoires||0}V / ${j.stats?.matchsJoues||0}M</span>
-      </div>`).join('')
-    : '<p class="text-sm">Aucun match joué encore.</p>';
+  _joueursCache = [];
+  usersSnap.forEach(child => { const d=child.val(); _joueursCache.push({uid:child.key,...d}); });
+  _classementComplet = false;
+  afficherClassement(_classDiscipline, uid);
 
   // Derniers matchs
   const matchsSnap = await db.ref('matchs').orderByChild('statut').equalTo('termine').once('value');
   const derniers = [];
   matchsSnap.forEach(child => derniers.push({id:child.key,...child.val()}));
   derniers.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const discIcon = d => d==='TROT'?'🔵 ':d==='GALOP'?'🟡 ':'';
   document.getElementById('home-derniers-matchs').innerHTML = derniers.length
     ? derniers.slice(0,5).map(m=>`
       <div style="padding:8px 10px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.05);font-size:.85rem;">
         <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'?'}</strong>
         <span style="float:right;color:var(--or-clair);">🏆 ${m.vainqueur==='j1'?m.j1?.nom:m.vainqueur==='j2'?m.j2?.nom:'Nul'}</span>
-        <div class="text-sm" style="margin-top:2px;">${m.reunion?.hippodrome||''} · ${m.manchesJ1||0}-${m.manchesJ2||0}</div>
+        <div class="text-sm" style="margin-top:2px;">${discIcon(m.reunion?.discipline)}${m.reunion?.hippodrome||''} · ${m.manchesJ1||0}-${m.manchesJ2||0}</div>
       </div>`).join('')
     : '<p class="text-sm">Aucun match terminé encore.</p>';
+
+  // Réunions à venir
+  chargerReunionsAvenir();
 }
 
+function ligneClassement(j, i, uid, key) {
+  const medals = ['🥇','🥈','🥉'];
+  const rang = medals[i] || (i+1)+'.';
+  const eloVal = j.elo?.[key] || 1200;
+  const isMe = j.uid === uid;
+  return `<div class="score-ligne ${isMe?'gagnant':''}">
+    <span>${rang} ${j.prenom||'?'} ${isMe?'<span style="font-size:.72rem;color:var(--or);">(moi)</span>':''}</span>
+    <span style="font-size:.85rem;"><strong>${eloVal}</strong> <span class="text-sm">· ${j.stats?.victoires||0}V/${j.stats?.matchsJoues||0}M</span></span>
+  </div>`;
+}
 
-// ── PROFIL ─────────────────────────────────────────
-function navProfil() {
-  showPage('profil'); setNavActive('profil');
-  const u = utilisateur;
-  const snap_p = db.ref('utilisateurs/'+u.uid).once('value').then(snap => {
-    const d = snap.val() || {};
-    document.getElementById('profil-info').innerHTML = `
-      <div class="score-ligne"><span>Prénom</span><strong>${d.prenom||'?'}</strong></div>
-      <div class="score-ligne"><span>Email</span><span>${u.email}</span></div>
-      <div class="score-ligne"><span>Matchs joués</span><strong>${d.stats?.matchsJoues||0}</strong></div>
-      <div class="score-ligne"><span>Victoires</span><strong>${d.stats?.victoires||0}</strong></div>`;
+function afficherClassement(discipline, uid) {
+  uid = uid || utilisateur?.uid;
+  _classDiscipline = discipline;
+  document.querySelectorAll('#tab-elo-gen,#tab-elo-trot,#tab-elo-galop').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-elo-'+(discipline==='general'?'gen':discipline))?.classList.add('active');
+
+  const key = discipline; // general, trot, galop
+  // Filtrer : pour trot/galop, seulement ceux qui ont joué dans cette discipline
+  // Pour général, tous ceux qui ont joué au moins un match
+  const joueurs = _joueursCache.filter(j => {
+    if(discipline === 'general') return (j.stats?.matchsJoues||0) > 0;
+    return (j.elo?.[key]||1200) !== 1200 || (j.stats?.matchsJoues||0) > 0;
   });
-}
+  joueurs.sort((a,b) => (b.elo?.[key]||1200) - (a.elo?.[key]||1200));
 
-async function changerMotDePasse() {
-  const actuel = document.getElementById('profil-mdp-actuel').value;
-  const newMdp = document.getElementById('profil-mdp-new').value;
-  const confirm = document.getElementById('profil-mdp-confirm').value;
-  if(!actuel||!newMdp||!confirm) { toast('⚠️ Remplissez tous les champs', true); return; }
-  if(newMdp.length < 6) { toast('⚠️ Minimum 6 caractères', true); return; }
-  if(newMdp !== confirm) { toast('⚠️ Les mots de passe ne correspondent pas', true); return; }
-  try {
-    const cred = firebase.auth.EmailAuthProvider.credential(utilisateur.email, actuel);
-    await utilisateur.reauthenticateWithCredential(cred);
-    await utilisateur.updatePassword(newMdp);
-    document.getElementById('profil-mdp-actuel').value='';
-    document.getElementById('profil-mdp-new').value='';
-    document.getElementById('profil-mdp-confirm').value='';
-    toast('✅ Mot de passe modifié avec succès !');
-  } catch(e) {
-    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential') toast('❌ Mot de passe actuel incorrect', true);
-    else toast('❌ Erreur : '+e.message, true);
+  const top10 = joueurs.slice(0,10);
+  const reste = joueurs.slice(10);
+
+  document.getElementById('home-classement').innerHTML = joueurs.length
+    ? top10.map((j,i) => ligneClassement(j,i,uid,key)).join('')
+    : '<p class="text-sm">Aucun joueur classé.</p>';
+
+  const suiteEl = document.getElementById('home-classement-suite');
+  const btnEl = document.getElementById('btn-voir-tout');
+  if(reste.length > 0) {
+    suiteEl.innerHTML = reste.map((j,i) => ligneClassement(j,i+10,uid,key)).join('');
+    suiteEl.style.display = _classementComplet ? 'block' : 'none';
+    btnEl.style.display = 'block';
+    btnEl.textContent = _classementComplet ? '▲ Réduire' : `▼ Voir tout (${joueurs.length} joueurs)`;
+  } else {
+    suiteEl.style.display = 'none';
+    btnEl.style.display = 'none';
   }
 }
 
-// ── ADMIN : CRÉER JOUEUR ────────────────────────────
-function genMdp() {
-  const chars='abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#';
-  let mdp='';
-  for(let i=0;i<10;i++) mdp+=chars[Math.floor(Math.random()*chars.length)];
-  return mdp;
+function switchClassement(discipline) {
+  afficherClassement(discipline);
 }
 
-async function adminCreerJoueur() {
-  const prenom = document.getElementById('admin-new-prenom').value.trim();
-  const email = document.getElementById('admin-new-email').value.trim().toLowerCase();
-  const resultEl = document.getElementById('admin-new-result');
-  if(!prenom||!email) { toast('⚠️ Remplissez prénom et email', true); return; }
-  const mdp = genMdp();
-  resultEl.innerHTML = '<span class="spinner"></span> Création en cours…';
-  try {
-    // Utiliser l'API REST Firebase pour créer sans déconnecter l'admin
-    const apiKey = window.FIREBASE_CONFIG.apiKey;
-    const res = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+apiKey, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({email, password:mdp, returnSecureToken:true})
-    });
-    const data = await res.json();
-    if(data.error) throw new Error(data.error.message);
-    const newUid = data.localId;
-    // Mettre à jour le displayName via REST aussi
-    await fetch('https://identitytoolkit.googleapis.com/v1/accounts:update?key='+apiKey, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({idToken:data.idToken, displayName:prenom, returnSecureToken:false})
-    });
-    // Enregistrer dans la DB
-    await db.ref('utilisateurs/'+newUid).set({
-      prenom, email, createdAt: Date.now(), visible: true,
-      stats:{matchsJoues:0,victoires:0,defaites:0,egalites:0}, statut:'absent'
-    });
-    // Afficher le MDP sans déconnecter l'admin
-    resultEl.innerHTML = `<div style="padding:14px;background:rgba(255,204,0,.15);border:1px solid var(--or);border-radius:8px;">
-      <p style="font-weight:bold;color:var(--or-clair);margin-bottom:8px;">✅ Compte créé pour ${prenom}</p>
-      <p class="text-sm" style="margin-bottom:4px;">Email : <strong>${email}</strong></p>
-      <p class="text-sm" style="margin-bottom:12px;">Mot de passe temporaire :</p>
-      <div style="background:#111;border:2px solid var(--or);border-radius:8px;padding:12px;text-align:center;font-size:1.4rem;font-family:monospace;letter-spacing:4px;color:var(--or-clair);">${mdp}</div>
-      <p class="text-sm" style="margin-top:8px;color:rgba(255,248,232,.5);">Communiquez ces identifiants au joueur. Il pourra changer son mot de passe dans son profil.</p>
-    </div>`;
-    document.getElementById('admin-new-prenom').value='';
-    document.getElementById('admin-new-email').value='';
-    chargerAdmin(); // Rafraîchir la liste
-  } catch(e) {
-    const msg = e.message==='EMAIL_EXISTS'?'Cet email est déjà utilisé.':e.message;
-    resultEl.innerHTML='<p style="color:var(--rouge);">❌ '+msg+'</p>';
+function toggleClassementComplet() {
+  _classementComplet = !_classementComplet;
+  const suiteEl = document.getElementById('home-classement-suite');
+  const btnEl = document.getElementById('btn-voir-tout');
+  suiteEl.style.display = _classementComplet ? 'block' : 'none';
+  const total = _joueursCache.filter(j=>(j.stats?.matchsJoues||0)>0).length;
+  btnEl.textContent = _classementComplet ? '▲ Réduire' : `▼ Voir tout (${total} joueurs)`;
+}
+
+async function chargerReunionsAvenir() {
+  const el = document.getElementById('home-reunions-avenir');
+  if(!el) return;
+  let html = '';
+  const today = new Date();
+  for(let d=0; d<7; d++) {
+    const date = new Date(today); date.setDate(today.getDate()+d);
+    const dd = String(date.getDate()).padStart(2,'0');
+    const mm = String(date.getMonth()+1).padStart(2,'0');
+    const yyyy = date.getFullYear();
+    const pmuDate = dd+mm+yyyy;
+    const labelJ = d===0?"Aujourd'hui":d===1?'Demain':`${dd}/${mm}`;
+    try {
+      const data = await pmuGet('programme/'+pmuDate);
+      const reunions = (data.programme?.reunions||[]).filter(r => {
+        // Garder seulement les réunions en France
+        const pays = r.hippodrome?.pays?.code || r.hippodrome?.pays || r.pays || '';
+        const lib = (r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'').toUpperCase();
+        // L'API PMU marque les réunions françaises avec pays 'FRA' ou pas de pays
+        if(pays && pays !== 'FRA' && pays !== 'FR') return false;
+        // Exclure les hippodromes étrangers connus par leur libellé
+        const etranger = ['BELGIQUE','ALLEMAGNE','ANGLETERRE','ITALIE','ESPAGNE','SUEDE','SUISSE','HONG KONG','DUBAI','AUSTRALIE','USA','JAPAN','IRLANDE'];
+        return !etranger.some(e => lib.includes(e));
+      });
+      if(reunions.length) {
+        html += `<div style="margin-bottom:10px;">
+          <div style="font-size:.78rem;font-weight:bold;color:var(--or);padding:3px 8px;background:rgba(255,204,0,.1);border-radius:4px;margin-bottom:5px;">${labelJ}</div>`;
+        reunions.forEach(r => {
+          const disc = detecterDiscipline(r);
+          const discIcon = disc==='TROT'?'🔵':disc==='GALOP'?'🟡':'⚪';
+          html += `<div style="padding:4px 8px;font-size:.82rem;border-left:2px solid rgba(255,204,0,.2);margin-bottom:2px;">
+            ${discIcon} <strong>R${r.numOrdre}</strong> — ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'}
+            <span class="text-sm" style="color:rgba(255,248,232,.45);"> (${r.courses?.length||0} courses)</span>
+          </div>`;
+        });
+        html += '</div>';
+      }
+    } catch(e) { /* pas de réunion ce jour */ }
   }
+  el.innerHTML = html || '<p class="text-sm">Aucune réunion trouvée.</p>';
 }
 
 // ── TABLEAU DE BORD ────────────────────────────────
@@ -1138,6 +1140,27 @@ function retourAccueil() {
   navMatchs();
 }
 
+
+// ── DISCIPLINE ─────────────────────────────────────
+function detecterDiscipline(reunion) {
+  const courses = reunion.courses || [];
+  if(!courses.length) {
+    const type = reunion.typeReunion || reunion.discipline || '';
+    if(type.includes('TROT')) return 'TROT';
+    if(type.includes('PLAT')||type.includes('GALOP')) return 'GALOP';
+    return 'MIXTE';
+  }
+  const disciplines = new Set(courses.map(c => {
+    const sp = c.specialite || c.discipline || '';
+    if(sp.includes('TROT')) return 'TROT';
+    if(sp.includes('PLAT')||sp.includes('OBSTACLE')||sp.includes('HAIES')||sp.includes('STEEPLE')||sp.includes('CROSS')) return 'GALOP';
+    return null;
+  }).filter(Boolean));
+  if(disciplines.size===1) return [...disciplines][0];
+  if(disciplines.size>1) return 'MIXTE';
+  return 'MIXTE';
+}
+
 // ── PMU RÉUNIONS ────────────────────────────────────
 async function chargerReunions() {
   const dateStr=document.getElementById('input-date').value.trim();
@@ -1150,12 +1173,23 @@ async function chargerReunions() {
     const reunions=data.programme?.reunions||[];
     if(!reunions.length) { container.innerHTML='<p class="text-sm">Aucune réunion pour cette date.</p>'; return; }
     container.innerHTML='<label style="margin-top:12px;">Choisir une réunion :</label>';
-    reunions.forEach(r => {
+    const reunionsFrance = reunions.filter(r => {
+      const pays = r.hippodrome?.pays?.code || r.hippodrome?.pays || r.pays || '';
+      if(pays && pays !== 'FRA' && pays !== 'FR') return false;
+      const lib = (r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'').toUpperCase();
+      const etranger = ['BELGIQUE','ALLEMAGNE','ANGLETERRE','ITALIE','ESPAGNE','SUEDE','SUISSE','HONG KONG','DUBAI','AUSTRALIE','USA','JAPAN','IRLANDE'];
+      return !etranger.some(e => lib.includes(e));
+    });
+    if(!reunionsFrance.length) { container.innerHTML='<p class="text-sm">Aucune réunion en France pour cette date.</p>'; return; }
+    reunionsFrance.forEach(r => {
+      const disc = detecterDiscipline(r);
+      const discLabel = disc==='TROT'?'🔵 Trot':disc==='GALOP'?'🟡 Galop':'⚪ Mixte';
+      const discColor = disc==='TROT'?'rgba(50,120,255,.2)':disc==='GALOP'?'rgba(255,204,0,.15)':'rgba(255,255,255,.08)';
       const btn=document.createElement('button');
-      btn.className='btn btn-vert mt8';
-      btn.style.cssText='width:100%;text-align:left;margin-bottom:6px;';
-      btn.innerHTML=`R${r.numOrdre} — ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'} (${r.courses?.length||0} courses)`;
-      btn.onclick=()=>selectionnerReunion(r,pmuDate);
+      btn.className='btn mt8';
+      btn.style.cssText=`width:100%;text-align:left;margin-bottom:6px;background:${discColor};border:1px solid rgba(255,255,255,.15);color:var(--creme);`;
+      btn.innerHTML=`${discLabel} — R${r.numOrdre} — ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'} (${r.courses?.length||0} courses)`;
+      btn.onclick=()=>selectionnerReunion(r,pmuDate,disc);
       container.appendChild(btn);
     });
   } catch(e) { container.innerHTML=`<p style="color:var(--rouge);">Erreur PMU : ${e.message}</p>`; }
@@ -1409,18 +1443,6 @@ function rendreProgramme(data) {
 
 function afficherCourse(idx) { etat.courseAffichee=idx; if(etat.matchData) rendreZoneJeu(etat.matchData,idx); }
 
-// Délégation d'événement pour les clics sur chevaux (une seule fois)
-let _zoneJeuListenerInit = false;
-function initZoneJeuListener() {
-  if(_zoneJeuListenerInit) return;
-  _zoneJeuListenerInit = true;
-  document.getElementById('zone-jeu').addEventListener('click', e => {
-    const tr = e.target.closest('tr[data-num]');
-    if(!tr || tr.dataset.disabled) return;
-    toggleCheval(parseInt(tr.dataset.idx), parseInt(tr.dataset.num), parseInt(tr.dataset.maxc), tr.dataset.role);
-  });
-}
-
 function rendreZoneJeu(data,idx) {
   const c=data.courses[idx]; if(!c) return;
   const mr=getMainPourCourse(idx),estMain=etat.joueurId===mr;
@@ -1438,7 +1460,6 @@ function rendreZoneJeu(data,idx) {
   else if(c.statut==='ouverte') html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId);
   html+='</div>';
   document.getElementById('zone-jeu').innerHTML=html;
-  initZoneJeuListener();
   if(etat.timerInterval) clearInterval(etat.timerInterval);
   if(c.heureDepart&&c.statut==='ouverte') {
     etat.timerInterval=setInterval(()=>{
@@ -1478,6 +1499,17 @@ function rendreSelecteurChevaux(c,idx,estMain,monRole) {
   });
   html+='</tbody></table></div>';
   if(mc.length>0) html+='<p class="text-sm mt8" style="text-align:center;">✅ '+mc.length+'/'+maxC+' sélectionné'+(mc.length>1?'s':'')+'</p>';
+  // Attacher les événements après rendu
+  setTimeout(()=>{
+    const tbl=document.getElementById('tbl-chevaux-'+idx);
+    if(!tbl) return;
+    tbl.querySelectorAll('tr[data-num]').forEach(tr=>{
+      if(tr.dataset.disabled) return;
+      tr.addEventListener('click',()=>{
+        toggleCheval(parseInt(tr.dataset.idx),parseInt(tr.dataset.num),parseInt(tr.dataset.maxc),tr.dataset.role);
+      });
+    });
+  },50);
   return html;
 }
 
@@ -1569,4 +1601,3 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
-
