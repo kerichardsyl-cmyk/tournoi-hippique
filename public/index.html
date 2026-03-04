@@ -104,7 +104,7 @@
   <h1>🏇 Tournoi Hippique</h1>
   <div id="header-right" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
     <div id="header-nav" style="display:none;gap:4px;">
-      <button type="button" class="btn btn-sm btn-nav" id="nav-accueil" onclick="navAccueil()">🏠 Accueil</button>
+      <button type="button" class="btn btn-sm btn-nav" id="nav-home" onclick="navHome()">🏠 Accueil</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-matchs" onclick="navMatchs()">🎮 Mes matchs</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-reglement" onclick="navReglement()">📋 Règlement</button>
@@ -143,8 +143,40 @@
   </div>
 </div>
 
-<!-- PAGE ACCUEIL (tableau de bord) -->
+<!-- PAGE ACCUEIL -->
 <div id="page-accueil" class="page">
+  <div style="display:flex;gap:16px;flex-wrap:wrap;">
+
+    <!-- Bienvenue + Stats perso -->
+    <div style="flex:1;min-width:260px;">
+      <div class="card" style="background:linear-gradient(135deg,rgba(204,34,0,.2),rgba(255,204,0,.08));border-color:rgba(255,204,0,.3);">
+        <h2>🏇 Bienvenue sur Tournoi Hippique !</h2>
+        <p style="font-size:.9rem;line-height:1.6;color:rgba(255,248,232,.8);">Affrontez vos amis en pronostiquant les courses PMU en temps réel. Choisissez vos chevaux avant le départ, collectez les rapports et remportez le plus de manches !</p>
+        <button type="button" class="btn btn-nav" style="margin-top:12px;width:100%;" onclick="navMatchs()">🎮 Jouer maintenant</button>
+      </div>
+      <div class="card">
+        <h2>📊 Mes statistiques</h2>
+        <div id="home-stats-perso"><p class="text-sm">Chargement…</p></div>
+      </div>
+    </div>
+
+    <!-- Classement + Derniers matchs -->
+    <div style="flex:1;min-width:260px;">
+      <div class="card">
+        <h2>🏆 Classement</h2>
+        <div id="home-classement"><p class="text-sm">Chargement…</p></div>
+      </div>
+      <div class="card">
+        <h2>🕒 Derniers matchs</h2>
+        <div id="home-derniers-matchs"><p class="text-sm">Chargement…</p></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PAGE MES MATCHS -->
+<div id="page-matchs-list" class="page">
   <div style="display:flex;gap:16px;flex-wrap:wrap;">
     <div style="flex:1;min-width:260px;">
       <div class="card">
@@ -218,7 +250,7 @@
   <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
     <div style="flex:0 0 260px;">
       <div class="card"><h2>📊 Scores</h2><div id="scores-display"></div></div>
-      <div class="card"><h2>🏁 Programme</h2><div id="liste-courses"></div></div>
+      <div class="card"><h2 id="titre-programme">🏁 Programme</h2><div id="liste-courses"></div></div>
     </div>
     <div style="flex:1;min-width:280px;"><div id="zone-jeu"></div></div>
   </div>
@@ -311,6 +343,9 @@
       <h3 style="color:var(--or-clair);margin:16px 0 8px;">🏆 Victoire</h3>
       <p>Le joueur qui remporte le plus de <strong>manches</strong> (courses) gagne le match. En cas d'égalité de manches, c'est le total de points sur l'ensemble des courses qui départage. Si toujours égalité : match nul.</p>
 
+      <h3 style="color:var(--or-clair);margin:16px 0 8px;">🎲 Tirage au sort</h3>
+      <p>Au lancement du match, un tirage au sort détermine quel joueur a <strong>la main en premier</strong> (course 1). La main alterne ensuite à chaque course.</p>
+
       <h3 style="color:var(--or-clair);margin:16px 0 8px;">⚙️ Organisation</h3>
       <p>Le créateur du match est l'<strong>arbitre</strong> : il choisit la réunion PMU et lance le match une fois l'adversaire connecté. Les résultats sont récupérés automatiquement après chaque course.</p>
     </div>
@@ -381,7 +416,8 @@ function setDateRapide(j) {
 window.addEventListener('popstate', e => {
   const page = e.state?.page;
   if(!page || page==='auth') { if(utilisateur) navAccueil(); return; }
-  if(page==='accueil') navAccueil();
+  if(page==='accueil') navHome();
+  else if(page==='matchs-list') navMatchs();
   else if(page==='annuaire') navAnnuaire();
   else if(page==='admin') navAdmin();
   else if(page==='lobby'||page==='match') { /* rester sur la page actuelle */ showPage(page, false); }
@@ -395,14 +431,18 @@ function setNavActive(id) {
   if(el) el.classList.add('active');
 }
 
+function navHome() {
+  showPage('accueil'); setNavActive('home');
+  chargerAccueil();
+}
+
 function navAccueil() {
-  showPage('accueil'); setNavActive('accueil');
-  chargerTableauBord();
+  navMatchs();
 }
 
 
 function navMatchs() {
-  showPage('accueil'); setNavActive('matchs');
+  showPage('matchs-list'); setNavActive('matchs');
   chargerTableauBord();
 }
 
@@ -533,10 +573,14 @@ auth.onAuthStateChanged(async user => {
     if(user.uid===ADMIN_UID) document.getElementById('btn-admin').style.display='block';
     afficherNav(true);
     chargerAnnuaire(); // charger en arrière-plan pour le lobby
-    const lastPage = localStorage.getItem('lastPage') || 'accueil';
+    const lastPage = localStorage.getItem('lastPage') || 'home';
     if(lastPage === 'lobby' || lastPage === 'match' || lastPage === 'fin') {
       // Pages de match : revenir à l'accueil (le match sera dans la liste)
-      showPage('accueil'); setNavActive('accueil'); chargerTableauBord();
+      showPage('matchs-list'); setNavActive('matchs'); chargerTableauBord();
+    } else if(lastPage === 'home') {
+      showPage('accueil'); setNavActive('home'); chargerAccueil();
+    } else if(lastPage === 'matchs-list') {
+      showPage('matchs-list'); setNavActive('matchs'); chargerTableauBord();
     } else if(lastPage === 'annuaire') {
       showPage('annuaire'); setNavActive('annuaire'); chargerAnnuaire();
     } else if(lastPage === 'admin' && user.uid===ADMIN_UID) {
@@ -544,7 +588,7 @@ auth.onAuthStateChanged(async user => {
     } else if(lastPage === 'reglement') {
       showPage('reglement'); setNavActive('reglement');
     } else {
-      showPage('accueil'); setNavActive('accueil'); chargerTableauBord();
+      showPage('accueil'); setNavActive('home'); chargerAccueil();
     }
     // Mettre statut en ligne
     db.ref('utilisateurs/'+user.uid+'/statut').set('disponible');
@@ -566,6 +610,65 @@ auth.onAuthStateChanged(async user => {
     afficherNav(false); showPage('auth');
   }
 });
+
+
+// ── PAGE ACCUEIL ───────────────────────────────────
+async function chargerAccueil() {
+  if(!utilisateur) return;
+  const uid = utilisateur.uid;
+
+  // Stats perso
+  const userSnap = await db.ref('utilisateurs/'+uid).once('value');
+  const u = userSnap.val() || {};
+  const s = u.stats || {};
+  const pct = s.matchsJoues ? Math.round((s.victoires||0)/s.matchsJoues*100) : 0;
+  document.getElementById('home-stats-perso').innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+      <div style="flex:1;text-align:center;padding:10px;background:rgba(255,204,0,.1);border-radius:8px;">
+        <div style="font-size:1.6rem;font-weight:bold;color:var(--or-clair);">${s.matchsJoues||0}</div>
+        <div class="text-sm">Matchs</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:10px;background:rgba(255,204,0,.1);border-radius:8px;">
+        <div style="font-size:1.6rem;font-weight:bold;color:var(--or-clair);">${s.victoires||0}</div>
+        <div class="text-sm">Victoires</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:10px;background:rgba(255,204,0,.1);border-radius:8px;">
+        <div style="font-size:1.6rem;font-weight:bold;color:var(--or-clair);">${pct}%</div>
+        <div class="text-sm">Win rate</div>
+      </div>
+    </div>`;
+
+  // Classement
+  const usersSnap = await db.ref('utilisateurs').once('value');
+  const joueurs = [];
+  usersSnap.forEach(child => {
+    const d = child.val();
+    if(d.stats?.matchsJoues > 0) joueurs.push({uid:child.key, ...d});
+  });
+  joueurs.sort((a,b)=>(b.stats?.victoires||0)-(a.stats?.victoires||0)||(b.stats?.matchsJoues||0)-(a.stats?.matchsJoues||0));
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('home-classement').innerHTML = joueurs.length
+    ? joueurs.slice(0,10).map((j,i)=>`
+      <div class="score-ligne ${j.uid===uid?'gagnant':''}">
+        <span>${medals[i]||'  '+(i+1)+'.'} ${j.prenom||'?'} ${j.uid===uid?'<span style="font-size:.72rem;color:var(--or);">(moi)</span>':''}</span>
+        <span style="font-size:.85rem;">${j.stats?.victoires||0}V / ${j.stats?.matchsJoues||0}M</span>
+      </div>`).join('')
+    : '<p class="text-sm">Aucun match joué encore.</p>';
+
+  // Derniers matchs
+  const matchsSnap = await db.ref('matchs').orderByChild('statut').equalTo('termine').once('value');
+  const derniers = [];
+  matchsSnap.forEach(child => derniers.push({id:child.key,...child.val()}));
+  derniers.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  document.getElementById('home-derniers-matchs').innerHTML = derniers.length
+    ? derniers.slice(0,5).map(m=>`
+      <div style="padding:8px 10px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.05);font-size:.85rem;">
+        <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'?'}</strong>
+        <span style="float:right;color:var(--or-clair);">🏆 ${m.vainqueur==='j1'?m.j1?.nom:m.vainqueur==='j2'?m.j2?.nom:'Nul'}</span>
+        <div class="text-sm" style="margin-top:2px;">${m.reunion?.hippodrome||''} · ${m.manchesJ1||0}-${m.manchesJ2||0}</div>
+      </div>`).join('')
+    : '<p class="text-sm">Aucun match terminé encore.</p>';
+}
 
 // ── TABLEAU DE BORD ────────────────────────────────
 function chargerTableauBord() {
@@ -899,7 +1002,7 @@ async function supprimerMatchCourant() {
   if(!confirm('Supprimer ce match ?')) return;
   await supprimerMatch(etat.matchId);
   etat = { matchId:null, joueurId:null, matchData:null, timerInterval:null, timersInitialises:false, courseAffichee:null };
-  navAccueil();
+  navMatchs();
 }
 
 async function supprimerMatchAdmin(matchId) {
@@ -915,7 +1018,7 @@ async function supprimerMatchAdmin(matchId) {
 
 function retourAccueil() {
   etat = { matchId:null, joueurId:null, matchData:null, timerInterval:null, timersInitialises:false, courseAffichee:null };
-  navAccueil();
+  navMatchs();
 }
 
 // ── PMU RÉUNIONS ────────────────────────────────────
@@ -1171,6 +1274,9 @@ function rendreScores(data) {
 
 function rendreProgramme(data) {
   const courses=data.courses||[];
+  const hippo=data.reunion?.hippodrome||'';
+  const titreEl=document.getElementById('titre-programme');
+  if(titreEl) titreEl.textContent='🏁 Programme'+(hippo?' : '+hippo:'');
   let html='<p class="text-sm" style="margin-bottom:8px;">Cliquez pour pronostiquer :</p>';
   courses.forEach((c,i)=>{
     const sl={ouverte:'<span class="course-statut statut-ouverte">Ouverte</span>',bloquee:'<span class="course-statut statut-bloquee">Bloquée</span>',terminee:'<span class="course-statut statut-terminee">Terminée</span>'}[c.statut]||'';
