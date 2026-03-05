@@ -258,6 +258,7 @@
     <button type="button" class="btn-back" onclick="navAccueil()">← Accueil</button>
     <h2 id="match-titre">Match en cours</h2>
   </div>
+  <div id="admin-match-banner" style="display:none;background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.4);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.85rem;"></div>
   <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
     <div style="flex:0 0 260px;">
       <div class="card"><h2>📊 Scores</h2><div id="scores-display"></div></div>
@@ -1849,27 +1850,24 @@ function rendreMatch(data) {
   rendreScores(data); rendreProgramme(data);
   // Bandeau admin
   const adminBanner = document.getElementById('admin-match-banner');
-  if(etat._adminView) {
-    const nbBloquees = (data.courses||[]).filter(c=>c.statut==='bloquee').length;
-    const nbSansRap  = (data.courses||[]).filter(c=>c.statut==='terminee'&&(!c.rapports||!Object.keys(c.rapports).length)).length;
-    let bannerHtml = `<div id="admin-match-banner" style="background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.4);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:.85rem;">
-      <strong style="color:var(--or);">👁 Vue admin</strong>
-      ${nbBloquees>0?`<span style="color:rgba(255,180,80,.9);margin-left:10px;">⏳ ${nbBloquees} course(s) bloquée(s)</span>`:''}
-      ${nbSansRap>0?`<span style="color:rgba(255,100,80,.9);margin-left:10px;">⚠️ ${nbSansRap} sans rapports</span>`:''}
-      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn btn-nav btn-sm" onclick="cloturerMatch('${etat.matchId}')">🏁 Clôturer</button>
-        <button class="btn btn-gris btn-sm" onclick="reimporterTousRapports()">🔄 Réimporter tous rapports</button>
-        <button class="btn btn-gris btn-sm" onclick="showPage('admin');chargerAdmin()">← Admin</button>
-      </div>
-    </div>`;
-    const zoneJeu = document.getElementById('zone-jeu');
-    if(zoneJeu) {
-      let banner = document.getElementById('admin-match-banner');
-      if(!banner) { banner = document.createElement('div'); zoneJeu.parentNode.insertBefore(banner, zoneJeu); }
-      banner.outerHTML = bannerHtml;
+  if(adminBanner) {
+    if(etat._adminView) {
+      const nbBloquees = (data.courses||[]).filter(c=>c.statut==='bloquee').length;
+      const nbSansRap  = (data.courses||[]).filter(c=>c.statut==='terminee'&&(!c.rapports||!Object.keys(c.rapports).length)).length;
+      adminBanner.style.display = 'block';
+      adminBanner.innerHTML = `
+        <strong style="color:var(--or);">👁 Vue admin</strong>
+        ${nbBloquees>0?`<span style="color:rgba(255,180,80,.9);margin-left:10px;">⏳ ${nbBloquees} bloquée(s)</span>`:''}
+        ${nbSansRap>0?`<span style="color:rgba(255,100,80,.9);margin-left:10px;">⚠️ ${nbSansRap} sans rapports</span>`:''}
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-nav btn-sm" onclick="cloturerMatch('${etat.matchId}')">🏁 Clôturer</button>
+          <button class="btn btn-gris btn-sm" onclick="reimporterTousRapports()">🔄 Réimporter tous rapports</button>
+          <button class="btn btn-gris btn-sm" onclick="showPage('admin');chargerAdmin()">← Admin</button>
+        </div>`;
+    } else {
+      adminBanner.style.display = 'none';
+      adminBanner.innerHTML = '';
     }
-  } else if(adminBanner) {
-    adminBanner.remove();
   }
   const courses=data.courses||[];
   let idx=etat.courseAffichee!==null?etat.courseAffichee:-1;
@@ -2093,6 +2091,7 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
 
 
