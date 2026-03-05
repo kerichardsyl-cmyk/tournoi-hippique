@@ -1169,19 +1169,46 @@ async function adminCreerJoueur() {
   resultEl.innerHTML = '<span class="spinner"></span> Création en cours…';
   try {
     const apiKey = window.FIREBASE_CONFIG.apiKey;
+    // Vérifier si l'email existe déjà dans la DB (compte créé mais DB non renseignée)
+    const existSnap = await db.ref('utilisateurs').orderByChild('email').equalTo(email).once('value');
+    if(existSnap.exists()) {
+      resultEl.innerHTML='<p style="color:var(--rouge);">❌ Cet email est déjà utilisé par un joueur existant.</p>'; return;
+    }
     const res = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+apiKey, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({email, password:mdp, returnSecureToken:true})
     });
     const data = await res.json();
-    if(data.error) throw new Error(data.error.message);
+    if(data.error) {
+      if(data.error.message==='EMAIL_EXISTS') {
+        // Compte Firebase existe mais pas dans DB — essayer de récupérer l'UID via signIn
+        resultEl.innerHTML='<p style="color:rgba(255,200,100,.9);">⚠️ Compte Firebase existant sans profil — tentative de récupération…</p>';
+        const signInRes = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+apiKey, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({email, password:mdp, returnSecureToken:true})
+        });
+        const signInData = await signInRes.json();
+        if(signInData.error) { resultEl.innerHTML='<p style="color:var(--rouge);">❌ Email déjà utilisé avec un mot de passe différent. Supprimez ce compte dans Firebase Authentication.</p>'; return; }
+        await db.ref('utilisateurs/'+signInData.localId).set({
+          prenom, email, createdAt:Date.now(), visible:true,
+          stats:{matchsJoues:0,victoires:0,defaites:0,egalites:0}, statut:'absent'
+        });
+        resultEl.innerHTML=`<div style="padding:14px;background:rgba(255,204,0,.15);border:1px solid var(--or);border-radius:8px;">
+          <p style="font-weight:bold;color:var(--or-clair);margin-bottom:8px;">✅ Profil récupéré pour ${prenom}</p>
+          <p class="text-sm">Email : <strong>${email}</strong> — Mot de passe inchangé</p>
+        </div>`;
+        chargerAdmin(); return;
+      }
+      throw new Error(data.error.message);
+    }
     await fetch('https://identitytoolkit.googleapis.com/v1/accounts:update?key='+apiKey, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({idToken:data.idToken, displayName:prenom, returnSecureToken:false})
     });
     await db.ref('utilisateurs/'+data.localId).set({
       prenom, email, createdAt:Date.now(), visible:true,
-      stats:{matchsJoues:0,victoires:0,defaites:0,egalites:0}, statut:'absent'
+      stats:{matchsJoues:0,victoires:0,defaites:0,egalites:0}, statut:'absent',
+      elo:{general:1200, trot:1200, galop:1200}
     });
     resultEl.innerHTML = `<div style="padding:14px;background:rgba(255,204,0,.15);border:1px solid var(--or);border-radius:8px;">
       <p style="font-weight:bold;color:var(--or-clair);margin-bottom:8px;">✅ Compte créé pour ${prenom}</p>
@@ -1194,8 +1221,7 @@ async function adminCreerJoueur() {
     document.getElementById('admin-new-email').value='';
     chargerAdmin();
   } catch(e) {
-    const msg = e.message==='EMAIL_EXISTS'?'Cet email est déjà utilisé.':e.message;
-    resultEl.innerHTML='<p style="color:var(--rouge);">❌ '+msg+'</p>';
+    resultEl.innerHTML='<p style="color:var(--rouge);">❌ '+e.message+'</p>';
   }
 }
 
@@ -1539,6 +1565,23 @@ async function bloquerEtValider(idx) {
 
 
 // ── ADMIN : RÉIMPORT RAPPORTS ───────────────────────
+
+async function reimporterTousRapports() {
+  const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
+  const courses = data.courses||[];
+  const aTraiter = courses.filter(c=>c.statut==='terminee'&&(!c.rapports||!Object.keys(c.rapports).length));
+  if(!aTraiter.length) { toast('Aucune course avec rapports manquants'); return; }
+  toast(`⏳ Réimport de ${aTraiter.length} course(s)…`);
+  for(let i=0;i<courses.length;i++) {
+    const co=courses[i];
+    if(co.statut==='terminee'&&(!co.rapports||!Object.keys(co.rapports).length)) {
+      await reimporterRapports(i);
+      await new Promise(r=>setTimeout(r,500)); // pause entre requêtes
+    }
+  }
+  toast('✅ Réimport terminé !');
+}
+
 async function reimporterRapports(idx) {
   const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
   const course = data.courses[idx];
@@ -1706,18 +1749,46 @@ async function cloturerMatch(matchId) {
   const m1=data.manchesJ1||0, m2=data.manchesJ2||0;
   const vainqueur = data.vainqueur || calculerVainqueur(courses,m1,m2);
   const v = vainqueur;
-  const updateStats = async(uid, role) => {
+  // Calcul ELO
+  const K = 32;
+  const calcElo = (eA, eB, sA) => {
+    const expected = 1 / (1 + Math.pow(10, (eB - eA) / 400));
+    return Math.round(K * (sA - expected));
+  };
+  const uidJ1 = data.uidJ1, uidJ2 = data.uidJ2;
+  const eloJ1Snap = uidJ1 ? (await db.ref('utilisateurs/'+uidJ1+'/elo').once('value')).val() : null;
+  const eloJ2Snap = uidJ2 ? (await db.ref('utilisateurs/'+uidJ2+'/elo').once('value')).val() : null;
+  const eloJ1 = eloJ1Snap || {general:1200, trot:1200, galop:1200};
+  const eloJ2 = eloJ2Snap || {general:1200, trot:1200, galop:1200};
+  const scoreJ1 = v==='j1'?1:v==='egal'?0.5:0;
+  const scoreJ2 = 1 - scoreJ1;
+  const disc = data.reunion?.discipline || 'MIXTE';
+  const discKey = disc==='TROT'?'trot':disc==='GALOP'?'galop':null;
+  // ELO général
+  const deltaJ1gen = calcElo(eloJ1.general, eloJ2.general, scoreJ1);
+  const deltaJ2gen = calcElo(eloJ2.general, eloJ1.general, scoreJ2);
+  eloJ1.general = (eloJ1.general||1200) + deltaJ1gen;
+  eloJ2.general = (eloJ2.general||1200) + deltaJ2gen;
+  // ELO discipline (sauf MIXTE)
+  if(discKey) {
+    const deltaJ1disc = calcElo(eloJ1[discKey]||1200, eloJ2[discKey]||1200, scoreJ1);
+    const deltaJ2disc = calcElo(eloJ2[discKey]||1200, eloJ1[discKey]||1200, scoreJ2);
+    eloJ1[discKey] = (eloJ1[discKey]||1200) + deltaJ1disc;
+    eloJ2[discKey] = (eloJ2[discKey]||1200) + deltaJ2disc;
+  }
+  const updateStats = async(uid, role, newElo) => {
     const s=(await db.ref('utilisateurs/'+uid+'/stats').once('value')).val()||{matchsJoues:0,victoires:0,defaites:0,egalites:0};
     s.matchsJoues=(s.matchsJoues||0)+1;
     if(v==='egal') s.egalites=(s.egalites||0)+1;
     else if(v===role) s.victoires=(s.victoires||0)+1;
     else s.defaites=(s.defaites||0)+1;
     await db.ref('utilisateurs/'+uid+'/stats').set(s);
+    await db.ref('utilisateurs/'+uid+'/elo').set(newElo);
     await db.ref('utilisateurs/'+uid+'/statut').set('disponible');
   };
   await db.ref('matchs/'+matchId).update({statut:'termine', vainqueur, manchesJ1:m1, manchesJ2:m2});
-  if(data.uidJ1) await updateStats(data.uidJ1,'j1');
-  if(data.uidJ2) await updateStats(data.uidJ2,'j2');
+  if(uidJ1) await updateStats(uidJ1,'j1',eloJ1);
+  if(uidJ2) await updateStats(uidJ2,'j2',eloJ2);
   toast('✅ Match clôturé !');
   if(matchId===etat.matchId) {
     const fresh=(await db.ref('matchs/'+matchId).once('value')).val();
@@ -1776,6 +1847,30 @@ function calculerVainqueur(courses,m1,m2) {
 // ── RENDU MATCH ─────────────────────────────────────
 function rendreMatch(data) {
   rendreScores(data); rendreProgramme(data);
+  // Bandeau admin
+  const adminBanner = document.getElementById('admin-match-banner');
+  if(etat._adminView) {
+    const nbBloquees = (data.courses||[]).filter(c=>c.statut==='bloquee').length;
+    const nbSansRap  = (data.courses||[]).filter(c=>c.statut==='terminee'&&(!c.rapports||!Object.keys(c.rapports).length)).length;
+    let bannerHtml = `<div id="admin-match-banner" style="background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.4);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:.85rem;">
+      <strong style="color:var(--or);">👁 Vue admin</strong>
+      ${nbBloquees>0?`<span style="color:rgba(255,180,80,.9);margin-left:10px;">⏳ ${nbBloquees} course(s) bloquée(s)</span>`:''}
+      ${nbSansRap>0?`<span style="color:rgba(255,100,80,.9);margin-left:10px;">⚠️ ${nbSansRap} sans rapports</span>`:''}
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-nav btn-sm" onclick="cloturerMatch('${etat.matchId}')">🏁 Clôturer</button>
+        <button class="btn btn-gris btn-sm" onclick="reimporterTousRapports()">🔄 Réimporter tous rapports</button>
+        <button class="btn btn-gris btn-sm" onclick="showPage('admin');chargerAdmin()">← Admin</button>
+      </div>
+    </div>`;
+    const zoneJeu = document.getElementById('zone-jeu');
+    if(zoneJeu) {
+      let banner = document.getElementById('admin-match-banner');
+      if(!banner) { banner = document.createElement('div'); zoneJeu.parentNode.insertBefore(banner, zoneJeu); }
+      banner.outerHTML = bannerHtml;
+    }
+  } else if(adminBanner) {
+    adminBanner.remove();
+  }
   const courses=data.courses||[];
   let idx=etat.courseAffichee!==null?etat.courseAffichee:-1;
   if(idx===-1) idx=courses.findIndex(c=>c.statut==='ouverte');
@@ -1998,5 +2093,6 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
 
