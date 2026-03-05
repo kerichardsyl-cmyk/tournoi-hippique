@@ -110,6 +110,7 @@
       <button type="button" class="btn btn-sm btn-nav" id="nav-matchs" onclick="navMatchs()">🎮 Mes matchs</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-reglement" onclick="navReglement()">📋 Règlement</button>
+      <button type="button" class="btn btn-sm btn-nav" id="nav-profil" onclick="navProfil()">👤 Profil</button>
     </div>
     <span id="header-user" style="font-size:.82rem;color:var(--or);font-style:italic;"></span>
     <button type="button" class="btn btn-sm btn-gris" id="btn-admin" style="display:none;" onclick="navAdmin()">⚙️ Admin</button>
@@ -121,10 +122,6 @@
 <!-- PAGE AUTH -->
 <div id="page-auth" class="page active">
   <div class="card" style="max-width:420px;margin:40px auto;">
-    <div class="tabs">
-      <button type="button" class="tab active" onclick="switchTab('connexion')">Connexion</button>
-      <button type="button" class="tab" onclick="switchTab('inscription')">Inscription</button>
-    </div>
     <div id="form-connexion">
       <label>Email</label>
       <input type="email" id="login-email" placeholder="votre@email.com" />
@@ -132,15 +129,6 @@
       <input type="password" id="login-mdp" placeholder="••••••••" />
       <button type="button" class="btn btn-or" style="width:100%;margin-top:4px;" onclick="seConnecter()">Se connecter</button>
       <p class="text-sm" style="text-align:center;margin-top:12px;cursor:pointer;color:var(--or);" onclick="motDePasseOublie()">Mot de passe oublié ?</p>
-    </div>
-    <div id="form-inscription" style="display:none;">
-      <label>Prénom / Pseudo</label>
-      <input type="text" id="reg-prenom" placeholder="Ex: Jean-Pierre" maxlength="20" />
-      <label>Email</label>
-      <input type="email" id="reg-email" placeholder="votre@email.com" />
-      <label>Mot de passe</label>
-      <input type="password" id="reg-mdp" placeholder="Minimum 6 caractères" />
-      <button type="button" class="btn btn-or" style="width:100%;margin-top:4px;" onclick="sInscrire()">Créer mon compte</button>
     </div>
   </div>
 </div>
@@ -356,6 +344,24 @@
 </div>
 
 
+
+<!-- PAGE PROFIL -->
+<div id="page-profil" class="page">
+  <div class="card" style="max-width:480px;margin:0 auto;">
+    <h2>👤 Mon profil</h2>
+    <div id="profil-info" style="margin-bottom:20px;"></div>
+    <hr class="separator" />
+    <h2 style="margin-top:4px;">🔑 Changer mon mot de passe</h2>
+    <label>Mot de passe actuel</label>
+    <input type="password" id="profil-mdp-actuel" placeholder="••••••••" />
+    <label>Nouveau mot de passe</label>
+    <input type="password" id="profil-mdp-new" placeholder="Minimum 6 caractères" />
+    <label>Confirmer</label>
+    <input type="password" id="profil-mdp-confirm" placeholder="••••••••" />
+    <button type="button" class="btn btn-nav" style="width:100%;margin-top:8px;" onclick="changerMotDePasse()">Modifier le mot de passe</button>
+  </div>
+</div>
+
 <!-- PAGE RÈGLEMENT -->
 <div id="page-reglement" class="page">
   <div class="card" style="max-width:700px;margin:0 auto;">
@@ -398,9 +404,9 @@
     <button type="button" class="btn-back" onclick="navAccueil()">← Accueil</button>
   </div>
   <div class="card" style="max-width:560px;margin:40px auto;text-align:center;">
-    <h2>🏆 Match terminé !</h2>
+    <h2 id="fin-titre">📊 Récapitulatif</h2>
     <div id="fin-contenu" class="mt16"></div>
-    <button class="btn btn-or mt16" onclick="retourAccueil()">🏠 Retour à l'accueil</button>
+    <div id="fin-actions" style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;"></div>
   </div>
 </div>
 
@@ -808,6 +814,46 @@ async function chargerReunionsAvenir() {
   el.innerHTML = html || '<p class="text-sm">Aucune réunion trouvée.</p>';
 }
 
+
+// ── PROFIL ─────────────────────────────────────────
+function navProfil() {
+  showPage('profil'); setNavActive('profil');
+  const uid = utilisateur.uid;
+  db.ref('utilisateurs/'+uid).once('value').then(snap => {
+    const d = snap.val() || {};
+    const elo = d.elo || {general:1200,trot:1200,galop:1200};
+    document.getElementById('profil-info').innerHTML = `
+      <div class="score-ligne"><span>Prénom</span><strong>${d.prenom||'?'}</strong></div>
+      <div class="score-ligne"><span>Email</span><span>${utilisateur.email}</span></div>
+      <div class="score-ligne"><span>Matchs joués</span><strong>${d.stats?.matchsJoues||0}</strong></div>
+      <div class="score-ligne"><span>Victoires</span><strong>${d.stats?.victoires||0}</strong></div>
+      <div class="score-ligne"><span>ELO Général</span><strong>${elo.general||1200}</strong></div>
+      <div class="score-ligne"><span>ELO Trot</span><strong>${elo.trot||1200}</strong></div>
+      <div class="score-ligne"><span>ELO Galop</span><strong>${elo.galop||1200}</strong></div>`;
+  });
+}
+
+async function changerMotDePasse() {
+  const actuel = document.getElementById('profil-mdp-actuel').value;
+  const newMdp = document.getElementById('profil-mdp-new').value;
+  const confirm = document.getElementById('profil-mdp-confirm').value;
+  if(!actuel||!newMdp||!confirm) { toast('⚠️ Remplissez tous les champs', true); return; }
+  if(newMdp.length < 6) { toast('⚠️ Minimum 6 caractères', true); return; }
+  if(newMdp !== confirm) { toast('⚠️ Les mots de passe ne correspondent pas', true); return; }
+  try {
+    const cred = firebase.auth.EmailAuthProvider.credential(utilisateur.email, actuel);
+    await utilisateur.reauthenticateWithCredential(cred);
+    await utilisateur.updatePassword(newMdp);
+    document.getElementById('profil-mdp-actuel').value='';
+    document.getElementById('profil-mdp-new').value='';
+    document.getElementById('profil-mdp-confirm').value='';
+    toast('✅ Mot de passe modifié avec succès !');
+  } catch(e) {
+    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential') toast('❌ Mot de passe actuel incorrect', true);
+    else toast('❌ Erreur : '+e.message, true);
+  }
+}
+
 // ── TABLEAU DE BORD ────────────────────────────────
 function chargerTableauBord() {
   if (!utilisateur) return;
@@ -832,6 +878,12 @@ function chargerTableauBord() {
           <div style="flex:1;">
             <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'En attente'}</strong>
             <div class="text-sm" style="margin-top:2px;">${m.reunion?.hippodrome||'Non configuré'}</div>
+            ${m.statut==='en_cours'?(()=>{
+              const cs=m.courses||[];
+              const p1=cs.reduce((s,c)=>s+(c.pointsJ1||0),0);
+              const p2=cs.reduce((s,c)=>s+(c.pointsJ2||0),0);
+              return `<div class="text-sm" style="margin-top:2px;color:var(--or-clair);">${m.j1?.nom||'J1'} ${m.manchesJ1||0} (${p1} pts) — ${m.j2?.nom||'J2'} ${m.manchesJ2||0} (${p2} pts)</div>`;
+            })():''}
           </div>
           <span class="badge-${m.statut==='en_cours'?'vert':'or'}">${m.statut==='en_cours'?'En cours':m.statut==='pret'?'Prêt':'Attente'}</span>
           <button type="button" class="btn btn-gris btn-sm" style="font-size:.75rem;padding:4px 8px;" onclick="event.stopPropagation();supprimerMatch('${m.id}')">🗑</button>
@@ -953,6 +1005,7 @@ async function ouvrirMatch(matchId) {
   ecouterMatch();
   if (data.statut==='attente'||data.statut==='pret') showPage('lobby');
   else if (data.statut==='en_cours') showPage('match');
+  else if (data.statut==='pret_cloture') { showPage('fin'); rendreFin(data); }
   else if (data.statut==='termine') { showPage('fin'); rendreFin(data); }
 }
 
@@ -1062,7 +1115,7 @@ function afficherAnnuaire(joueurs) {
         <div style="font-weight:bold;font-size:.9rem;">${j.prenom||'Joueur'}</div>
         <div style="font-size:.75rem;color:rgba(253,246,227,.55);margin-top:1px;">${stats.matchsJoues||0} matchs · ${stats.victoires||0} victoires · ${statutHtml}</div>
       </div>
-      <button type="button" class="btn btn-vert btn-sm" onclick="inviterDepuisAnnuaire('${j.uid}','${j.prenom}','${j.email||''}')">Inviter</button>
+      <button type="button" class="btn btn-vert btn-sm" data-uid="${j.uid}" data-prenom="${j.prenom}" data-email="${j.email||''}" onclick="inviterDepuisAnnuaire(this.dataset.uid,this.dataset.prenom,this.dataset.email)">Inviter</button>
     </div>`;
   }).join('');
 }
@@ -1392,7 +1445,8 @@ function rendreEtat(data) {
   else if(data.statut==='en_cours') {
     if(!etat.timersInitialises) { etat.timersInitialises=true; reprendreTimers(data); }
     showPage('match'); rendreMatch(data);
-  } else if(data.statut==='termine') { showPage('fin'); rendreFin(data); }
+  } else if(data.statut==='pret_cloture') { showPage('fin'); rendreFin(data); }
+  else if(data.statut==='termine') { showPage('fin'); rendreFin(data); }
 }
 
 function rendrelobby(data) {
@@ -1464,15 +1518,24 @@ async function bloquerEtValider(idx) {
 }
 
 // ── POLLING RÉSULTATS ───────────────────────────────
+// Appelé par les DEUX joueurs : celui qui a la main via bloquerEtValider,
+// et l'autre via ecouterMatch dès qu'il voit une course passer en 'bloquee'
+const _pollsActifs = {};
+
 async function demarrerPollingResultats(idx) {
+  if(_pollsActifs[idx]) return; // déjà en cours pour ce joueur
+  _pollsActifs[idx] = true;
   const poll=setInterval(async()=>{
     try {
+      // Vérifier d'abord si la course n'est pas déjà terminée par l'autre joueur
+      const snap=await db.ref(`matchs/${etat.matchId}/courses/${idx}/statut`).once('value');
+      if(snap.val()==='terminee') { clearInterval(poll); delete _pollsActifs[idx]; return; }
       const c=etat.matchData.courses[idx];
+      if(!c) { clearInterval(poll); delete _pollsActifs[idx]; return; }
       const res=await pmuGet(`programme/${c.pmuDate}/R${c.numReunion}/C${c.numOrdre}`);
       const statut=res.statut||res.course?.statut;
       if(['ARRIVEE_DEFINITIVE','RAPPORTS_DEFINITIFS','FIN_COURSE','ARRIVEE_DEFINITIVE_COMPLETE'].includes(statut)) {
-        clearInterval(poll);
-        // Récupérer les rapports définitifs
+        clearInterval(poll); delete _pollsActifs[idx];
         try {
           const raps=await pmuGet(`programme/${c.pmuDate}/R${c.numReunion}/C${c.numOrdre}/rapports-definitifs`);
           res._rapportsDefinitifs=raps;
@@ -1526,23 +1589,81 @@ async function mettreAJourScores() {
   let m1=0,m2=0;
   courses.forEach(c=>{if(c.mancheGagnant==='j1')m1++;else if(c.mancheGagnant==='j2')m2++;});
   const update={manchesJ1:m1,manchesJ2:m2};
-  if(courses.every(c=>c.statut==='terminee')) {
-    update.statut='termine'; update.vainqueur=calculerVainqueur(courses,m1,m2);
-    const md=(await db.ref('matchs/'+etat.matchId).once('value')).val();
-    const v=update.vainqueur;
-    const updateStats=async(uid,role)=>{
-      const s=(await db.ref('utilisateurs/'+uid+'/stats').once('value')).val()||{matchsJoues:0,victoires:0,defaites:0,egalites:0};
-      s.matchsJoues=(s.matchsJoues||0)+1;
-      if(v==='egal') s.egalites=(s.egalites||0)+1;
-      else if(v===role) s.victoires=(s.victoires||0)+1;
-      else s.defaites=(s.defaites||0)+1;
-      await db.ref('utilisateurs/'+uid+'/stats').set(s);
-      await db.ref('utilisateurs/'+uid+'/statut').set('disponible');
-    };
-    if(md.uidJ1) updateStats(md.uidJ1,'j1');
-    if(md.uidJ2) updateStats(md.uidJ2,'j2');
+  if(courses.every(c=>c.statut==='terminee') && data.statut!=='pret_cloture' && data.statut!=='termine') {
+    update.statut='pret_cloture';
+    update.vainqueur=calculerVainqueur(courses,m1,m2);
   }
   await db.ref('matchs/'+etat.matchId).update(update);
+}
+
+
+// ── CLÔTURE MATCH ──────────────────────────────────
+async function cloturerMatch(matchId) {
+  matchId = matchId || etat.matchId;
+  if(!matchId) return;
+  const data = (await db.ref('matchs/'+matchId).once('value')).val();
+  if(!data) return;
+  const courses = data.courses||[];
+  const toutes = courses.every(c=>c.statut==='terminee');
+  if(!toutes) {
+    const nbBloquees = courses.filter(c=>c.statut==='bloquee').length;
+    if(nbBloquees>0 && utilisateur.uid !== ADMIN_UID) {
+      toast("⚠️ "+nbBloquees+" course(s) en attente de résultats. Seul l'admin peut forcer la clôture.", true);
+      return;
+    }
+    if(!confirm("Certaines courses n'ont pas leurs résultats. Clôturer quand même ?")) return;
+  }
+  const m1=data.manchesJ1||0, m2=data.manchesJ2||0;
+  const vainqueur = data.vainqueur || calculerVainqueur(courses,m1,m2);
+  const v = vainqueur;
+  const updateStats = async(uid, role) => {
+    const s=(await db.ref('utilisateurs/'+uid+'/stats').once('value')).val()||{matchsJoues:0,victoires:0,defaites:0,egalites:0};
+    s.matchsJoues=(s.matchsJoues||0)+1;
+    if(v==='egal') s.egalites=(s.egalites||0)+1;
+    else if(v===role) s.victoires=(s.victoires||0)+1;
+    else s.defaites=(s.defaites||0)+1;
+    await db.ref('utilisateurs/'+uid+'/stats').set(s);
+    await db.ref('utilisateurs/'+uid+'/statut').set('disponible');
+  };
+  await db.ref('matchs/'+matchId).update({statut:'termine', vainqueur, manchesJ1:m1, manchesJ2:m2});
+  if(data.uidJ1) await updateStats(data.uidJ1,'j1');
+  if(data.uidJ2) await updateStats(data.uidJ2,'j2');
+  toast('✅ Match clôturé !');
+  if(matchId===etat.matchId) {
+    const fresh=(await db.ref('matchs/'+matchId).once('value')).val();
+    rendreFin(fresh); afficherBoutonsFin(fresh);
+  } else {
+    chargerAdmin();
+  }
+}
+
+async function rouvrirMatch(matchId) {
+  if(!confirm('Rouvrir ce match pour corrections ?')) return;
+  await db.ref('matchs/'+matchId).update({statut:'en_cours'});
+  toast('🔓 Match rouvert');
+  chargerAdmin();
+}
+
+function afficherBoutonsFin(data) {
+  const el = document.getElementById('fin-actions');
+  if(!el) return;
+  const statut = data.statut;
+  const isAdmin = utilisateur?.uid === ADMIN_UID;
+  let html = '';
+  if(statut==='pret_cloture') {
+    html += `<button class="btn btn-or" onclick="cloturerMatch()">🏁 Clôturer le match</button>`;
+  } else if(statut==='termine') {
+    html += `<span style="color:var(--vert);font-size:.9rem;">✅ Match clôturé</span>`;
+  }
+  if(statut!=='termine') {
+    html += `<button class="btn btn-gris" onclick="navMatchs()">🏠 Mes matchs</button>`;
+  } else {
+    html += `<button class="btn btn-gris" onclick="retourAccueil()">🏠 Retour à l'accueil</button>`;
+  }
+  el.innerHTML = html;
+  // Titre dynamique
+  const titreEl = document.getElementById('fin-titre');
+  if(titreEl) titreEl.textContent = statut==='termine'?'🏆 Match terminé !':'📊 Récapitulatif';
 }
 
 function calculerVainqueur(courses,m1,m2) {
@@ -1565,10 +1686,13 @@ function rendreMatch(data) {
 
 function rendreScores(data) {
   const j1=data.j1?.nom||'J1',j2=data.j2?.nom||'J2',m1=data.manchesJ1||0,m2=data.manchesJ2||0;
+  const courses=data.courses||[];
+  const p1=courses.reduce((s,c)=>s+(c.pointsJ1||0),0);
+  const p2=courses.reduce((s,c)=>s+(c.pointsJ2||0),0);
   document.getElementById('scores-display').innerHTML=`
-    <div class="score-ligne ${m1>m2?'gagnant':m2>m1?'perdant':''}"><span>${etat.joueurId==='j1'?'👤 ':''}${j1}</span><span class="score-pts">${m1}</span></div>
-    <div class="score-ligne ${m2>m1?'gagnant':m1>m2?'perdant':''}"><span>${etat.joueurId==='j2'?'👤 ':''}${j2}</span><span class="score-pts">${m2}</span></div>
-    <p class="text-sm" style="text-align:center;margin-top:8px;">manches remportées</p>`;
+    <div class="score-ligne ${m1>m2?'gagnant':m2>m1?'perdant':''}"><span>${etat.joueurId==='j1'?'👤 ':''}${j1}</span><span class="score-pts">${m1} <span style="font-size:.75rem;font-weight:normal;opacity:.7;">(${p1} pts)</span></span></div>
+    <div class="score-ligne ${m2>m1?'gagnant':m1>m2?'perdant':''}"><span>${etat.joueurId==='j2'?'👤 ':''}${j2}</span><span class="score-pts">${m2} <span style="font-size:.75rem;font-weight:normal;opacity:.7;">(${p2} pts)</span></span></div>
+    <p class="text-sm" style="text-align:center;margin-top:8px;">manches · points totaux</p>`;
 }
 
 function rendreProgramme(data) {
@@ -1733,6 +1857,7 @@ function rendreResultatsCourse(c,data) {
 }
 
 function rendreFin(data) {
+  afficherBoutonsFin(data);
   const j1=data.j1?.nom||'J1',j2=data.j2?.nom||'J2',v=data.vainqueur,cs=data.courses||[];
   let t=`<table style="width:100%;border-collapse:collapse;font-size:.85rem;margin-top:16px;">
     <tr style="color:var(--or);border-bottom:1px solid rgba(201,169,74,.3);"><th style="padding:6px;text-align:left;">Course</th><th style="padding:6px;">${j1}</th><th style="padding:6px;">${j2}</th><th style="padding:6px;">Manche</th></tr>`;
@@ -1749,3 +1874,4 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
