@@ -79,6 +79,8 @@
     .statut-dispo { color:#6fffa0; font-size:.72rem; }
     .statut-occupe { color:#ffaaaa; font-size:.72rem; }
     .statut-absent { color:rgba(253,246,227,.35); font-size:.72rem; }
+    .match-historique { transition:background .15s, transform .1s; }
+    .match-historique:hover { background:rgba(255,204,0,.12) !important; transform:translateX(3px); }
     .match-card { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-radius:10px; margin-bottom:10px; background:rgba(255,255,255,.06); border:1px solid rgba(201,169,74,.2); gap:12px; flex-wrap:wrap; }
     .match-card:hover { background:rgba(255,255,255,.1); cursor:pointer; }
     .match-card.invite { border-color:rgba(201,169,74,.6); background:rgba(201,169,74,.08); }
@@ -703,7 +705,7 @@ async function chargerAccueil() {
   const discIcon = d => d==='TROT'?'🔵 ':d==='GALOP'?'🟡 ':'';
   document.getElementById('home-derniers-matchs').innerHTML = derniers.length
     ? derniers.slice(0,10).map(m=>`
-      <div style="padding:8px 10px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.05);font-size:.85rem;cursor:pointer;" onclick="ouvrirMatch('${m.id}')">
+      <div class="match-historique" style="padding:8px 10px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.05);font-size:.85rem;cursor:pointer;" onclick="ouvrirMatch('${m.id}')">
         <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'?'}</strong>
         <span style="float:right;color:var(--or-clair);">🏆 ${m.vainqueur==='j1'?m.j1?.nom:m.vainqueur==='j2'?m.j2?.nom:'Nul'}</span>
         <div class="text-sm" style="margin-top:2px;">${discIcon(m.reunion?.discipline)}${m.reunion?.hippodrome||''} · ${m.manchesJ1||0}-${m.manchesJ2||0}</div>
