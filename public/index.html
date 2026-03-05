@@ -1002,13 +1002,11 @@ async function ouvrirMatch(matchId) {
   const isAdmin = uid === ADMIN_UID;
   etat.matchId = matchId;
   // Admin : joueur fictif j1 pour pouvoir visualiser, sans être participant
-  if(isAdmin && data.uidJ1 !== uid && data.uidJ2 !== uid) {
-    etat.joueurId = 'j1'; // vue admin = vue j1
-    etat._adminView = true;
-  } else {
-    etat.joueurId = data.uidJ1===uid ? 'j1' : 'j2';
-    etat._adminView = false;
-  }
+  // L'admin a toujours la vue admin, même s'il participe au match
+  etat._adminView = isAdmin;
+  if(data.uidJ1===uid) etat.joueurId = 'j1';
+  else if(data.uidJ2===uid) etat.joueurId = 'j2';
+  else etat.joueurId = 'j1'; // admin observateur : vue j1 par défaut
   document.getElementById('lobby-code').textContent = matchId;
   if (etat.joueurId==='j1' && !etat._adminView) document.getElementById('bloc-arbitre').style.display='block';
   ecouterMatch();
@@ -2091,6 +2089,7 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
 
 
