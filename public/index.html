@@ -850,12 +850,13 @@ function chargerTableauBord() {
           const d = m.createdAt ? new Date(m.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
           const disc = m.reunion?.discipline||'';
           const discIcon = disc==='TROT'?'🔵 ':disc==='GALOP'?'🟡 ':'';
-          return `<div class="match-card" style="background:${resColor};cursor:default;">
+          return `<div class="match-card" style="background:${resColor};cursor:pointer;" onclick="ouvrirMatch('${m.id}')">
             <div style="flex:1;">
               <div style="display:flex;align-items:center;gap:8px;"><strong>vs ${adv}</strong><span style="font-size:.8rem;">${res}</span></div>
               <div class="text-sm" style="margin-top:2px;">${d} · ${discIcon}${m.reunion?.hippodrome||'?'}</div>
               <div class="text-sm" style="margin-top:1px;color:var(--or-clair);">Manches ${mM} — ${mA}</div>
             </div>
+            <span style="font-size:.8rem;opacity:.5;">›</span>
           </div>`;
         }).join('')
       : '<p class="text-sm">Aucun match terminé.</p>';
@@ -1746,5 +1747,3 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
-
-
