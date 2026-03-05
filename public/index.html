@@ -199,6 +199,16 @@
         <h2>📬 Invitations reçues</h2>
         <div id="liste-invitations"><p class="text-sm">Aucune invitation.</p></div>
       </div>
+      <div class="card">
+        <h2>📤 Invitations envoyées</h2>
+        <div id="liste-invitations-envoyees"><p class="text-sm">Aucune invitation envoyée.</p></div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:260px;">
+      <div class="card">
+        <h2>🏁 Mes matchs terminés</h2>
+        <div id="liste-matchs-termines"><p class="text-sm">Chargement…</p></div>
+      </div>
     </div>
   </div>
 </div>
@@ -528,7 +538,7 @@ async function envoyerInvitationLobby() {
   if(!emailInvite) { toast('⚠️ Entrez un email',true); return; }
   if(emailInvite === utilisateur.email) { toast('⚠️ Vous ne pouvez pas vous inviter vous-même',true); return; }
   const monPrenom = utilisateur.displayName || utilisateur.email;
-  await db.ref('invitations').push({
+  await db.ref('invitations/inv_'+etat.matchId).set({
     matchId:etat.matchId, emailInvite, nomInviteur:monPrenom,
     uidInviteur:utilisateur.uid, statut:'en_attente', createdAt:Date.now()
   });
@@ -538,7 +548,7 @@ async function envoyerInvitationLobby() {
 
 async function inviterDepuisLobby(uid, prenom, email) {
   const monPrenom = utilisateur.displayName || utilisateur.email;
-  await db.ref('invitations').push({
+  await db.ref('invitations/inv_'+etat.matchId).set({
     matchId:etat.matchId, uidInvite:uid, emailInvite:email, nomInviteur:monPrenom,
     uidInviteur:utilisateur.uid, statut:'en_attente', createdAt:Date.now()
   });
@@ -686,9 +696,9 @@ async function chargerAccueil() {
   afficherClassement(_classDiscipline, uid);
 
   // Derniers matchs
-  const matchsSnap = await db.ref('matchs').orderByChild('statut').equalTo('termine').once('value');
+  const matchsSnap = await db.ref('matchs').orderByChild('createdAt').limitToLast(50).once('value');
   const derniers = [];
-  matchsSnap.forEach(child => derniers.push({id:child.key,...child.val()}));
+  matchsSnap.forEach(child => { const d=child.val(); if(d.statut==='termine') derniers.push({id:child.key,...d}); });
   derniers.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const discIcon = d => d==='TROT'?'🔵 ':d==='GALOP'?'🟡 ':'';
   document.getElementById('home-derniers-matchs').innerHTML = derniers.length
@@ -785,7 +795,7 @@ async function chargerReunionsAvenir() {
           const disc = detecterDiscipline(r);
           const discIcon = disc==='TROT'?'🔵':disc==='GALOP'?'🟡':'⚪';
           html += `<div style="padding:4px 8px;font-size:.82rem;border-left:2px solid rgba(255,204,0,.2);margin-bottom:2px;">
-            ${discIcon} <strong>R${r.numOrdre}</strong> — ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'}
+            ${discIcon} ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'}
             <span class="text-sm" style="color:rgba(255,248,232,.45);"> (${r.courses?.length||0} courses)</span>
           </div>`;
         });
@@ -802,35 +812,80 @@ function chargerTableauBord() {
   const uid = utilisateur.uid;
 
   // Matchs en cours
+  // Matchs en cours
   db.ref('matchs').orderByChild('statut').once('value', snap => {
-    const matchs = [];
+    const enCours = [], termines = [];
     snap.forEach(child => {
       const d = child.val();
-      if ((d.uidJ1===uid || d.uidJ2===uid) && d.statut !== 'termine') matchs.push({id:child.key,...d});
+      if(d.uidJ1===uid || d.uidJ2===uid) {
+        if(d.statut !== 'termine') enCours.push({id:child.key,...d});
+        else termines.push({id:child.key,...d});
+      }
     });
+    // Matchs en cours
     const container = document.getElementById('liste-matchs-cours');
-    if (!matchs.length) { container.innerHTML='<p class="text-sm">Aucun match en cours.</p>'; return; }
-    container.innerHTML = matchs.map(m => `
-      <div class="match-card" onclick="ouvrirMatch('${m.id}')">
-        <div style="flex:1;">
-          <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'En attente'}</strong>
-          <div class="text-sm" style="margin-top:2px;">Match ${m.id} · ${m.reunion?.hippodrome||'Non configuré'}</div>
-        </div>
-        <span class="badge-${m.statut==='en_cours'?'vert':'or'}">${m.statut==='en_cours'?'En cours':m.statut==='pret'?'Prêt':'Attente'}</span>
-        <button type="button" class="btn btn-gris btn-sm" style="font-size:.75rem;padding:4px 8px;" onclick="event.stopPropagation();supprimerMatch('${m.id}')">🗑</button>
-      </div>`).join('');
+    container.innerHTML = enCours.length
+      ? enCours.map(m => `
+        <div class="match-card" onclick="ouvrirMatch('${m.id}')">
+          <div style="flex:1;">
+            <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'En attente'}</strong>
+            <div class="text-sm" style="margin-top:2px;">${m.reunion?.hippodrome||'Non configuré'}</div>
+          </div>
+          <span class="badge-${m.statut==='en_cours'?'vert':'or'}">${m.statut==='en_cours'?'En cours':m.statut==='pret'?'Prêt':'Attente'}</span>
+          <button type="button" class="btn btn-gris btn-sm" style="font-size:.75rem;padding:4px 8px;" onclick="event.stopPropagation();supprimerMatch('${m.id}')">🗑</button>
+        </div>`).join('')
+      : '<p class="text-sm">Aucun match en cours.</p>';
+
+    // Matchs terminés
+    termines.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    const contT = document.getElementById('liste-matchs-termines');
+    contT.innerHTML = termines.length
+      ? termines.map(m => {
+          const monRole = m.uidJ1===uid ? 'j1' : 'j2';
+          const adv = monRole==='j1' ? m.j2?.nom||'?' : m.j1?.nom||'?';
+          const mM = monRole==='j1' ? m.manchesJ1||0 : m.manchesJ2||0;
+          const mA = monRole==='j1' ? m.manchesJ2||0 : m.manchesJ1||0;
+          const res = m.vainqueur===monRole?'✅ Victoire':m.vainqueur==='egal'?'🤝 Nul':'❌ Défaite';
+          const resColor = m.vainqueur===monRole?'rgba(100,255,150,.15)':m.vainqueur==='egal'?'rgba(255,204,0,.1)':'rgba(204,34,0,.15)';
+          const d = m.createdAt ? new Date(m.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+          const disc = m.reunion?.discipline||'';
+          const discIcon = disc==='TROT'?'🔵 ':disc==='GALOP'?'🟡 ':'';
+          return `<div class="match-card" style="background:${resColor};cursor:default;">
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;"><strong>vs ${adv}</strong><span style="font-size:.8rem;">${res}</span></div>
+              <div class="text-sm" style="margin-top:2px;">${d} · ${discIcon}${m.reunion?.hippodrome||'?'}</div>
+              <div class="text-sm" style="margin-top:1px;color:var(--or-clair);">Manches ${mM} — ${mA}</div>
+            </div>
+          </div>`;
+        }).join('')
+      : '<p class="text-sm">Aucun match terminé.</p>';
   });
 
-  // Invitations reçues
-  // Invitations reçues (par UID ou email)
-  const afficherInvitations = (invits) => {
+  // Invitations reçues (une seule par match, dédupliquées)
+  const afficherInvitations = async (invits) => {
     const container = document.getElementById('liste-invitations');
-    if (!invits.length) { container.innerHTML='<p class="text-sm">Aucune invitation.</p>'; return; }
-    container.innerHTML = invits.map(inv => `
+    // Dédupliquer par matchId (garder la plus récente)
+    const parMatch = {};
+    invits.forEach(inv => {
+      if(!parMatch[inv.matchId] || inv.createdAt > parMatch[inv.matchId].createdAt)
+        parMatch[inv.matchId] = inv;
+    });
+    const uniques = Object.values(parMatch);
+    if(!uniques.length) { container.innerHTML='<p class="text-sm">Aucune invitation.</p>'; return; }
+    const enrichies = await Promise.all(uniques.map(async inv => {
+      try {
+        const mSnap = await db.ref('matchs/'+inv.matchId).once('value');
+        const m = mSnap.val() || {};
+        inv._hippodrome = m.reunion?.hippodrome || '';
+        inv._date = m.createdAt ? new Date(m.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+      } catch(e) {}
+      return inv;
+    }));
+    container.innerHTML = enrichies.map(inv => `
       <div class="match-card invite">
         <div>
-          <strong>Invitation de ${inv.nomInviteur}</strong>
-          <div class="text-sm" style="margin-top:2px;">Match ${inv.matchId}</div>
+          <strong>De ${inv.nomInviteur}</strong>
+          <div class="text-sm" style="margin-top:2px;">${inv._date?inv._date+' · ':''}${inv._hippodrome||'Réunion non configurée'}</div>
         </div>
         <div class="flex">
           <button type="button" class="btn btn-or btn-sm" onclick="accepterInvitation('${inv.id}','${inv.matchId}')">Accepter</button>
@@ -838,6 +893,32 @@ function chargerTableauBord() {
         </div>
       </div>`).join('');
   };
+
+  // Invitations envoyées
+  const afficherInvitationsEnvoyees = async (invits) => {
+    const container = document.getElementById('liste-invitations-envoyees');
+    const en_attente = invits.filter(i => i.statut==='en_attente');
+    if(!en_attente.length) { container.innerHTML='<p class="text-sm">Aucune invitation en attente.</p>'; return; }
+    const enrichies = await Promise.all(en_attente.map(async inv => {
+      try {
+        const mSnap = await db.ref('matchs/'+inv.matchId).once('value');
+        const m = mSnap.val() || {};
+        inv._hippodrome = m.reunion?.hippodrome || '';
+        inv._date = m.createdAt ? new Date(m.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+      } catch(e) {}
+      return inv;
+    }));
+    container.innerHTML = enrichies.map(inv => `
+      <div class="match-card" style="background:rgba(255,255,255,.04);">
+        <div style="flex:1;">
+          <strong>→ ${inv.emailInvite}</strong>
+          <div class="text-sm" style="margin-top:2px;">${inv._date?inv._date+' · ':''}${inv._hippodrome||'Réunion non configurée'}</div>
+          <div class="text-sm" style="margin-top:1px;color:var(--or);opacity:.7;">⏳ En attente de réponse</div>
+        </div>
+        <button type="button" class="btn btn-gris btn-sm" onclick="annulerInvitation('${inv.id}','${inv.matchId}')">Annuler</button>
+      </div>`).join('');
+  };
+
   const invitsMerges = {};
   db.ref('invitations').orderByChild('uidInvite').equalTo(utilisateur.uid).on('value', snap => {
     snap.forEach(child => { const d=child.val(); if(d.statut==='en_attente') invitsMerges[child.key]={id:child.key,...d}; else delete invitsMerges[child.key]; });
@@ -846,6 +927,11 @@ function chargerTableauBord() {
   db.ref('invitations').orderByChild('emailInvite').equalTo(utilisateur.email).on('value', snap => {
     snap.forEach(child => { const d=child.val(); if(d.statut==='en_attente') invitsMerges[child.key]={id:child.key,...d}; else delete invitsMerges[child.key]; });
     afficherInvitations(Object.values(invitsMerges));
+  });
+  db.ref('invitations').orderByChild('uidInviteur').equalTo(utilisateur.uid).on('value', snap => {
+    const envoyees = [];
+    snap.forEach(child => envoyees.push({id:child.key,...child.val()}));
+    afficherInvitationsEnvoyees(envoyees);
   });
 }
 
@@ -872,15 +958,14 @@ async function envoyerInvitation() {
   const emailInvite = document.getElementById('invite-email').value.trim().toLowerCase();
   if (!emailInvite) { toast('⚠️ Entrez un email',true); return; }
   if (emailInvite === utilisateur.email) { toast('⚠️ Vous ne pouvez pas vous inviter vous-même',true); return; }
-  // Créer le match d'abord
-  const code = genCode();
   const prenom = utilisateur.displayName || utilisateur.email;
+  const code = genCode();
   await db.ref('matchs/'+code).set({
     code, statut:'attente', uidJ1:utilisateur.uid,
     j1:{nom:prenom, uid:utilisateur.uid, connecte:true}, j2:null, createdAt:Date.now()
   });
-  // Créer l'invitation
-  await db.ref('invitations').push({
+  // Une seule invitation par match (clé = matchId pour éviter les doublons)
+  await db.ref('invitations/inv_'+code).set({
     matchId:code, emailInvite, nomInviteur:prenom,
     uidInviteur:utilisateur.uid, statut:'en_attente', createdAt:Date.now()
   });
@@ -900,6 +985,15 @@ async function accepterInvitation(invitId, matchId) {
   etat.matchId=matchId; etat.joueurId='j2';
   document.getElementById('lobby-code').textContent=matchId;
   showPage('lobby'); ecouterMatch();
+}
+
+
+async function annulerInvitation(invitId, matchId) {
+  if(!confirm('Annuler cette invitation et supprimer le match ?')) return;
+  await db.ref('invitations/'+invitId).remove();
+  await db.ref('matchs/'+matchId).remove();
+  toast('Invitation annulée.');
+  chargerTableauBord();
 }
 
 async function refuserInvitation(invitId) {
@@ -992,6 +1086,54 @@ async function inviterDepuisAnnuaire(uid, prenom, email) {
 
 // ── ADMIN ──────────────────────────────────────────
 let tousUsersAdmin = [];
+
+
+// ── ADMIN : CRÉER JOUEUR ────────────────────────────
+function genMdp() {
+  const chars='abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#';
+  let mdp='';
+  for(let i=0;i<10;i++) mdp+=chars[Math.floor(Math.random()*chars.length)];
+  return mdp;
+}
+
+async function adminCreerJoueur() {
+  const prenom = document.getElementById('admin-new-prenom').value.trim();
+  const email = document.getElementById('admin-new-email').value.trim().toLowerCase();
+  const resultEl = document.getElementById('admin-new-result');
+  if(!prenom||!email) { toast('Remplissez prénom et email', true); return; }
+  const mdp = genMdp();
+  resultEl.innerHTML = '<span class="spinner"></span> Création en cours…';
+  try {
+    const apiKey = window.FIREBASE_CONFIG.apiKey;
+    const res = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+apiKey, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email, password:mdp, returnSecureToken:true})
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error.message);
+    await fetch('https://identitytoolkit.googleapis.com/v1/accounts:update?key='+apiKey, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({idToken:data.idToken, displayName:prenom, returnSecureToken:false})
+    });
+    await db.ref('utilisateurs/'+data.localId).set({
+      prenom, email, createdAt:Date.now(), visible:true,
+      stats:{matchsJoues:0,victoires:0,defaites:0,egalites:0}, statut:'absent'
+    });
+    resultEl.innerHTML = `<div style="padding:14px;background:rgba(255,204,0,.15);border:1px solid var(--or);border-radius:8px;">
+      <p style="font-weight:bold;color:var(--or-clair);margin-bottom:8px;">✅ Compte créé pour ${prenom}</p>
+      <p class="text-sm" style="margin-bottom:4px;">Email : <strong>${email}</strong></p>
+      <p class="text-sm" style="margin-bottom:12px;">Mot de passe temporaire :</p>
+      <div style="background:#111;border:2px solid var(--or);border-radius:8px;padding:12px;text-align:center;font-size:1.4rem;font-family:monospace;letter-spacing:4px;color:var(--or-clair);">${mdp}</div>
+      <p class="text-sm" style="margin-top:8px;color:rgba(255,248,232,.5);">Communiquez ces identifiants au joueur. Il pourra changer son mot de passe dans son profil.</p>
+    </div>`;
+    document.getElementById('admin-new-prenom').value='';
+    document.getElementById('admin-new-email').value='';
+    chargerAdmin();
+  } catch(e) {
+    const msg = e.message==='EMAIL_EXISTS'?'Cet email est déjà utilisé.':e.message;
+    resultEl.innerHTML='<p style="color:var(--rouge);">❌ '+msg+'</p>';
+  }
+}
 
 async function chargerAdmin() {
   if (!utilisateur || utilisateur.uid !== ADMIN_UID) return;
@@ -1604,4 +1746,5 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
