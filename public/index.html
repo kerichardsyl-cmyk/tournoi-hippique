@@ -998,10 +998,18 @@ async function ouvrirMatch(matchId) {
   const snap = await db.ref('matchs/'+matchId).once('value');
   const data = snap.val(); if (!data) return;
   const uid = utilisateur.uid;
+  const isAdmin = uid === ADMIN_UID;
   etat.matchId = matchId;
-  etat.joueurId = data.uidJ1===uid ? 'j1' : 'j2';
+  // Admin : joueur fictif j1 pour pouvoir visualiser, sans être participant
+  if(isAdmin && data.uidJ1 !== uid && data.uidJ2 !== uid) {
+    etat.joueurId = 'j1'; // vue admin = vue j1
+    etat._adminView = true;
+  } else {
+    etat.joueurId = data.uidJ1===uid ? 'j1' : 'j2';
+    etat._adminView = false;
+  }
   document.getElementById('lobby-code').textContent = matchId;
-  if (etat.joueurId==='j1') document.getElementById('bloc-arbitre').style.display='block';
+  if (etat.joueurId==='j1' && !etat._adminView) document.getElementById('bloc-arbitre').style.display='block';
   ecouterMatch();
   if (data.statut==='attente'||data.statut==='pret') showPage('lobby');
   else if (data.statut==='en_cours') showPage('match');
@@ -1229,15 +1237,27 @@ async function chargerAdmin() {
   if(matchsContainer) {
     if(!tousMatchsAdmin.length) { matchsContainer.innerHTML='<p class="text-sm">Aucun match.</p>'; }
     else {
-      const sBadge = s => s==='en_cours'?'<span class="badge-vert">En cours</span>':s==='pret'||s==='attente'?'<span class="badge-or">'+s+'</span>':'<span style="color:rgba(253,246,227,.4);font-size:.78rem;">Terminé</span>';
-      matchsContainer.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.82rem;"><thead><tr style="color:var(--or);border-bottom:1px solid rgba(201,169,74,.3);"><th style="padding:6px 8px;text-align:left;">Code</th><th style="padding:6px 8px;">J1</th><th style="padding:6px 8px;">J2</th><th style="padding:6px 8px;">Statut</th><th style="padding:6px 8px;">Action</th></tr></thead><tbody>' +
+      const sBadge = s => {
+        if(s==='en_cours') return '<span class="badge-vert">En cours</span>';
+        if(s==='pret'||s==='attente') return '<span class="badge-or">'+s+'</span>';
+        if(s==='pret_cloture') return '<span style="color:#6fffa0;font-size:.78rem;">✅ Prêt clôture</span>';
+        return '<span style="color:rgba(253,246,227,.4);font-size:.78rem;">Terminé</span>';
+      };
+      const sActions = m => {
+        let b = '<button type="button" class="btn btn-or btn-sm" style="font-size:.72rem;padding:3px 6px;margin-right:3px;" onclick="ouvrirMatch(\''+m.id+'\')">👁 Voir</button>';
+        if(m.statut!=='termine') b += '<button type="button" class="btn btn-nav btn-sm" style="font-size:.72rem;padding:3px 6px;margin-right:3px;" onclick="cloturerMatch(\''+m.id+'\')">🏁</button>';
+        if(m.statut==='termine') b += '<button type="button" class="btn btn-gris btn-sm" style="font-size:.72rem;padding:3px 6px;margin-right:3px;" onclick="rouvrirMatch(\''+m.id+'\')">🔓</button>';
+        b += '<button type="button" class="btn btn-gris btn-sm" style="font-size:.72rem;padding:3px 6px;" onclick="supprimerMatchAdmin(\''+m.id+'\')">🗑</button>';
+        return b;
+      };
+      matchsContainer.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.82rem;"><thead><tr style="color:var(--or);border-bottom:1px solid rgba(201,169,74,.3);"><th style="padding:6px 8px;text-align:left;">Code</th><th style="padding:6px 8px;">J1</th><th style="padding:6px 8px;">J2</th><th style="padding:6px 8px;">Statut</th><th style="padding:6px 8px;">Actions</th></tr></thead><tbody>' +
         tousMatchsAdmin.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(m =>
           '<tr style="border-bottom:1px solid rgba(255,255,255,.06);">' +
-          '<td style="padding:6px 8px;font-family:monospace;">'+m.id+'</td>' +
+          '<td style="padding:6px 8px;font-family:monospace;font-size:.75rem;">'+m.id+'</td>' +
           '<td style="padding:6px 8px;text-align:center;">'+(m.j1?.nom||'—')+'</td>' +
           '<td style="padding:6px 8px;text-align:center;">'+(m.j2?.nom||'—')+'</td>' +
           '<td style="padding:6px 8px;text-align:center;">'+sBadge(m.statut)+'</td>' +
-          '<td style="padding:6px 8px;text-align:center;"><button type="button" class="btn btn-gris btn-sm" style="font-size:.72rem;padding:3px 8px;" onclick="supprimerMatchAdmin(\''+m.id+'\')">🗑</button></td>' +
+          '<td style="padding:6px 8px;white-space:nowrap;">'+sActions(m)+'</td>' +
           '</tr>'
         ).join('') + '</tbody></table>';
     }
@@ -1517,6 +1537,76 @@ async function bloquerEtValider(idx) {
   demarrerPollingResultats(idx);
 }
 
+
+// ── ADMIN : RÉIMPORT RAPPORTS ───────────────────────
+async function reimporterRapports(idx) {
+  const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
+  const course = data.courses[idx];
+  if(!course) { toast('Course introuvable', true); return; }
+  toast('⏳ Récupération PMU en cours…');
+  try {
+    const res = await pmuGet(`programme/${course.pmuDate}/R${course.numReunion}/C${course.numOrdre}`);
+    let rapsData = [];
+    try {
+      const raps = await pmuGet(`programme/${course.pmuDate}/R${course.numReunion}/C${course.numOrdre}/rapports-definitifs`);
+      rapsData = raps;
+    } catch(e) { toast('⚠️ Rapports définitifs non disponibles, tentative avec données existantes…', true); }
+    // Construire rapports
+    const rapports = {};
+    rapsData.forEach(r => {
+      if(r.typePari==='SIMPLE_GAGNANT') (r.rapports||[]).forEach(rap => {
+        const n=parseInt(rap.combinaison);
+        if(!rapports[n]) rapports[n]={gagnant:0,place:0};
+        rapports[n].gagnant=rap.dividendePourUnEuro||rap.dividende||0;
+      });
+      if(r.typePari==='SIMPLE_PLACE') (r.rapports||[]).forEach(rap => {
+        const n=parseInt(rap.combinaison);
+        if(!rapports[n]) rapports[n]={gagnant:0,place:0};
+        const val=rap.dividendePourUnEuro||rap.dividende||0;
+        if(val > rapports[n].place) rapports[n].place=val;
+      });
+    });
+    const arrivee = (res.ordreArrivee||[]).flat();
+    if(arrivee.length===0 && Object.keys(rapports).length===0) {
+      toast('❌ Aucune donnée disponible pour cette course sur PMU', true); return;
+    }
+    // Recalculer les points
+    const score = choix => choix.reduce((s,n) => {
+      const r=rapports[n]||{};
+      const ptG=r.gagnant ? Math.round(r.gagnant/10) : 0;
+      const ptP=r.place   ? Math.round(r.place/10)   : 0;
+      return s+ptG+ptP;
+    },0);
+    const s1=score(course.choixFinalJ1||[]), s2=score(course.choixFinalJ2||[]);
+    await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({
+      arrivee, rapports, pointsJ1:s1, pointsJ2:s2,
+      mancheGagnant: s1>s2?'j1':s2>s1?'j2':'egal'
+    });
+    await mettreAJourScores();
+    toast('✅ Rapports réimportés ! Points recalculés.');
+  } catch(e) {
+    toast('❌ Erreur PMU : '+e.message, true);
+  }
+}
+
+async function forceTraiterCourse(idx) {
+  const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
+  const course = data.courses[idx];
+  if(!course) return;
+  if(!confirm('Forcer le traitement de cette course bloquée ?')) return;
+  // Repasser en bloquee si besoin puis lancer récupération
+  await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({statut:'bloquee'});
+  // Relancer le polling une seule fois immédiatement
+  try {
+    const res = await pmuGet(`programme/${course.pmuDate}/R${course.numReunion}/C${course.numOrdre}`);
+    res._rapportsDefinitifs = await pmuGet(`programme/${course.pmuDate}/R${course.numReunion}/C${course.numOrdre}/rapports-definitifs`).catch(()=>[]);
+    await traiterResultats(idx, res);
+    toast('✅ Course traitée !');
+  } catch(e) {
+    toast('❌ Erreur : '+e.message, true);
+  }
+}
+
 // ── POLLING RÉSULTATS ───────────────────────────────
 // Appelé par les DEUX joueurs : celui qui a la main via bloquerEtValider,
 // et l'autre via ecouterMatch dès qu'il voit une course passer en 'bloquee'
@@ -1649,21 +1739,31 @@ function afficherBoutonsFin(data) {
   if(!el) return;
   const statut = data.statut;
   const isAdmin = utilisateur?.uid === ADMIN_UID;
+  const adminView = etat._adminView;
   let html = '';
-  if(statut==='pret_cloture') {
-    html += `<button class="btn btn-or" onclick="cloturerMatch()">🏁 Clôturer le match</button>`;
-  } else if(statut==='termine') {
-    html += `<span style="color:var(--vert);font-size:.9rem;">✅ Match clôturé</span>`;
-  }
-  if(statut!=='termine') {
-    html += `<button class="btn btn-gris" onclick="navMatchs()">🏠 Mes matchs</button>`;
+  if(adminView) {
+    // Vue admin : boutons admin uniquement
+    if(statut !== 'termine') {
+      html += `<button class="btn btn-nav" onclick="cloturerMatch('${etat.matchId}')">🏁 Clôturer ce match</button>`;
+    } else {
+      html += `<button class="btn btn-gris" onclick="rouvrirMatch('${etat.matchId}')">🔓 Rouvrir</button>`;
+    }
+    html += `<button class="btn btn-gris" onclick="showPage('admin');chargerAdmin()">← Retour admin</button>`;
   } else {
-    html += `<button class="btn btn-gris" onclick="retourAccueil()">🏠 Retour à l'accueil</button>`;
+    if(statut==='pret_cloture') {
+      html += `<button class="btn btn-or" onclick="cloturerMatch()">🏁 Clôturer le match</button>`;
+    } else if(statut==='termine') {
+      html += `<span style="color:var(--vert);font-size:.9rem;">✅ Match clôturé</span>`;
+    }
+    if(statut!=='termine') {
+      html += `<button class="btn btn-gris" onclick="navMatchs()">🏠 Mes matchs</button>`;
+    } else {
+      html += `<button class="btn btn-gris" onclick="retourAccueil()">🏠 Retour à l'accueil</button>`;
+    }
   }
   el.innerHTML = html;
-  // Titre dynamique
   const titreEl = document.getElementById('fin-titre');
-  if(titreEl) titreEl.textContent = statut==='termine'?'🏆 Match terminé !':'📊 Récapitulatif';
+  if(titreEl) titreEl.textContent = statut==='termine'?'🏆 Match terminé !':(adminView?'👁 Vue admin — ':'')+'📊 Récapitulatif';
 }
 
 function calculerVainqueur(courses,m1,m2) {
@@ -1727,8 +1827,32 @@ function rendreZoneJeu(data,idx) {
     const ms=c.heureDepart-Date.now(),lim=estMain?10*60*1000:5*60*1000,urg=ms<lim+60000&&ms>0;
     html+=`<div class="timer-bloc"><div id="timer-val" class="timer-valeur ${urg?'urgent':'normal'}">${ms<=0?'00:00':msToHMS(ms)}</div><div class="text-sm">avant le départ</div></div>`;
   }
-  if(c.statut==='terminee') html+=rendreResultatsCourse(c,data);
-  else if(c.statut==='bloquee') html+=rendreChoixValides(c,etat.joueurId);
+  if(c.statut==='terminee') {
+    html+=rendreResultatsCourse(c,data);
+    // Bouton admin si rapports manquants
+    if(etat._adminView) {
+      const hasRapports = c.rapports && Object.keys(c.rapports).length > 0;
+      const hasArrivee = c.arrivee && c.arrivee.length > 0;
+      if(!hasRapports || !hasArrivee) {
+        html+=`<div style="margin-top:12px;padding:10px;background:rgba(204,34,0,.15);border:1px solid rgba(204,34,0,.4);border-radius:8px;">
+          <p class="text-sm" style="color:rgba(255,150,100,.9);margin-bottom:8px;">⚠️ Rapports manquants sur cette course</p>
+          <button class="btn btn-or btn-sm" onclick="reimporterRapports(${idx})">🔄 Réimporter depuis PMU</button>
+        </div>`;
+      } else {
+        html+=`<div style="margin-top:8px;text-align:center;">
+          <button class="btn btn-gris btn-sm" onclick="reimporterRapports(${idx})">🔄 Forcer réimport rapports</button>
+        </div>`;
+      }
+    }
+  }
+  else if(c.statut==='bloquee') {
+    html+=rendreChoixValides(c,etat.joueurId);
+    if(etat._adminView) {
+      html+=`<div style="margin-top:12px;text-align:center;">
+        <button class="btn btn-or btn-sm" onclick="forceTraiterCourse(${idx})">⚡ Forcer le traitement</button>
+      </div>`;
+    }
+  }
   else if(c.statut==='ouverte') html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId);
   html+='</div>';
   document.getElementById('zone-jeu').innerHTML=html;
@@ -1874,4 +1998,5 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
