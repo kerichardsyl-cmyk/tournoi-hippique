@@ -135,6 +135,7 @@
 
 <!-- PAGE ACCUEIL -->
 <div id="page-accueil" class="page">
+  <div id="bloc-annonce" style="display:none;background:#fff;color:#1a1a1a;border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:.92rem;line-height:1.5;"></div>
   <div style="display:flex;gap:16px;flex-wrap:wrap;">
 
     <!-- Bienvenue + Stats perso -->
@@ -301,6 +302,19 @@
             <input type="checkbox" id="toggle-inscriptions" onchange="toggleConfig('inscriptionsBloquees',this.checked)" style="width:18px;height:18px;cursor:pointer;" />
             <span id="label-inscriptions" style="font-size:.85rem;color:var(--or);">Non</span>
           </label>
+        </div>
+        <hr class="separator" />
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <span>Bandeau d'annonce</span>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="toggle-annonce" onchange="toggleConfig('annonceActive',this.checked)" style="width:18px;height:18px;cursor:pointer;" />
+            <span id="label-annonce" style="font-size:.85rem;color:var(--or);">Non</span>
+          </label>
+        </div>
+        <div id="bloc-edit-annonce">
+          <label>Texte de l'annonce</label>
+          <textarea id="texte-annonce" rows="3" placeholder="Ex: Prochain tournoi le samedi 15 mars à 14h !" style="width:100%;resize:vertical;"></textarea>
+          <button type="button" class="btn btn-vert btn-sm" style="margin-top:6px;" onclick="sauvegarderAnnonce()">Sauvegarder</button>
         </div>
       </div>
 
@@ -672,6 +686,18 @@ let _classementComplet = false;
 async function chargerAccueil() {
   if(!utilisateur) return;
   const uid = utilisateur.uid;
+  // Annonce
+  const cfgSnap = await db.ref('config').once('value');
+  const cfg = cfgSnap.val() || {};
+  const blocAnnonce = document.getElementById('bloc-annonce');
+  if(blocAnnonce) {
+    if(cfg.annonceActive && cfg.texteAnnonce) {
+      blocAnnonce.style.display = 'block';
+      blocAnnonce.innerHTML = '📢 ' + cfg.texteAnnonce;
+    } else {
+      blocAnnonce.style.display = 'none';
+    }
+  }
 
   // Stats perso + ELO
   const userSnap = await db.ref('utilisateurs/'+uid).once('value');
@@ -1002,11 +1028,13 @@ async function ouvrirMatch(matchId) {
   const isAdmin = uid === ADMIN_UID;
   etat.matchId = matchId;
   // Admin : joueur fictif j1 pour pouvoir visualiser, sans être participant
-  // L'admin a toujours la vue admin, même s'il participe au match
-  etat._adminView = isAdmin;
-  if(data.uidJ1===uid) etat.joueurId = 'j1';
-  else if(data.uidJ2===uid) etat.joueurId = 'j2';
-  else etat.joueurId = 'j1'; // admin observateur : vue j1 par défaut
+  if(isAdmin && data.uidJ1 !== uid && data.uidJ2 !== uid) {
+    etat.joueurId = 'j1'; // vue admin = vue j1
+    etat._adminView = true;
+  } else {
+    etat.joueurId = data.uidJ1===uid ? 'j1' : 'j2';
+    etat._adminView = false;
+  }
   document.getElementById('lobby-code').textContent = matchId;
   if (etat.joueurId==='j1' && !etat._adminView) document.getElementById('bloc-arbitre').style.display='block';
   ecouterMatch();
@@ -1236,6 +1264,10 @@ async function chargerAdmin() {
     const el2 = document.getElementById('toggle-inscriptions');
     if(el) { el.checked = offline; document.getElementById('label-offline').textContent = offline ? 'Oui' : 'Non'; document.getElementById('bloc-message-offline').style.display = offline ? 'block' : 'none'; if(cfg.messageOffline) document.getElementById('message-offline').value = cfg.messageOffline; }
     if(el2) { el2.checked = blocked; document.getElementById('label-inscriptions').textContent = blocked ? 'Oui' : 'Non'; }
+    const annonceActive = cfg.annonceActive || false;
+    const elAnnonce = document.getElementById('toggle-annonce');
+    if(elAnnonce) { elAnnonce.checked = annonceActive; document.getElementById('label-annonce').textContent = annonceActive ? 'Oui' : 'Non'; }
+    if(cfg.texteAnnonce) { const ta = document.getElementById('texte-annonce'); if(ta) ta.value = cfg.texteAnnonce; }
   });
 
   // Stats
@@ -1334,6 +1366,12 @@ async function toggleConfig(cle, val) {
   document.getElementById('label-'+(cle==='siteOffline'?'offline':'inscriptions')).textContent = val ? 'Oui' : 'Non';
   if(cle==='siteOffline') document.getElementById('bloc-message-offline').style.display = val ? 'block' : 'none';
   toast(val ? '⚠️ '+( cle==='siteOffline'?'Site mis hors ligne':'Inscriptions bloquées') : '✅ '+( cle==='siteOffline'?'Site remis en ligne':'Inscriptions rouvertes'));
+}
+
+async function sauvegarderAnnonce() {
+  const texte = document.getElementById('texte-annonce').value.trim();
+  await db.ref('config/texteAnnonce').set(texte);
+  toast('✅ Annonce sauvegardée !');
 }
 
 async function sauvegarderMessageOffline() {
@@ -2089,8 +2127,3 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
-
-
-
-
-
