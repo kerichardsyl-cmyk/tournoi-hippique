@@ -834,7 +834,14 @@ function ligneClassement(j, i, uid, key) {
   const eloVal = j.elo?.[key] || 1200;
   const isMe = j.uid === uid;
   if(medal) {
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:${medal.bg};border:1px solid ${medal.border}${isMe?';outline:2px solid var(--or)':''};">      <span><span style="font-size:${medal.size};margin-right:6px;">${medal.icon}</span><strong>${j.prenom||'?'}</strong>${isMe?' <span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}</span>      <span style="font-size:.85rem;"><strong>${eloVal}</strong> <span class="text-sm" style="opacity:.6;">· ${j.stats?.victoires||0}V/${j.stats?.matchsJoues||0}M</span></span>    </div>`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:${medal.bg};border:1px solid ${medal.border};${isMe?'outline:2px solid var(--or);':''}">
+      <span style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:${medal.size};line-height:1;display:inline-block;">${medal.icon}</span>
+        <strong>${j.prenom||'?'}</strong>
+        ${isMe?'<span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}
+      </span>
+      <span style="font-size:.85rem;white-space:nowrap;"><strong>${eloVal}</strong> <span class="text-sm" style="opacity:.6;">· ${j.stats?.victoires||0}V/${j.stats?.matchsJoues||0}M</span></span>
+    </div>`;
   }
   return `<div class="score-ligne ${isMe?'gagnant':''}" style="padding:5px 10px;">
     <span><span style="font-size:.8rem;opacity:.5;margin-right:6px;">${i+1}.</span>${j.prenom||'?'} ${isMe?'<span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}</span>
@@ -970,7 +977,7 @@ function chargerTableauBord() {
 
   // Matchs en cours
   // Matchs en cours
-  db.ref('matchs').orderByChild('statut').once('value', snap => {
+  db.ref('matchs').orderByChild('statut').once('value', async snap => {
     const enCours = [], termines = [];
     snap.forEach(child => {
       const d = child.val();
@@ -979,13 +986,24 @@ function chargerTableauBord() {
         else termines.push({id:child.key,...d});
       }
     });
+    // Enrichir les matchs en attente avec le nom de l'invité
+    const enCoursEnrichis = await Promise.all(enCours.map(async m => {
+      if((m.statut==='attente'||m.statut==='pret') && !m.j2 && m.uidJ1===uid) {
+        try {
+          const invSnap = await db.ref('invitations/inv_'+m.id).once('value');
+          const inv = invSnap.val();
+          if(inv) m._nomInvite = inv.emailInvite || '?';
+        } catch(e) {}
+      }
+      return m;
+    }));
     // Matchs en cours
     const container = document.getElementById('liste-matchs-cours');
-    container.innerHTML = enCours.length
-      ? enCours.map(m => `
+    container.innerHTML = enCoursEnrichis.length
+      ? enCoursEnrichis.map(m => `
         <div class="match-card" onclick="ouvrirMatch('${m.id}')">
           <div style="flex:1;">
-            <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'En attente'}</strong>
+            <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom || (m._nomInvite ? '<span style="opacity:.6;font-style:italic;">⏳ '+m._nomInvite+'</span>' : '<span style="opacity:.5;font-style:italic;">En attente…</span>')}</strong>
             <div class="text-sm" style="margin-top:2px;">${m.reunion?.hippodrome||'Non configuré'}</div>
             ${m.statut==='en_cours'?(()=>{
               const cs=m.courses||[];
