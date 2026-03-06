@@ -1285,13 +1285,13 @@ async function chargerReunionsCreation() {
   let pmuDate;
   try {
     const p = dateStr.split('/');
-    if(p.length===3) pmuDate = p[2]+p[1]+p[0];
+    if(p.length===3) pmuDate = p[0].padStart(2,'0') + p[1].padStart(2,'0') + p[2]; // DDMMYYYY
     else { toast('⚠️ Format JJ/MM/AAAA', true); return; }
   } catch(e) { toast('⚠️ Date invalide', true); return; }
   container.innerHTML = '<span class="spinner"></span> Chargement…';
   try {
-    const data = await pmuGet('programme/'+pmuDate+'/reunions');
-    const reunions = data.reunions||data||[];
+    const data = await pmuGet('programme/'+pmuDate);
+    const reunions = data.programme?.reunions || data.reunions || data || [];
     if(!reunions.length) { container.innerHTML='<p class="text-sm">Aucune réunion.</p>'; return; }
     container.innerHTML = '';
     reunions.forEach(r => {
@@ -2527,5 +2527,6 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
 
