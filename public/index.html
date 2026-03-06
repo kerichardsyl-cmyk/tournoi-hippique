@@ -1348,6 +1348,13 @@ async function creerMatchAvecReunion(reunion, pmuDate, disc) {
   fermerPanneauCreation();
   if(errs.length) toast('⚠️ Match créé mais partants manquants : '+errs.join(', '));
   else toast('✅ Match créé ! Invitation envoyée à '+_creationAdv.prenom);
+  // Ouvrir directement le match pour que le créateur puisse pronostiquer
+  etat.matchId = code;
+  etat.joueurId = 'j1';
+  etat._adminView = utilisateur.uid === ADMIN_UID;
+  etat.timersInitialises = false;
+  ecouterMatch();
+  showPage('match');
   chargerTableauBord();
 }
 
@@ -1775,6 +1782,12 @@ function rendreEtat(data) {
   if(data.statut==='attente'||data.statut==='pret') { rendrelobby(data); }
   else if(data.statut==='en_cours') {
     if(!etat.timersInitialises) { etat.timersInitialises=true; reprendreTimers(data); }
+    else {
+      // Vérifier quand même les nouvelles courses bloquées (ex: démarrage via acceptation)
+      (data.courses||[]).forEach((c,i) => {
+        if(c.statut==='bloquee' && !_pollsActifs[i]) demarrerPollingResultats(i);
+      });
+    }
     showPage('match'); rendreMatch(data);
   } else if(data.statut==='pret_cloture') { showPage('fin'); rendreFin(data); }
   else if(data.statut==='termine') { showPage('fin'); rendreFin(data); }
@@ -1809,6 +1822,10 @@ async function lancerMatch() {
 
 // ── TIMERS ──────────────────────────────────────────
 function reprendreTimers(data) {
+  // Lancer immédiatement le polling pour les courses déjà bloquées
+  (data.courses||[]).forEach((c,i) => {
+    if(c.statut==='bloquee') demarrerPollingResultats(i);
+  });
   (data.courses||[]).forEach((c,i)=>{
     if(c.statut==='ouverte') programmerBlocageCourse(i,c);
     else if(c.statut==='bloquee') demarrerPollingResultats(i);
@@ -2056,8 +2073,10 @@ async function demarrerPollingResultats(idx) {
           clearInterval(_pollsActifs[idx+'_timer']); delete _pollsActifs[idx]; delete _pollsActifs[idx+'_timer'];
           res._rapportsDefinitifs = raps;
           await traiterResultats(idx, res);
+        } else {
+          // Données incomplètes — log pour diagnostic
+          console.log(`[Poll C${idx}] statut=${statut} arrivee=${arrivee.length} rapports=${Object.keys(rapports).length} → retry dans 5min`);
         }
-        // Si arrivée sans rapports : on continue à attendre
       }
     } catch(e) {}
   };
@@ -2372,15 +2391,16 @@ function rendreZoneJeu(data,idx) {
     }
   }
   else if(c.statut==='ouverte') {
+    // Toujours afficher le sélecteur pour pouvoir jouer
+    html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId);
+    // En vue admin : afficher aussi les choix en cours de l'adversaire
     if(isAdmin) {
-      // Vue admin : montrer l'état des choix, pas le sélecteur
       const choixJ1 = c.choixJ1||[], choixJ2 = c.choixJ2||[];
-      html += `<div style="padding:10px;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;">
-        <div style="margin-bottom:6px;"><strong>${data.j1?.nom||'J1'} :</strong> ${choixJ1.length?choixJ1.join(', '):'<span style="opacity:.5;">Pas encore choisi</span>'}</div>
-        <div><strong>${data.j2?.nom||'J2'} :</strong> ${choixJ2.length?choixJ2.join(', '):'<span style="opacity:.5;">Pas encore choisi</span>'}</div>
+      html += `<div style="margin-top:8px;padding:8px 10px;background:rgba(255,204,0,.07);border-radius:6px;font-size:.82rem;border:1px solid rgba(255,204,0,.2);">
+        <div style="margin-bottom:4px;opacity:.7;">👁 Choix en cours :</div>
+        <div style="margin-bottom:3px;"><strong>${data.j1?.nom||'J1'} :</strong> ${choixJ1.length?choixJ1.join(', '):'<span style="opacity:.4;">—</span>'}</div>
+        <div><strong>${data.j2?.nom||'J2'} :</strong> ${choixJ2.length?choixJ2.join(', '):'<span style="opacity:.4;">—</span>'}</div>
       </div>`;
-    } else {
-      html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId);
     }
   }
   html+='</div>';
