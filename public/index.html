@@ -120,7 +120,7 @@
   <div id="header-right" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
     <div id="header-nav" style="display:none;gap:4px;">
       <button type="button" class="btn btn-sm btn-nav" id="nav-home" onclick="navHome()">🏠 Accueil</button>
-      <button type="button" class="btn btn-sm btn-nav" id="nav-matchs" onclick="navMatchs()">🎮 Mes matchs</button>
+      <button type="button" class="btn btn-sm btn-nav" id="nav-matchs" onclick="navMatchs()" style="position:relative;">🎮 Mes matchs<span id="badge-matchs" style="display:none;position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:50%;width:17px;height:17px;font-size:.65rem;font-weight:bold;line-height:17px;text-align:center;pointer-events:none;"></span></button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-reglement" onclick="navReglement()">📋 Règlement</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-profil" onclick="navProfil()">👤 Profil</button>
@@ -211,8 +211,40 @@
       <div class="card">
         <h2>🎮 Mes matchs en cours</h2>
         <div id="liste-matchs-cours"><p class="text-sm">Chargement…</p></div>
-        <button type="button" class="btn btn-or" style="width:100%;margin-top:12px;" onclick="creerMatch()">🏆 Créer un nouveau match</button>
+        <button type="button" class="btn btn-or" style="width:100%;margin-top:12px;" onclick="afficherPanneauCreation()">🏆 Créer un nouveau match</button>
       </div>
+      <!-- PANNEAU CRÉATION MATCH -->
+      <div id="panneau-creation" class="card" style="display:none;border:2px solid rgba(255,204,0,.4);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h2 style="margin:0;">🏆 Nouveau match</h2>
+          <button class="btn btn-gris btn-sm" onclick="fermerPanneauCreation()">✕</button>
+        </div>
+        <div id="creation-etape1">
+          <p class="text-sm" style="margin-bottom:10px;"><strong>Étape 1 —</strong> Choisissez un adversaire</p>
+          <input type="text" id="creation-search" placeholder="🔍 Chercher un joueur…" oninput="filtrerJoueursCreation()" style="margin-bottom:6px;" />
+          <div id="creation-liste-joueurs" style="max-height:200px;overflow-y:auto;margin-bottom:10px;"></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="email" id="creation-email" placeholder="Ou saisir un email…" style="flex:1;min-width:160px;" />
+            <button class="btn btn-vert btn-sm" onclick="passerEtape2()">Suivant →</button>
+          </div>
+        </div>
+        <div id="creation-etape2" style="display:none;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <button class="btn btn-gris btn-sm" onclick="retourEtape1()">← Retour</button>
+            <p class="text-sm" style="margin:0;"><strong>Étape 2 —</strong> Choisissez la réunion</p>
+          </div>
+          <div id="creation-adversaire-label" style="background:rgba(255,204,0,.1);border-radius:6px;padding:6px 10px;font-size:.85rem;margin-bottom:10px;"></div>
+          <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+            <button class="btn btn-vert btn-sm" onclick="setDateCreation(0)">📅 Aujourd'hui</button>
+            <button class="btn btn-vert btn-sm" onclick="setDateCreation(1)">📅 Demain</button>
+            <button class="btn btn-vert btn-sm" onclick="setDateCreation(2)">📅 J+2</button>
+          </div>
+          <input type="text" id="creation-date" placeholder="JJ/MM/AAAA" style="margin-bottom:8px;" />
+          <button class="btn btn-or btn-sm" style="width:100%;margin-bottom:10px;" onclick="chargerReunionsCreation()">🔍 Charger les réunions PMU</button>
+          <div id="creation-liste-reunions"></div>
+        </div>
+      </div>
+
       <div class="card">
         <h2>📬 Invitations reçues</h2>
         <div id="liste-invitations"><p class="text-sm">Aucune invitation.</p></div>
@@ -788,6 +820,7 @@ async function chargerAccueil() {
   chargerReunionsAvenir();
   // Chat accueil
   demarrerChatAccueil();
+  mettreAJourBadgeMatchs();
 }
 
 function ligneClassement(j, i, uid, key) {
@@ -1027,9 +1060,9 @@ function chargerTableauBord() {
   // Invitations envoyées
   const afficherInvitationsEnvoyees = async (invits) => {
     const container = document.getElementById('liste-invitations-envoyees');
-    const en_attente = invits.filter(i => i.statut==='en_attente');
-    if(!en_attente.length) { container.innerHTML='<p class="text-sm">Aucune invitation en attente.</p>'; return; }
-    const enrichies = await Promise.all(en_attente.map(async inv => {
+    const visibles = invits.filter(i => i.statut==='en_attente' || i.statut==='refusee');
+    if(!visibles.length) { container.innerHTML='<p class="text-sm">Aucune invitation en attente.</p>'; return; }
+    const enrichies = await Promise.all(visibles.map(async inv => {
       try {
         const mSnap = await db.ref('matchs/'+inv.matchId).once('value');
         const m = mSnap.val() || {};
@@ -1038,15 +1071,18 @@ function chargerTableauBord() {
       } catch(e) {}
       return inv;
     }));
-    container.innerHTML = enrichies.map(inv => `
-      <div class="match-card" style="background:rgba(255,255,255,.04);">
+    container.innerHTML = enrichies.map(inv => {
+      const refusee = inv.statut === 'refusee';
+      return `<div class="match-card" style="background:${refusee?'rgba(204,34,0,.15)':'rgba(255,255,255,.04)'};${refusee?'border:1px solid rgba(204,34,0,.4);':''}">
         <div style="flex:1;">
-          <strong>→ ${inv.emailInvite}</strong>
-          <div class="text-sm" style="margin-top:2px;">${inv._date?inv._date+' · ':''}${inv._hippodrome||'Réunion non configurée'}</div>
-          <div class="text-sm" style="margin-top:1px;color:var(--or);opacity:.7;">⏳ En attente de réponse</div>
+          <strong>→ ${inv.emailInvite||'?'}</strong>
+          <div class="text-sm" style="margin-top:2px;">${inv._date?inv._date+' · ':''}${inv._hippodrome||'Réunion configurée'}</div>
+          <div class="text-sm" style="margin-top:1px;color:${refusee?'#ff8070':'var(--or)'};opacity:.9;">${refusee?'❌ Refusée — vous pouvez supprimer':'⏳ En attente de réponse'}</div>
         </div>
-        <button type="button" class="btn btn-gris btn-sm" onclick="annulerInvitation('${inv.id}','${inv.matchId}')">Annuler</button>
-      </div>`).join('');
+        <button type="button" class="btn btn-gris btn-sm" onclick="annulerInvitation('${inv.id}','${inv.matchId}')">${refusee?'🗑':'Annuler'}</button>
+      </div>`;
+    }).join('');
+    mettreAJourBadgeMatchs();
   };
 
   const invitsMerges = {};
@@ -1063,6 +1099,7 @@ function chargerTableauBord() {
     snap.forEach(child => envoyees.push({id:child.key,...child.val()}));
     afficherInvitationsEnvoyees(envoyees);
   });
+  mettreAJourBadgeMatchs();
 }
 
 async function reprendreMatchEnCours() {
@@ -1115,12 +1152,17 @@ async function envoyerInvitation() {
 
 async function accepterInvitation(invitId, matchId) {
   const prenom = utilisateur.displayName || utilisateur.email;
-  await db.ref('matchs/'+matchId+'/j2').set({nom:prenom, uid:utilisateur.uid, connecte:true});
-  await db.ref('matchs/'+matchId).update({uidJ2:utilisateur.uid});
+  await db.ref('matchs/'+matchId+'/j2').set({nom:prenom, uid:utilisateur.uid});
+  await db.ref('matchs/'+matchId).update({uidJ2:utilisateur.uid, statut:'en_cours'});
   await db.ref('invitations/'+invitId).update({statut:'acceptee'});
-  etat.matchId=matchId; etat.joueurId='j2';
-  document.getElementById('lobby-code').textContent=matchId;
-  showPage('lobby'); ecouterMatch();
+  toast('✅ Match démarré !');
+  etat.matchId = matchId;
+  etat.joueurId = 'j2';
+  etat._adminView = utilisateur.uid === ADMIN_UID;
+  etat.timersInitialises = false;
+  ecouterMatch();
+  showPage('match');
+  chargerTableauBord();
 }
 
 
@@ -1133,24 +1175,184 @@ async function annulerInvitation(invitId, matchId) {
 }
 
 async function refuserInvitation(invitId) {
-  await db.ref('invitations/'+invitId).update({statut:'refusee'});
+  await db.ref('invitations/'+invitId).update({statut:'refusee', refuseeAt:Date.now()});
   toast('Invitation refusée.');
+  chargerTableauBord();
 }
 
-// ── CRÉER MATCH (sans invitation) ─────────────────
-async function creerMatch() {
+// ── BADGE NAV MATCHS ────────────────────────────────
+function mettreAJourBadgeMatchs() {
+  if(!utilisateur) return;
+  const uid = utilisateur.uid;
+  const badge = document.getElementById('badge-matchs');
+  if(!badge) return;
+  let count = 0;
+  const check = () => {
+    badge.style.display = count > 0 ? 'block' : 'none';
+    badge.textContent = count > 9 ? '9+' : count || '';
+  };
+  // Invitations reçues en attente (par email)
+  db.ref('invitations').orderByChild('emailInvite').equalTo(utilisateur.email).once('value', s1 => {
+    s1.forEach(c => { if(c.val().statut==='en_attente') count++; });
+    // Invitations reçues (par uid)
+    db.ref('invitations').orderByChild('uidInvite').equalTo(uid).once('value', s2 => {
+      s2.forEach(c => { if(c.val().statut==='en_attente') count++; });
+      // Invitations envoyées refusées
+      db.ref('invitations').orderByChild('uidInviteur').equalTo(uid).once('value', s3 => {
+        s3.forEach(c => { if(c.val().statut==='refusee') count++; });
+        check();
+      });
+    });
+  });
+}
+
+// ── NOUVEAU FLOW CRÉATION MATCH ──────────────────────
+let _creationAdv = null;
+
+function afficherPanneauCreation() {
+  document.getElementById('panneau-creation').style.display = 'block';
+  document.getElementById('creation-etape1').style.display = 'block';
+  document.getElementById('creation-etape2').style.display = 'none';
+  document.getElementById('creation-liste-reunions').innerHTML = '';
+  _creationAdv = null;
+  // S'assurer que l'annuaire est chargé
+  if(!tousLesJoueurs.length) chargerAnnuaire();
+  setTimeout(filtrerJoueursCreation, 400);
+}
+
+function fermerPanneauCreation() {
+  document.getElementById('panneau-creation').style.display = 'none';
+  document.getElementById('creation-search').value = '';
+  document.getElementById('creation-email').value = '';
+}
+
+function filtrerJoueursCreation() {
+  const q = (document.getElementById('creation-search')?.value||'').toLowerCase();
+  const container = document.getElementById('creation-liste-joueurs');
+  if(!container) return;
+  const uid = utilisateur?.uid;
+  const liste = tousLesJoueurs.filter(j => j.uid !== uid && (
+    !q || (j.prenom||'').toLowerCase().includes(q) || (j.email||'').toLowerCase().includes(q)
+  )).slice(0, 8);
+  if(!liste.length) { container.innerHTML='<p class="text-sm" style="opacity:.5;">Aucun joueur trouvé</p>'; return; }
+  container.innerHTML = liste.map(j => {
+    const p = (j.prenom||'?').replace(/'/g,"&#39;");
+    const e = (j.email||'').replace(/'/g,"&#39;");
+    return `<div style="cursor:pointer;padding:7px 10px;border-radius:6px;margin-bottom:4px;background:rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;"
+      onclick="selectionnerAdversaireCreation('${j.uid}','${p}','${e}')">
+      <div>
+        <div style="font-weight:bold;font-size:.88rem;">${j.prenom||'?'}</div>
+        <div style="font-size:.72rem;opacity:.5;">${j.stats?.matchsJoues||0} matchs · ${j.stats?.victoires||0}V</div>
+      </div>
+      <span style="font-size:.75rem;color:var(--or);">Sélectionner</span>
+    </div>`;
+  }).join('');
+}
+
+function selectionnerAdversaireCreation(uid, prenom, email) {
+  _creationAdv = {uid, prenom, email};
+  passerEtape2();
+}
+
+function passerEtape2() {
+  if(!_creationAdv) {
+    const email = document.getElementById('creation-email').value.trim().toLowerCase();
+    if(!email || !email.includes('@')) { toast('⚠️ Choisissez un joueur ou entrez un email', true); return; }
+    _creationAdv = {uid:null, prenom:email, email};
+  }
+  document.getElementById('creation-etape1').style.display = 'none';
+  document.getElementById('creation-etape2').style.display = 'block';
+  document.getElementById('creation-adversaire-label').innerHTML =
+    `Adversaire : <strong>${_creationAdv.prenom}</strong>`;
+  setDateCreation(0);
+}
+
+function retourEtape1() {
+  _creationAdv = null;
+  document.getElementById('creation-etape1').style.display = 'block';
+  document.getElementById('creation-etape2').style.display = 'none';
+}
+
+function setDateCreation(delta) {
+  const d = new Date(); d.setDate(d.getDate()+delta);
+  document.getElementById('creation-date').value =
+    d.getDate().toString().padStart(2,'0')+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'\/'+d.getFullYear();
+}
+
+async function chargerReunionsCreation() {
+  const dateStr = document.getElementById('creation-date').value.trim();
+  const container = document.getElementById('creation-liste-reunions');
+  let pmuDate;
+  try {
+    const p = dateStr.split('/');
+    if(p.length===3) pmuDate = p[2]+p[1]+p[0];
+    else { toast('⚠️ Format JJ/MM/AAAA', true); return; }
+  } catch(e) { toast('⚠️ Date invalide', true); return; }
+  container.innerHTML = '<span class="spinner"></span> Chargement…';
+  try {
+    const data = await pmuGet('programme/'+pmuDate+'/reunions');
+    const reunions = data.reunions||data||[];
+    if(!reunions.length) { container.innerHTML='<p class="text-sm">Aucune réunion.</p>'; return; }
+    container.innerHTML = '';
+    reunions.forEach(r => {
+      const disc = detecterDiscipline(r);
+      const lbl = disc==='TROT'?'🔵 Trot':disc==='GALOP'?'🟡 Galop':'⚪ Mixte';
+      const bg = disc==='TROT'?'rgba(50,120,255,.2)':disc==='GALOP'?'rgba(255,204,0,.15)':'rgba(255,255,255,.08)';
+      const btn = document.createElement('button');
+      btn.className = 'btn mt8';
+      btn.style.cssText = `width:100%;text-align:left;margin-bottom:6px;background:${bg};border:1px solid rgba(255,255,255,.15);color:var(--creme);`;
+      btn.innerHTML = `${lbl} — R${r.numOfficiel||r.numOrdre||'?'} — ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'} (${r.courses?.length||0} courses)`;
+      btn.onclick = () => creerMatchAvecReunion(r, pmuDate, disc);
+      container.appendChild(btn);
+    });
+  } catch(e) { container.innerHTML=`<p style="color:var(--rouge);">Erreur : ${e.message}</p>`; }
+}
+
+async function creerMatchAvecReunion(reunion, pmuDate, disc) {
+  if(!_creationAdv) { toast('⚠️ Aucun adversaire', true); return; }
+  const container = document.getElementById('creation-liste-reunions');
+  const allC = reunion.courses||[];
+  const nb = allC.length%2===0 ? allC.length : allC.length-1;
+  const courses = allC.slice(0, nb);
+  container.innerHTML = '<span class="spinner"></span> Chargement des partants…';
+  const serieCourses = [], errs = [];
+  for(let i=0; i<courses.length; i++) {
+    const co = courses[i];
+    container.innerHTML = `<span class="spinner"></span> Partants ${i+1}/${courses.length}…`;
+    try {
+      const pData = await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${co.numOrdre}/participants`);
+      const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0,urlCasaque:p.urlCasaque||''}));
+      serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants,choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
+    } catch(e) {
+      errs.push(`C${co.numOrdre}`);
+      serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants:[],choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
+    }
+  }
   const prenom = utilisateur.displayName || utilisateur.email;
   const code = genCode();
-  await db.ref('matchs/'+code).set({
+  const matchData = {
     code, statut:'attente', uidJ1:utilisateur.uid,
-    j1:{nom:prenom, uid:utilisateur.uid, connecte:true}, j2:null, createdAt:Date.now()
-  });
-  etat.matchId=code; etat.joueurId='j1';
-  document.getElementById('lobby-code').textContent=code;
-  document.getElementById('bloc-arbitre').style.display='block';
-  showPage('lobby'); ecouterMatch();
-  toast('Match créé ! Invitez un adversaire par email ou partagez le code : '+code);
+    j1:{nom:prenom, uid:utilisateur.uid}, j2:null, createdAt:Date.now(),
+    reunion:{hippodrome:reunion.hippodrome?.libelleLong||reunion.hippodrome?.libelleCourt, numReunion:reunion.numOfficiel, pmuDate, discipline:disc},
+    courses:serieCourses, premierMain:Math.random()<0.5?'j1':'j2'
+  };
+  await db.ref('matchs/'+code).set(matchData);
+  const invData = {
+    matchId:code, nomInviteur:prenom, uidInviteur:utilisateur.uid,
+    statut:'en_attente', createdAt:Date.now(),
+    _hippodrome:reunion.hippodrome?.libelleLong||reunion.hippodrome?.libelleCourt||''
+  };
+  if(_creationAdv.uid) invData.uidInvite = _creationAdv.uid;
+  if(_creationAdv.email) invData.emailInvite = _creationAdv.email;
+  await db.ref('invitations/inv_'+code).set(invData);
+  fermerPanneauCreation();
+  if(errs.length) toast('⚠️ Match créé mais partants manquants : '+errs.join(', '));
+  else toast('✅ Match créé ! Invitation envoyée à '+_creationAdv.prenom);
+  chargerTableauBord();
 }
+
+// ── CRÉER MATCH legacy ─────────────────────────────
+async function creerMatch() { afficherPanneauCreation(); }
 
 
 // ── ANNUAIRE ───────────────────────────────────────
@@ -2325,4 +2527,5 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
