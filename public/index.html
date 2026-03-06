@@ -791,13 +791,20 @@ async function chargerAccueil() {
 }
 
 function ligneClassement(j, i, uid, key) {
-  const medals = ['🥇','🥈','🥉'];
-  const rang = medals[i] || (i+1)+'.';
+  const medals = [
+    {icon:'🥇', bg:'linear-gradient(90deg,rgba(255,215,0,.25),rgba(255,215,0,.08))', border:'rgba(255,215,0,.5)', size:'1.25rem'},
+    {icon:'🥈', bg:'linear-gradient(90deg,rgba(192,192,192,.2),rgba(192,192,192,.06))', border:'rgba(192,192,192,.4)', size:'1.1rem'},
+    {icon:'🥉', bg:'linear-gradient(90deg,rgba(205,127,50,.2),rgba(205,127,50,.06))', border:'rgba(205,127,50,.4)', size:'1.05rem'},
+  ];
+  const medal = medals[i];
   const eloVal = j.elo?.[key] || 1200;
   const isMe = j.uid === uid;
-  return `<div class="score-ligne ${isMe?'gagnant':''}">
-    <span>${rang} ${j.prenom||'?'} ${isMe?'<span style="font-size:.72rem;color:var(--or);">(moi)</span>':''}</span>
-    <span style="font-size:.85rem;"><strong>${eloVal}</strong> <span class="text-sm">· ${j.stats?.victoires||0}V/${j.stats?.matchsJoues||0}M</span></span>
+  if(medal) {
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:${medal.bg};border:1px solid ${medal.border}${isMe?';outline:2px solid var(--or)':''};">      <span><span style="font-size:${medal.size};margin-right:6px;">${medal.icon}</span><strong>${j.prenom||'?'}</strong>${isMe?' <span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}</span>      <span style="font-size:.85rem;"><strong>${eloVal}</strong> <span class="text-sm" style="opacity:.6;">· ${j.stats?.victoires||0}V/${j.stats?.matchsJoues||0}M</span></span>    </div>`;
+  }
+  return `<div class="score-ligne ${isMe?'gagnant':''}" style="padding:5px 10px;">
+    <span><span style="font-size:.8rem;opacity:.5;margin-right:6px;">${i+1}.</span>${j.prenom||'?'} ${isMe?'<span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}</span>
+    <span style="font-size:.82rem;"><strong>${eloVal}</strong> <span class="text-sm" style="opacity:.6;">· ${j.stats?.victoires||0}V/${j.stats?.matchsJoues||0}M</span></span>
   </div>`;
 }
 
@@ -1068,14 +1075,11 @@ async function ouvrirMatch(matchId) {
   const uid = utilisateur.uid;
   const isAdmin = uid === ADMIN_UID;
   etat.matchId = matchId;
-  // Admin : joueur fictif j1 pour pouvoir visualiser, sans être participant
-  if(isAdmin && data.uidJ1 !== uid && data.uidJ2 !== uid) {
-    etat.joueurId = 'j1'; // vue admin = vue j1
-    etat._adminView = true;
-  } else {
-    etat.joueurId = data.uidJ1===uid ? 'j1' : 'j2';
-    etat._adminView = false;
-  }
+  // Admin : toujours vue admin, quel que soit sa participation
+  etat._adminView = isAdmin;
+  if(data.uidJ1 === uid) etat.joueurId = 'j1';
+  else if(data.uidJ2 === uid) etat.joueurId = 'j2';
+  else etat.joueurId = 'j1'; // observateur : vue j1 par défaut
   document.getElementById('lobby-code').textContent = matchId;
   if (etat.joueurId==='j1' && !etat._adminView) document.getElementById('bloc-arbitre').style.display='block';
   ecouterMatch();
@@ -1513,7 +1517,7 @@ async function chargerReunions() {
       const btn=document.createElement('button');
       btn.className='btn mt8';
       btn.style.cssText=`width:100%;text-align:left;margin-bottom:6px;background:${discColor};border:1px solid rgba(255,255,255,.15);color:var(--creme);`;
-      btn.innerHTML=`${discLabel} — R${r.numOrdre} — ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'} (${r.courses?.length||0} courses)`;
+      btn.innerHTML=`${discLabel} — R${r.numOfficiel||r.numOrdre||'?'} — ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'} (${r.courses?.length||0} courses)`;
       btn.onclick=()=>selectionnerReunion(r,pmuDate,disc);
       container.appendChild(btn);
     });
@@ -1674,20 +1678,7 @@ async function reimporterRapports(idx) {
       rapsData = raps;
     } catch(e) { toast('⚠️ Rapports définitifs non disponibles, tentative avec données existantes…', true); }
     // Construire rapports
-    const rapports = {};
-    rapsData.forEach(r => {
-      if(r.typePari==='SIMPLE_GAGNANT') (r.rapports||[]).forEach(rap => {
-        const n=parseInt(rap.combinaison);
-        if(!rapports[n]) rapports[n]={gagnant:0,place:0};
-        rapports[n].gagnant=rap.dividendePourUnEuro||rap.dividende||0;
-      });
-      if(r.typePari==='SIMPLE_PLACE') (r.rapports||[]).forEach(rap => {
-        const n=parseInt(rap.combinaison);
-        if(!rapports[n]) rapports[n]={gagnant:0,place:0};
-        const val=rap.dividendePourUnEuro||rap.dividende||0;
-        if(val > rapports[n].place) rapports[n].place=val;
-      });
-    });
+    const rapports = extraireRapports(rapsData);
     const arrivee = (res.ordreArrivee||[]).flat();
     if(arrivee.length===0 && Object.keys(rapports).length===0) {
       toast('❌ Aucune donnée disponible pour cette course sur PMU', true); return;
@@ -1838,52 +1829,63 @@ async function viderChatMatch(matchId) {
 const _pollsActifs = {};
 
 async function demarrerPollingResultats(idx) {
-  if(_pollsActifs[idx]) return; // déjà en cours pour ce joueur
+  if(_pollsActifs[idx]) return;
   _pollsActifs[idx] = true;
-  const poll=setInterval(async()=>{
+  // Tentative immédiate, puis toutes les 5 minutes
+  const tenter = async () => {
     try {
-      // Vérifier d'abord si la course n'est pas déjà terminée par l'autre joueur
-      const snap=await db.ref(`matchs/${etat.matchId}/courses/${idx}/statut`).once('value');
-      if(snap.val()==='terminee') { clearInterval(poll); delete _pollsActifs[idx]; return; }
-      const c=etat.matchData.courses[idx];
-      if(!c) { clearInterval(poll); delete _pollsActifs[idx]; return; }
-      const res=await pmuGet(`programme/${c.pmuDate}/R${c.numReunion}/C${c.numOrdre}`);
-      const statut=res.statut||res.course?.statut;
+      const snap = await db.ref(`matchs/${etat.matchId}/courses/${idx}/statut`).once('value');
+      if(snap.val()==='terminee') { clearInterval(_pollsActifs[idx+'_timer']); delete _pollsActifs[idx]; return; }
+      const c = etat.matchData?.courses[idx];
+      if(!c) { clearInterval(_pollsActifs[idx+'_timer']); delete _pollsActifs[idx]; return; }
+      const res = await pmuGet(`programme/${c.pmuDate}/R${c.numReunion}/C${c.numOrdre}`);
+      const statut = res.statut||res.course?.statut;
       if(['ARRIVEE_DEFINITIVE','RAPPORTS_DEFINITIFS','FIN_COURSE','ARRIVEE_DEFINITIVE_COMPLETE'].includes(statut)) {
-        clearInterval(poll); delete _pollsActifs[idx];
-        try {
-          const raps=await pmuGet(`programme/${c.pmuDate}/R${c.numReunion}/C${c.numOrdre}/rapports-definitifs`);
-          res._rapportsDefinitifs=raps;
-        } catch(e) {}
-        await traiterResultats(idx,res);
+        // Récupérer les rapports définitifs
+        let raps = [];
+        try { raps = await pmuGet(`programme/${c.pmuDate}/R${c.numReunion}/C${c.numOrdre}/rapports-definitifs`); } catch(e) {}
+        // Vérifier que rapports + arrivée sont bien présents
+        const arrivee = (res.ordreArrivee||[]).flat();
+        const rapports = extraireRapports(raps);
+        const hasArrivee = arrivee.length > 0;
+        const hasRapports = Object.keys(rapports).length > 0;
+        if(hasArrivee && hasRapports) {
+          // Tout complet → terminer la course
+          clearInterval(_pollsActifs[idx+'_timer']); delete _pollsActifs[idx]; delete _pollsActifs[idx+'_timer'];
+          res._rapportsDefinitifs = raps;
+          await traiterResultats(idx, res);
+        }
+        // Si arrivée sans rapports : on continue à attendre
       }
     } catch(e) {}
-  },30000);
+  };
+  await tenter(); // Essai immédiat
+  _pollsActifs[idx+'_timer'] = setInterval(tenter, 5*60*1000); // puis toutes les 5 min
+}
+
+function extraireRapports(rapsData) {
+  const rapports = {};
+  (rapsData||[]).forEach(r => {
+    if(r.typePari==='SIMPLE_GAGNANT') (r.rapports||[]).forEach(rap => {
+      const n = parseInt(rap.combinaison);
+      if(!rapports[n]) rapports[n] = {gagnant:0, place:0};
+      rapports[n].gagnant = rap.dividendePourUnEuro||rap.dividende||0;
+    });
+    if(r.typePari==='SIMPLE_PLACE') (r.rapports||[]).forEach(rap => {
+      const n = parseInt(rap.combinaison);
+      if(!rapports[n]) rapports[n] = {gagnant:0, place:0};
+      const val = rap.dividendePourUnEuro||rap.dividende||0;
+      if(val > rapports[n].place) rapports[n].place = val;
+    });
+  });
+  return rapports;
 }
 
 async function traiterResultats(idx, pmuData) {
   const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
   const c=data.courses[idx];
-  // Arrivée
   const arrivee=(pmuData.ordreArrivee||[]).flat();
-  // Rapports depuis rapports-definitifs
-  const rapports={};
-  const rapsData=pmuData._rapportsDefinitifs||[];
-  rapsData.forEach(r=>{
-    if(r.typePari==='SIMPLE_GAGNANT') (r.rapports||[]).forEach(rap=>{
-      const n=parseInt(rap.combinaison);
-      if(!rapports[n]) rapports[n]={gagnant:0,place:0};
-      rapports[n].gagnant=rap.dividendePourUnEuro||rap.dividende||0;
-    });
-    if(r.typePari==='SIMPLE_PLACE') (r.rapports||[]).forEach(rap=>{
-      const n=parseInt(rap.combinaison);
-      if(!rapports[n]) rapports[n]={gagnant:0,place:0};
-      const val=rap.dividendePourUnEuro||rap.dividende||0;
-      if(val > rapports[n].place) rapports[n].place=val;
-    });
-  });
-  // Score = (rapport pour 1€ gagnant + rapport pour 1€ placé) × 10
-  // dividende est en centimes : 450 = 4.50€ => rapport/100 * 10 = rapport/10
+  const rapports = extraireRapports(pmuData._rapportsDefinitifs||[]);
   const score=choix=>choix.reduce((s,n)=>{
     const r=rapports[n]||{};
     const ptG=r.gagnant ? Math.round(r.gagnant/10) : 0;
@@ -1921,7 +1923,7 @@ async function cloturerMatch(matchId) {
   const courses = data.courses||[];
   const toutes = courses.every(c=>c.statut==='terminee');
   if(!toutes) {
-    const nbBloquees = courses.filter(c=>c.statut==='bloquee').length;
+    const nbBloquees = courses.filter(c=>c.statut==='bloquee'||c.statut==='ouverte').length;
     if(nbBloquees>0 && utilisateur.uid !== ADMIN_UID) {
       toast("⚠️ "+nbBloquees+" course(s) en attente de résultats. Seul l'admin peut forcer la clôture.", true);
       return;
@@ -1931,46 +1933,72 @@ async function cloturerMatch(matchId) {
   const m1=data.manchesJ1||0, m2=data.manchesJ2||0;
   const vainqueur = data.vainqueur || calculerVainqueur(courses,m1,m2);
   const v = vainqueur;
-  // Calcul ELO
+  const uidJ1 = data.uidJ1, uidJ2 = data.uidJ2;
   const K = 32;
   const calcElo = (eA, eB, sA) => {
     const expected = 1 / (1 + Math.pow(10, (eB - eA) / 400));
     return Math.round(K * (sA - expected));
   };
-  const uidJ1 = data.uidJ1, uidJ2 = data.uidJ2;
-  const eloJ1Snap = uidJ1 ? (await db.ref('utilisateurs/'+uidJ1+'/elo').once('value')).val() : null;
-  const eloJ2Snap = uidJ2 ? (await db.ref('utilisateurs/'+uidJ2+'/elo').once('value')).val() : null;
-  const eloJ1 = eloJ1Snap || {general:1200, trot:1200, galop:1200};
-  const eloJ2 = eloJ2Snap || {general:1200, trot:1200, galop:1200};
+
+  // ── Annuler l'ancien calcul si match déjà clôturé une fois ──
+  const dejaClotureSnap = data.eloSnapshot;
+  const annulerAncienCalc = async (uid) => {
+    if(!uid || !dejaClotureSnap?.[uid]) return;
+    const snap = dejaClotureSnap[uid];
+    // Restaurer ELO et stats d'avant la dernière clôture
+    await db.ref('utilisateurs/'+uid+'/elo').set(snap.eloBefore);
+    await db.ref('utilisateurs/'+uid+'/stats').set(snap.statsBefore);
+  };
+  if(dejaClotureSnap) {
+    await annulerAncienCalc(uidJ1);
+    await annulerAncienCalc(uidJ2);
+  }
+
+  // ── Lire les valeurs actuelles (après annulation éventuelle) ──
+  const eloJ1Raw = uidJ1 ? (await db.ref('utilisateurs/'+uidJ1+'/elo').once('value')).val() : null;
+  const eloJ2Raw = uidJ2 ? (await db.ref('utilisateurs/'+uidJ2+'/elo').once('value')).val() : null;
+  const statsJ1Raw = uidJ1 ? (await db.ref('utilisateurs/'+uidJ1+'/stats').once('value')).val() : null;
+  const statsJ2Raw = uidJ2 ? (await db.ref('utilisateurs/'+uidJ2+'/stats').once('value')).val() : null;
+  const eloJ1 = eloJ1Raw || {general:1200, trot:1200, galop:1200};
+  const eloJ2 = eloJ2Raw || {general:1200, trot:1200, galop:1200};
+
+  // ── Calcul ELO ──
   const scoreJ1 = v==='j1'?1:v==='egal'?0.5:0;
   const scoreJ2 = 1 - scoreJ1;
   const disc = data.reunion?.discipline || 'MIXTE';
   const discKey = disc==='TROT'?'trot':disc==='GALOP'?'galop':null;
-  // ELO général
-  const deltaJ1gen = calcElo(eloJ1.general, eloJ2.general, scoreJ1);
-  const deltaJ2gen = calcElo(eloJ2.general, eloJ1.general, scoreJ2);
-  eloJ1.general = (eloJ1.general||1200) + deltaJ1gen;
-  eloJ2.general = (eloJ2.general||1200) + deltaJ2gen;
-  // ELO discipline (sauf MIXTE)
+  const newEloJ1 = {...eloJ1};
+  const newEloJ2 = {...eloJ2};
+  const deltaJ1gen = calcElo(eloJ1.general||1200, eloJ2.general||1200, scoreJ1);
+  const deltaJ2gen = calcElo(eloJ2.general||1200, eloJ1.general||1200, scoreJ2);
+  newEloJ1.general = (eloJ1.general||1200) + deltaJ1gen;
+  newEloJ2.general = (eloJ2.general||1200) + deltaJ2gen;
   if(discKey) {
-    const deltaJ1disc = calcElo(eloJ1[discKey]||1200, eloJ2[discKey]||1200, scoreJ1);
-    const deltaJ2disc = calcElo(eloJ2[discKey]||1200, eloJ1[discKey]||1200, scoreJ2);
-    eloJ1[discKey] = (eloJ1[discKey]||1200) + deltaJ1disc;
-    eloJ2[discKey] = (eloJ2[discKey]||1200) + deltaJ2disc;
+    newEloJ1[discKey] = (eloJ1[discKey]||1200) + calcElo(eloJ1[discKey]||1200, eloJ2[discKey]||1200, scoreJ1);
+    newEloJ2[discKey] = (eloJ2[discKey]||1200) + calcElo(eloJ2[discKey]||1200, eloJ1[discKey]||1200, scoreJ2);
   }
-  const updateStats = async(uid, role, newElo) => {
-    const s=(await db.ref('utilisateurs/'+uid+'/stats').once('value')).val()||{matchsJoues:0,victoires:0,defaites:0,egalites:0};
-    s.matchsJoues=(s.matchsJoues||0)+1;
-    if(v==='egal') s.egalites=(s.egalites||0)+1;
-    else if(v===role) s.victoires=(s.victoires||0)+1;
-    else s.defaites=(s.defaites||0)+1;
-    await db.ref('utilisateurs/'+uid+'/stats').set(s);
-    await db.ref('utilisateurs/'+uid+'/elo').set(newElo);
-    await db.ref('utilisateurs/'+uid+'/statut').set('disponible');
+
+  // ── Mise à jour stats ──
+  const appliquerStats = (s, role) => {
+    const ns = {...(s||{matchsJoues:0,victoires:0,defaites:0,egalites:0})};
+    ns.matchsJoues = (ns.matchsJoues||0)+1;
+    if(v==='egal') ns.egalites = (ns.egalites||0)+1;
+    else if(v===role) ns.victoires = (ns.victoires||0)+1;
+    else ns.defaites = (ns.defaites||0)+1;
+    return ns;
   };
-  await db.ref('matchs/'+matchId).update({statut:'termine', vainqueur, manchesJ1:m1, manchesJ2:m2});
-  if(uidJ1) await updateStats(uidJ1,'j1',eloJ1);
-  if(uidJ2) await updateStats(uidJ2,'j2',eloJ2);
+  const newStatsJ1 = uidJ1 ? appliquerStats(statsJ1Raw,'j1') : null;
+  const newStatsJ2 = uidJ2 ? appliquerStats(statsJ2Raw,'j2') : null;
+
+  // ── Snapshot pour pouvoir annuler si on re-clôture ──
+  const eloSnapshot = {};
+  if(uidJ1) eloSnapshot[uidJ1] = {eloBefore: eloJ1Raw||{general:1200,trot:1200,galop:1200}, statsBefore: statsJ1Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}};
+  if(uidJ2) eloSnapshot[uidJ2] = {eloBefore: eloJ2Raw||{general:1200,trot:1200,galop:1200}, statsBefore: statsJ2Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}};
+
+  // ── Appliquer ──
+  await db.ref('matchs/'+matchId).update({statut:'termine', vainqueur, manchesJ1:m1, manchesJ2:m2, eloSnapshot});
+  if(uidJ1 && newStatsJ1) { await db.ref('utilisateurs/'+uidJ1+'/stats').set(newStatsJ1); await db.ref('utilisateurs/'+uidJ1+'/elo').set(newEloJ1); await db.ref('utilisateurs/'+uidJ1+'/statut').set('disponible'); }
+  if(uidJ2 && newStatsJ2) { await db.ref('utilisateurs/'+uidJ2+'/stats').set(newStatsJ2); await db.ref('utilisateurs/'+uidJ2+'/elo').set(newEloJ2); await db.ref('utilisateurs/'+uidJ2+'/statut').set('disponible'); }
   await viderChatMatch(matchId);
   arreterChatMatch();
   toast('✅ Match clôturé !');
@@ -2094,11 +2122,23 @@ function afficherCourse(idx) { etat.courseAffichee=idx; if(etat.matchData) rendr
 function rendreZoneJeu(data,idx) {
   const c=data.courses[idx]; if(!c) return;
   const mr=getMainPourCourse(idx),estMain=etat.joueurId===mr;
+  const isAdmin = etat._adminView;
+  // Bandeau : version admin ou version joueur
+  const bandeauAdmin = isAdmin ? `
+    <div style="background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.3);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:.82rem;">
+      <strong style="color:var(--or);">👁 Vue admin</strong>
+      <span style="margin-left:10px;opacity:.7;">Statut : <strong>${c.statut}</strong></span>
+      ${c.statut==='bloquee'||c.statut==='terminee' ? `<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
+        <span>J1 : ${(c.choixFinalJ1||[]).join(', ')||'—'}</span>
+        <span>J2 : ${(c.choixFinalJ2||[]).join(', ')||'—'}</span>
+      </div>` : ''}
+    </div>` : '';
   let html=`<div class="card"><h2>C${c.numOrdre} — ${c.libelle}</h2>
-    <div class="bandeau-joueur ${estMain?'bandeau-main':'bandeau-second'}">
+    ${bandeauAdmin}
+    ${!isAdmin ? `<div class="bandeau-joueur ${estMain?'bandeau-main':'bandeau-second'}">
       <span class="role-badge ${estMain?'role-main':'role-second'}">${estMain?'⭐ Vous avez la main':'2ème joueur'}</span>
       <span style="font-size:.85rem;">${estMain?'Choisissez <strong>2 chevaux</strong> (fermeture à -10 min)':'Choisissez <strong>4 chevaux</strong> en ordre (fermeture à -5 min)'}</span>
-    </div>`;
+    </div>` : ''}`;
   if(c.heureDepart&&c.statut==='ouverte') {
     const ms=c.heureDepart-Date.now(),lim=estMain?10*60*1000:5*60*1000,urg=ms<lim+60000&&ms>0;
     html+=`<div class="timer-bloc"><div id="timer-val" class="timer-valeur ${urg?'urgent':'normal'}">${ms<=0?'00:00':msToHMS(ms)}</div><div class="text-sm">avant le départ</div></div>`;
@@ -2129,7 +2169,18 @@ function rendreZoneJeu(data,idx) {
       </div>`;
     }
   }
-  else if(c.statut==='ouverte') html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId);
+  else if(c.statut==='ouverte') {
+    if(isAdmin) {
+      // Vue admin : montrer l'état des choix, pas le sélecteur
+      const choixJ1 = c.choixJ1||[], choixJ2 = c.choixJ2||[];
+      html += `<div style="padding:10px;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;">
+        <div style="margin-bottom:6px;"><strong>${data.j1?.nom||'J1'} :</strong> ${choixJ1.length?choixJ1.join(', '):'<span style="opacity:.5;">Pas encore choisi</span>'}</div>
+        <div><strong>${data.j2?.nom||'J2'} :</strong> ${choixJ2.length?choixJ2.join(', '):'<span style="opacity:.5;">Pas encore choisi</span>'}</div>
+      </div>`;
+    } else {
+      html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId);
+    }
+  }
   html+='</div>';
   document.getElementById('zone-jeu').innerHTML=html;
   if(etat.timerInterval) clearInterval(etat.timerInterval);
@@ -2274,3 +2325,4 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
