@@ -1731,49 +1731,67 @@ async function forceTraiterCourse(idx) {
 
 
 // ── CHAT ────────────────────────────────────────────
-let _chatAccueilOff = null;
-let _chatMatchOff = null;
+// ── CHAT ────────────────────────────────────────────
+// Stocke {ref, handler} pour pouvoir faire .off() proprement
+const _chatListeners = {};
 
 function formatChatHeure(ts) {
   const d = new Date(ts);
   return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
 }
 
-function afficherMessages(msgs, containerId) {
+function _ajouterBulle(containerId, m) {
   const el = document.getElementById(containerId);
   if(!el) return;
-  const uid = utilisateur?.uid;
-  if(!msgs.length) { el.innerHTML='<p class="chat-vide">Aucun message pour l\'instant…</p>'; return; }
-  el.innerHTML = msgs.map(m => {
-    const moi = m.uid === uid;
-    return `<div class="chat-msg ${moi?'moi':'autre'}">
-      ${!moi?`<div class="chat-auteur">${m.prenom||'?'}</div>`:''}
-      <div>${m.texte}</div>
-      <div class="chat-heure">${formatChatHeure(m.ts)}</div>
-    </div>`;
-  }).join('');
-  el.scrollTop = el.scrollHeight;
+  // Retirer le message "vide" s'il existe
+  const vide = el.querySelector('.chat-vide');
+  if(vide) vide.remove();
+  const moi = m.uid === utilisateur?.uid;
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + (moi ? 'moi' : 'autre');
+  div.innerHTML = (!moi ? `<div class="chat-auteur">${m.prenom||'?'}</div>` : '')
+    + `<div>${m.texte}</div>`
+    + `<div class="chat-heure">${formatChatHeure(m.ts)}</div>`;
+  el.appendChild(div);
+  // Scroll en bas
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+}
+
+function _stopChat(key) {
+  if(_chatListeners[key]) {
+    _chatListeners[key].ref.off('child_added', _chatListeners[key].handler);
+    delete _chatListeners[key];
+  }
+}
+
+function _startChat(key, ref) {
+  _stopChat(key);
+  // Vider l'affichage
+  const containerId = key === 'accueil' ? 'chat-accueil-messages' : 'chat-match-messages';
+  const el = document.getElementById(containerId);
+  if(el) el.innerHTML = '<p class="chat-vide">Aucun message pour l\'instant\u2026</p>';
+  // child_added déclenché pour chaque message existant puis chaque nouveau
+  const handler = snap => _ajouterBulle(containerId, snap.val());
+  ref.on('child_added', handler);
+  _chatListeners[key] = {ref, handler};
 }
 
 // ── CHAT ACCUEIL (durée de vie 2h) ──────────────────
 function demarrerChatAccueil() {
-  if(_chatAccueilOff) _chatAccueilOff();
-  const limite = Date.now() - 2*60*60*1000;
-  _chatAccueilOff = db.ref('chat_accueil').orderByChild('ts').startAt(limite).limitToLast(50).on('value', snap => {
-    const msgs = [];
-    snap.forEach(child => msgs.push(child.val()));
-    afficherMessages(msgs, 'chat-accueil-messages');
-  });
-  // Nettoyage auto des messages > 2h
   nettoyerChatAccueil();
+  const limite = Date.now() - 2*60*60*1000;
+  const ref = db.ref('chat_accueil').orderByChild('ts').startAt(limite);
+  _startChat('accueil', ref);
 }
 
 async function nettoyerChatAccueil() {
-  const limite = Date.now() - 2*60*60*1000;
-  const snap = await db.ref('chat_accueil').orderByChild('ts').endAt(limite).once('value');
-  const updates = {};
-  snap.forEach(child => { updates[child.key] = null; });
-  if(Object.keys(updates).length) await db.ref('chat_accueil').update(updates);
+  try {
+    const limite = Date.now() - 2*60*60*1000;
+    const snap = await db.ref('chat_accueil').orderByChild('ts').endAt(limite).once('value');
+    const updates = {};
+    snap.forEach(child => { updates[child.key] = null; });
+    if(Object.keys(updates).length) await db.ref('chat_accueil').update(updates);
+  } catch(e) {}
 }
 
 async function envoyerChatAccueil() {
@@ -1790,16 +1808,12 @@ async function envoyerChatAccueil() {
 
 // ── CHAT MATCH ───────────────────────────────────────
 function demarrerChatMatch(matchId) {
-  if(_chatMatchOff) _chatMatchOff();
-  _chatMatchOff = db.ref('chat_matchs/'+matchId).orderByChild('ts').limitToLast(100).on('value', snap => {
-    const msgs = [];
-    snap.forEach(child => msgs.push(child.val()));
-    afficherMessages(msgs, 'chat-match-messages');
-  });
+  const ref = db.ref('chat_matchs/'+matchId).orderByChild('ts');
+  _startChat('match', ref);
 }
 
 function arreterChatMatch() {
-  if(_chatMatchOff) { _chatMatchOff(); _chatMatchOff = null; }
+  _stopChat('match');
 }
 
 async function envoyerChatMatch() {
