@@ -318,6 +318,7 @@
     <button type="button" class="btn-back" onclick="navAccueil()">← Accueil</button>
     <h2 id="match-titre">Match en cours</h2>
   </div>
+  <div id="bandeau-attente-adv" style="display:none;background:rgba(255,160,0,.12);border:1px solid rgba(255,160,0,.35);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:.85rem;color:rgba(255,235,170,.9);"></div>
   <div id="admin-match-banner" style="display:none;background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.4);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.85rem;"></div>
   <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
     <div style="flex:0 0 260px;">
@@ -1294,17 +1295,34 @@ async function chargerReunionsCreation() {
     const reunions = data.programme?.reunions || data.reunions || data || [];
     if(!reunions.length) { container.innerHTML='<p class="text-sm">Aucune réunion.</p>'; return; }
     container.innerHTML = '';
+    const LIMITE_MS = 15 * 60 * 1000;
+    const now = Date.now();
+    let nbFiltrees = 0;
     reunions.forEach(r => {
+      const courses = r.courses || [];
+      const premiereHeure = courses.length > 0 ? courses[0].heureDepart : null;
+      const resteMs = premiereHeure ? premiereHeure - now : null;
+      // Filtrer si déjà démarrée ou moins de 15 min
+      if(resteMs !== null && resteMs < LIMITE_MS) { nbFiltrees++; return; }
       const disc = detecterDiscipline(r);
       const lbl = disc==='TROT'?'🔵 Trot':disc==='GALOP'?'🟡 Galop':'⚪ Mixte';
       const bg = disc==='TROT'?'rgba(50,120,255,.2)':disc==='GALOP'?'rgba(255,204,0,.15)':'rgba(255,255,255,.08)';
+      const heureLabel = premiereHeure ? ` · 1ère course à ${new Date(premiereHeure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}` : '';
       const btn = document.createElement('button');
       btn.className = 'btn mt8';
       btn.style.cssText = `width:100%;text-align:left;margin-bottom:6px;background:${bg};border:1px solid rgba(255,255,255,.15);color:var(--creme);`;
-      btn.innerHTML = `${lbl} — R${r.numOfficiel||r.numOrdre||'?'} — ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'} (${r.courses?.length||0} courses)`;
+      btn.innerHTML = `${lbl} — R${r.numOfficiel||r.numOrdre||'?'} — ${r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?'} (${r.courses?.length||0} courses${heureLabel})`;
       btn.onclick = () => creerMatchAvecReunion(r, pmuDate, disc);
       container.appendChild(btn);
     });
+    if(!container.children.length) {
+      container.innerHTML = '<p class="text-sm" style="color:rgba(255,200,100,.8);">Aucune réunion disponible — toutes les réunions démarrent dans moins de 15 min ou sont déjà lancées.</p>';
+    } else if(nbFiltrees > 0) {
+      const note = document.createElement('p');
+      note.className = 'text-sm'; note.style.cssText = 'opacity:.45;margin-top:6px;';
+      note.textContent = `${nbFiltrees} réunion(s) masquée(s) car démarrée(s) ou < 15 min.`;
+      container.appendChild(note);
+    }
   } catch(e) { container.innerHTML=`<p style="color:var(--rouge);">Erreur : ${e.message}</p>`; }
 }
 
@@ -1768,12 +1786,46 @@ async function selectionnerReunion(reunion, pmuDate) {
 }
 
 // ── FIREBASE ÉCOUTE ─────────────────────────────────
+let _annulationTimer = null;
+
 function ecouterMatch() {
   demarrerChatMatch(etat.matchId);
   db.ref('matchs/'+etat.matchId).on('value',snap=>{
     const data=snap.val(); if(!data) return;
-    etat.matchData=data; rendreEtat(data);
+    etat.matchData=data;
+    if((data.statut==='attente'||data.statut==='pret') && (data.courses||[]).length > 0 && etat.joueurId==='j1') {
+      programmerAnnulationAuto(data);
+    } else if(data.statut!=='attente' && data.statut!=='pret') {
+      if(_annulationTimer) { clearTimeout(_annulationTimer); _annulationTimer = null; }
+    }
+    rendreEtat(data);
   });
+}
+
+function programmerAnnulationAuto(data) {
+  if(_annulationTimer) return;
+  const courses = data.courses || [];
+  const premiereHeure = courses.reduce((min,c) => c.heureDepart && c.heureDepart < min ? c.heureDepart : min, Infinity);
+  if(premiereHeure === Infinity) return;
+  const delai = premiereHeure - Date.now() - 15 * 60 * 1000;
+  if(delai <= 0) { annulerMatchAttenteExpire(etat.matchId); return; }
+  console.log('[Auto-annulation] dans ' + Math.round(delai/60000) + ' min');
+  _annulationTimer = setTimeout(async () => {
+    _annulationTimer = null;
+    const snap = await db.ref('matchs/'+etat.matchId+'/statut').once('value');
+    if(snap.val()==='attente' || snap.val()==='pret') await annulerMatchAttenteExpire(etat.matchId);
+  }, delai);
+}
+
+async function annulerMatchAttenteExpire(matchId) {
+  await db.ref('matchs/'+matchId).update({statut:'annule', annuleRaison:'Invitation non acceptée 15 min avant la 1ère course'});
+  const invSnap = await db.ref('invitations').orderByChild('matchId').equalTo(matchId).once('value');
+  const updates = {};
+  invSnap.forEach(child => { updates[child.key+'/statut'] = 'expiree'; });
+  if(Object.keys(updates).length) await db.ref('invitations').update(updates);
+  toast('⏰ Match annulé — invitation non acceptée à temps.', true);
+  chargerTableauBord();
+  showPage('matchs-list'); setNavActive('matchs');
 }
 
 function rendreEtat(data) {
@@ -1797,6 +1849,12 @@ function rendreEtat(data) {
     showPage('match'); rendreMatch(data);
   } else if(data.statut==='pret_cloture') { showPage('fin'); rendreFin(data); }
   else if(data.statut==='termine') { showPage('fin'); rendreFin(data); }
+  else if(data.statut==='annule') {
+    if(_annulationTimer) { clearTimeout(_annulationTimer); _annulationTimer = null; }
+    toast('⏰ Ce match a été annulé — invitation non acceptée à temps.', true);
+    chargerTableauBord();
+    showPage('matchs-list'); setNavActive('matchs');
+  }
 }
 
 function rendrelobby(data) {
@@ -2286,6 +2344,21 @@ function calculerVainqueur(courses,m1,m2) {
 // ── RENDU MATCH ─────────────────────────────────────
 function rendreMatch(data) {
   rendreScores(data); rendreProgramme(data);
+  // Bandeau attente adversaire
+  const bandeauAttenteEl = document.getElementById('bandeau-attente-adv');
+  if(bandeauAttenteEl) {
+    if((data.statut==='attente'||data.statut==='pret') && etat.joueurId==='j1') {
+      const courses = data.courses||[];
+      const premiereHeure = courses.reduce((min,c)=>c.heureDepart&&c.heureDepart<min?c.heureDepart:min, Infinity);
+      const heureStr = premiereHeure!==Infinity ? new Date(premiereHeure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '?';
+      const resteAnnul = premiereHeure!==Infinity ? Math.max(0, Math.floor((premiereHeure - Date.now() - 15*60*1000)/60000)) : null;
+      const resteStr = resteAnnul!==null ? (resteAnnul > 0 ? `Annulation auto dans ${resteAnnul} min` : '⚠️ Annulation imminente !') : '';
+      bandeauAttenteEl.style.display = 'block';
+      bandeauAttenteEl.innerHTML = `⏳ En attente que <strong>${data.j2?.nom||'votre adversaire'}</strong> accepte. <span style="opacity:.7;font-size:.82rem;">1ère course à ${heureStr}${resteStr?' · '+resteStr:''}</span>`;
+    } else {
+      bandeauAttenteEl.style.display = 'none';
+    }
+  }
   // Bandeau admin
   const adminBanner = document.getElementById('admin-match-banner');
   if(adminBanner) {
