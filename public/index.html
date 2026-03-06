@@ -81,6 +81,19 @@
     .statut-absent { color:rgba(253,246,227,.35); font-size:.72rem; }
     .match-historique { transition:background .15s, transform .1s; }
     .match-historique:hover { background:rgba(255,204,0,.12) !important; transform:translateX(3px); }
+
+    /* ── CHAT ── */
+    .chat-box { display:flex; flex-direction:column; height:320px; }
+    .chat-messages { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px; scroll-behavior:smooth; }
+    .chat-msg { max-width:75%; padding:7px 12px; border-radius:16px; font-size:.85rem; line-height:1.4; word-break:break-word; }
+    .chat-msg.moi { align-self:flex-end; background:var(--or); color:#1a1100; border-bottom-right-radius:4px; }
+    .chat-msg.autre { align-self:flex-start; background:rgba(255,255,255,.1); color:var(--texte); border-bottom-left-radius:4px; }
+    .chat-msg .chat-auteur { font-size:.72rem; font-weight:bold; margin-bottom:2px; opacity:.7; }
+    .chat-msg .chat-heure { font-size:.68rem; opacity:.5; margin-top:2px; text-align:right; }
+    .chat-input-zone { display:flex; gap:6px; padding:8px; border-top:1px solid rgba(255,255,255,.08); }
+    .chat-input-zone input { flex:1; font-size:.85rem; padding:7px 10px; }
+    .chat-input-zone button { padding:7px 14px; font-size:.85rem; }
+    .chat-vide { text-align:center; color:rgba(255,248,232,.35); font-size:.82rem; margin-top:40px; }
     .match-card { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-radius:10px; margin-bottom:10px; background:rgba(255,255,255,.06); border:1px solid rgba(201,169,74,.2); gap:12px; flex-wrap:wrap; }
     .match-card:hover { background:rgba(255,255,255,.1); cursor:pointer; }
     .match-card.invite { border-color:rgba(201,169,74,.6); background:rgba(201,169,74,.08); }
@@ -171,6 +184,20 @@
       <div class="card">
         <h2>🕒 Derniers matchs</h2>
         <div id="home-derniers-matchs"><p class="text-sm">Chargement…</p></div>
+      </div>
+    </div>
+
+    <!-- Chat accueil -->
+    <div style="flex:1;min-width:260px;">
+      <div class="card" style="padding-bottom:0;">
+        <h2>💬 Chat général</h2>
+        <div class="chat-box">
+          <div class="chat-messages" id="chat-accueil-messages"></div>
+          <div class="chat-input-zone">
+            <input type="text" id="chat-accueil-input" placeholder="Votre message…" maxlength="200" onkeydown="if(event.key==='Enter')envoyerChatAccueil()" />
+            <button class="btn btn-or btn-sm" onclick="envoyerChatAccueil()">➤</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -265,7 +292,19 @@
       <div class="card"><h2>📊 Scores</h2><div id="scores-display"></div></div>
       <div class="card"><h2 id="titre-programme">🏁 Programme</h2><div id="liste-courses"></div></div>
     </div>
-    <div style="flex:1;min-width:280px;"><div id="zone-jeu"></div></div>
+    <div style="flex:1;min-width:280px;">
+      <div id="zone-jeu"></div>
+      <div class="card" style="margin-top:0;padding-bottom:0;">
+        <h2>💬 Chat du match</h2>
+        <div class="chat-box">
+          <div class="chat-messages" id="chat-match-messages"></div>
+          <div class="chat-input-zone">
+            <input type="text" id="chat-match-input" placeholder="Votre message…" maxlength="200" onkeydown="if(event.key==='Enter')envoyerChatMatch()" />
+            <button class="btn btn-or btn-sm" onclick="envoyerChatMatch()">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -747,6 +786,8 @@ async function chargerAccueil() {
 
   // Réunions à venir
   chargerReunionsAvenir();
+  // Chat accueil
+  demarrerChatAccueil();
 }
 
 function ligneClassement(j, i, uid, key) {
@@ -1515,6 +1556,7 @@ async function selectionnerReunion(reunion, pmuDate) {
 
 // ── FIREBASE ÉCOUTE ─────────────────────────────────
 function ecouterMatch() {
+  demarrerChatMatch(etat.matchId);
   db.ref('matchs/'+etat.matchId).on('value',snap=>{
     const data=snap.val(); if(!data) return;
     etat.matchData=data; rendreEtat(data);
@@ -1687,6 +1729,95 @@ async function forceTraiterCourse(idx) {
   }
 }
 
+
+// ── CHAT ────────────────────────────────────────────
+let _chatAccueilOff = null;
+let _chatMatchOff = null;
+
+function formatChatHeure(ts) {
+  const d = new Date(ts);
+  return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+}
+
+function afficherMessages(msgs, containerId) {
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const uid = utilisateur?.uid;
+  if(!msgs.length) { el.innerHTML='<p class="chat-vide">Aucun message pour l\'instant…</p>'; return; }
+  el.innerHTML = msgs.map(m => {
+    const moi = m.uid === uid;
+    return `<div class="chat-msg ${moi?'moi':'autre'}">
+      ${!moi?`<div class="chat-auteur">${m.prenom||'?'}</div>`:''}
+      <div>${m.texte}</div>
+      <div class="chat-heure">${formatChatHeure(m.ts)}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── CHAT ACCUEIL (durée de vie 2h) ──────────────────
+function demarrerChatAccueil() {
+  if(_chatAccueilOff) _chatAccueilOff();
+  const limite = Date.now() - 2*60*60*1000;
+  _chatAccueilOff = db.ref('chat_accueil').orderByChild('ts').startAt(limite).limitToLast(50).on('value', snap => {
+    const msgs = [];
+    snap.forEach(child => msgs.push(child.val()));
+    afficherMessages(msgs, 'chat-accueil-messages');
+  });
+  // Nettoyage auto des messages > 2h
+  nettoyerChatAccueil();
+}
+
+async function nettoyerChatAccueil() {
+  const limite = Date.now() - 2*60*60*1000;
+  const snap = await db.ref('chat_accueil').orderByChild('ts').endAt(limite).once('value');
+  const updates = {};
+  snap.forEach(child => { updates[child.key] = null; });
+  if(Object.keys(updates).length) await db.ref('chat_accueil').update(updates);
+}
+
+async function envoyerChatAccueil() {
+  const input = document.getElementById('chat-accueil-input');
+  const texte = input.value.trim();
+  if(!texte || !utilisateur) return;
+  input.value = '';
+  await db.ref('chat_accueil').push({
+    uid: utilisateur.uid,
+    prenom: utilisateur.displayName || 'Joueur',
+    texte, ts: Date.now()
+  });
+}
+
+// ── CHAT MATCH ───────────────────────────────────────
+function demarrerChatMatch(matchId) {
+  if(_chatMatchOff) _chatMatchOff();
+  _chatMatchOff = db.ref('chat_matchs/'+matchId).orderByChild('ts').limitToLast(100).on('value', snap => {
+    const msgs = [];
+    snap.forEach(child => msgs.push(child.val()));
+    afficherMessages(msgs, 'chat-match-messages');
+  });
+}
+
+function arreterChatMatch() {
+  if(_chatMatchOff) { _chatMatchOff(); _chatMatchOff = null; }
+}
+
+async function envoyerChatMatch() {
+  const input = document.getElementById('chat-match-input');
+  const texte = input.value.trim();
+  if(!texte || !utilisateur || !etat.matchId) return;
+  input.value = '';
+  await db.ref('chat_matchs/'+etat.matchId).push({
+    uid: utilisateur.uid,
+    prenom: utilisateur.displayName || 'Joueur',
+    texte, ts: Date.now()
+  });
+}
+
+async function viderChatMatch(matchId) {
+  await db.ref('chat_matchs/'+matchId).remove();
+}
+
 // ── POLLING RÉSULTATS ───────────────────────────────
 // Appelé par les DEUX joueurs : celui qui a la main via bloquerEtValider,
 // et l'autre via ecouterMatch dès qu'il voit une course passer en 'bloquee'
@@ -1826,6 +1957,8 @@ async function cloturerMatch(matchId) {
   await db.ref('matchs/'+matchId).update({statut:'termine', vainqueur, manchesJ1:m1, manchesJ2:m2});
   if(uidJ1) await updateStats(uidJ1,'j1',eloJ1);
   if(uidJ2) await updateStats(uidJ2,'j2',eloJ2);
+  await viderChatMatch(matchId);
+  arreterChatMatch();
   toast('✅ Match clôturé !');
   if(matchId===etat.matchId) {
     const fresh=(await db.ref('matchs/'+matchId).once('value')).val();
