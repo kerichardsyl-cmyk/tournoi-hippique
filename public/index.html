@@ -1777,9 +1777,15 @@ function ecouterMatch() {
 }
 
 function rendreEtat(data) {
-  const nomAdv = etat.joueurId==='j1' ? data.j2?.nom||'?' : data.j1?.nom||'?';
+  const nomAdv = etat.joueurId==='j1' ? data.j2?.nom||'En attente…' : data.j1?.nom||'?';
   document.getElementById('header-user').textContent = `👤 ${utilisateur?.displayName||''} vs ${nomAdv} — ${etat.matchId}`;
-  if(data.statut==='attente'||data.statut==='pret') { rendrelobby(data); }
+  if(data.statut==='attente'||data.statut==='pret') {
+    // Créateur (j1) avec courses déjà chargées → page match directement
+    if(etat.joueurId==='j1' && (data.courses||[]).length > 0) {
+      showPage('match'); rendreMatch(data); return;
+    }
+    rendrelobby(data); return;
+  }
   else if(data.statut==='en_cours') {
     if(!etat.timersInitialises) { etat.timersInitialises=true; reprendreTimers(data); }
     else {
