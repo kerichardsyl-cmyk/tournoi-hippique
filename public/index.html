@@ -982,8 +982,9 @@ function chargerTableauBord() {
     snap.forEach(child => {
       const d = child.val();
       if(d.uidJ1===uid || d.uidJ2===uid) {
-        if(d.statut !== 'termine') enCours.push({id:child.key,...d});
-        else termines.push({id:child.key,...d});
+        if(d.statut === 'termine') termines.push({id:child.key,...d});
+        else if(d.statut !== 'annule') enCours.push({id:child.key,...d});
+        // matchs annulés ignorés dans le tableau de bord
       }
     });
     // Enrichir les matchs en attente avec le nom de l'invité
@@ -1012,7 +1013,7 @@ function chargerTableauBord() {
               return `<div class="text-sm" style="margin-top:2px;color:var(--or-clair);">${m.j1?.nom||'J1'} ${m.manchesJ1||0}M (${p1}pts) — ${m.j2?.nom||'J2'} ${m.manchesJ2||0}M (${p2}pts)</div>`;
             })():''}
           </div>
-          <span class="badge-${m.statut==='en_cours'?'vert':'or'}">${m.statut==='en_cours'?'En cours':m.statut==='pret'?'Prêt':'Attente'}</span>
+          <span class="badge-${m.statut==='en_cours'||m.statut==='pret_cloture'?'vert':'or'}">${m.statut==='en_cours'?'En cours':m.statut==='pret_cloture'?'Fin':m.statut==='pret'?'Prêt':'Attente'}</span>
           <button type="button" class="btn btn-gris btn-sm" style="font-size:.75rem;padding:4px 8px;" onclick="event.stopPropagation();supprimerMatch('${m.id}')">🗑</button>
         </div>`).join('')
       : '<p class="text-sm">Aucun match en cours.</p>';
@@ -2663,8 +2664,5 @@ function rendreFin(data) {
     <h3 style="font-size:1.5rem;color:var(--or-clair);">${v==='egal'?'Match nul !':(v==='j1'?j1:j2)+' remporte le match !'}</h3>${t}`;
 }
 </script>
-</body>
-</html>
-
 </body>
 </html>
