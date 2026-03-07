@@ -11,7 +11,7 @@
   <style>
     :root { --vert:#cc2200; --or:#ffcc00; --or-clair:#ffe566; --brun:#111111; --creme:#fff8e8; --rouge:#ff4422; }
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:'Georgia',serif; background:#1e1a16; color:var(--text); min-height:100vh; }
+    body { font-family:'Georgia',serif; background:#0d0d0d; color:var(--creme); min-height:100vh; }
     header { background:linear-gradient(135deg,#1a0000 0%,#8b0000 40%,#cc2200 60%,#1a0000 100%); border-bottom:3px solid var(--or); padding:14px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
     header h1 { font-size:1.4rem; color:var(--or-clair); letter-spacing:2px; text-transform:uppercase; }
     #header-right { display:flex; align-items:center; gap:12px; }
@@ -968,10 +968,6 @@ async function chargerReunionsAvenir() {
         html += `<div style="margin-bottom:10px;">
           <div style="font-size:.78rem;font-weight:bold;color:var(--or);padding:3px 8px;background:rgba(255,204,0,.1);border-radius:4px;margin-bottom:5px;">${labelJ}</div>`;
         reunions.forEach(r => {
-          const audA=r.audience||r.reunion?.audience||'';
-          if(audA && audA!=='NATIONAL' && audA!=='') return; // exclure si explicitement non-national
-          const paysA=r.pays||r.hippodrome?.pays||r.lieu?.pays||r.hippodrome?.localisation?.pays||'';
-          if(paysA && paysA!=='FRANCE' && paysA!=='France' && paysA!=='FR') return;
           const disc = detecterDiscipline(r);
           const discIcon = disc==='TROT'?'🔵':disc==='GALOP'?'🟡':'⚪';
           html += `<div style="padding:4px 8px;font-size:.82rem;border-left:2px solid rgba(255,204,0,.2);margin-bottom:2px;">
@@ -1380,12 +1376,6 @@ async function chargerReunionsCreation() {
     const now = Date.now();
     let nbFiltrees = 0;
     reunions.forEach(r => {
-      // Filtre audience : exclure PMH/local si champ présent
-      const aud = r.audience || r.reunion?.audience || '';
-      if(aud && aud !== 'NATIONAL' && aud !== '') { nbFiltrees++; return; }
-      // Filtre pays : exclure étranger si champ présent
-      const pays = r.pays || r.hippodrome?.pays || r.lieu?.pays || r.hippodrome?.localisation?.pays || '';
-      if(pays && pays !== 'FRANCE' && pays !== 'France' && pays !== 'FR') { nbFiltrees++; return; }
       const courses = r.courses || [];
       const premiereHeure = courses.length > 0 ? courses[0].heureDepart : null;
       const resteMs = premiereHeure ? premiereHeure - now : null;
@@ -1842,13 +1832,9 @@ async function chargerReunions() {
     if(!reunions.length) { container.innerHTML='<p class="text-sm">Aucune réunion pour cette date.</p>'; return; }
     container.innerHTML='<label style="margin-top:12px;">Choisir une réunion :</label>';
     const reunionsFrance = reunions.filter(r => {
-      const aud=r.audience||r.reunion?.audience||'';
-      if(aud&&aud!=='NATIONAL'&&aud!=='') return false;
-      const pays=r.pays||r.hippodrome?.pays||r.lieu?.pays||r.hippodrome?.localisation?.pays||'';
-      if(pays&&pays!=='FRANCE'&&pays!=='France'&&pays!=='FR') return false;
       return true;
     });
-    if(!reunionsFrance.length) { container.innerHTML='<p class="text-sm">Aucune réunion NATIONAL en France pour cette date.</p>'; return; }
+    if(!reunionsFrance.length) { container.innerHTML='<p class="text-sm">Aucune réunion disponible pour cette date.</p>'; return; }
     reunionsFrance.forEach(r => {
       const disc = detecterDiscipline(r);
       const discLabel = disc==='TROT'?'🔵 Trot':disc==='GALOP'?'🟡 Galop':'⚪ Mixte';
@@ -2777,5 +2763,6 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
 
