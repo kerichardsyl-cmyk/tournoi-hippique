@@ -644,7 +644,7 @@ async function envoyerInvitationLobby() {
 async function inviterDepuisLobby(uid, prenom, email) {
   const monPrenom = utilisateur.displayName || utilisateur.email;
   await db.ref('invitations/inv_'+etat.matchId).set({
-    matchId:etat.matchId, uidInvite:uid, emailInvite:email, nomInviteur:monPrenom,
+    matchId:etat.matchId, uidInvite:uid, emailInvite:email, nomInviteur:monPrenom, _prenomInvite:prenom,
     uidInviteur:utilisateur.uid, statut:'en_attente', createdAt:Date.now()
   });
   document.getElementById('lobby-search-joueur').value='';
@@ -813,7 +813,7 @@ async function chargerAccueil() {
       <div class="match-historique" style="padding:8px 10px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.05);font-size:.85rem;cursor:pointer;" onclick="ouvrirMatch('${m.id}')">
         <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'?'}</strong>
         <span style="float:right;color:var(--or-clair);">🏆 ${m.vainqueur==='j1'?m.j1?.nom:m.vainqueur==='j2'?m.j2?.nom:'Nul'}</span>
-        <div class="text-sm" style="margin-top:2px;">${discIcon(m.reunion?.discipline)}${m.reunion?.hippodrome||''} · ${m.manchesJ1||0}-${m.manchesJ2||0}</div>
+        <div class="text-sm" style="margin-top:2px;">${discIcon(m.reunion?.discipline)}${m.reunion?.hippodrome||''} · ${m.manchesJ1||0}-${m.manchesJ2||0} manches</div>
       </div>`).join('')
     : '<p class="text-sm">Aucun match terminé encore.</p>';
 
@@ -992,7 +992,7 @@ function chargerTableauBord() {
         try {
           const invSnap = await db.ref('invitations/inv_'+m.id).once('value');
           const inv = invSnap.val();
-          if(inv) m._nomInvite = inv.emailInvite || '?';
+          if(inv) m._nomInvite = inv._prenomInvite || inv.nomInvite || inv.emailInvite || '?';
         } catch(e) {}
       }
       return m;
@@ -1009,7 +1009,7 @@ function chargerTableauBord() {
               const cs=m.courses||[];
               const p1=cs.reduce((s,c)=>s+(c.pointsJ1||0),0);
               const p2=cs.reduce((s,c)=>s+(c.pointsJ2||0),0);
-              return `<div class="text-sm" style="margin-top:2px;color:var(--or-clair);">${m.j1?.nom||'J1'} ${m.manchesJ1||0} (${p1} pts) — ${m.j2?.nom||'J2'} ${m.manchesJ2||0} (${p2} pts)</div>`;
+              return `<div class="text-sm" style="margin-top:2px;color:var(--or-clair);">${m.j1?.nom||'J1'} ${m.manchesJ1||0}M (${p1}pts) — ${m.j2?.nom||'J2'} ${m.manchesJ2||0}M (${p2}pts)</div>`;
             })():''}
           </div>
           <span class="badge-${m.statut==='en_cours'?'vert':'or'}">${m.statut==='en_cours'?'En cours':m.statut==='pret'?'Prêt':'Attente'}</span>
@@ -1194,7 +1194,13 @@ async function annulerInvitation(invitId, matchId) {
 }
 
 async function refuserInvitation(invitId) {
-  await db.ref('invitations/'+invitId).update({statut:'refusee', refuseeAt:Date.now()});
+  // Récupérer le matchId lié à cette invitation
+  const invSnap = await db.ref('invitations/'+invitId).once('value');
+  const inv = invSnap.val();
+  if(inv?.matchId) {
+    await db.ref('matchs/'+inv.matchId).remove();
+  }
+  await db.ref('invitations/'+invitId).remove();
   toast('Invitation refusée.');
   chargerTableauBord();
 }
@@ -1380,6 +1386,7 @@ async function creerMatchAvecReunion(reunion, pmuDate, disc) {
   };
   if(_creationAdv.uid) invData.uidInvite = _creationAdv.uid;
   if(_creationAdv.email) invData.emailInvite = _creationAdv.email;
+  if(_creationAdv.prenom) invData._prenomInvite = _creationAdv.prenom;
   await db.ref('invitations/inv_'+code).set(invData);
   fermerPanneauCreation();
   if(errs.length) toast('⚠️ Match créé mais partants manquants : '+errs.join(', '));
@@ -1454,7 +1461,7 @@ async function inviterDepuisAnnuaire(uid, prenom, email) {
   });
   // Invitation via UID (pas besoin d'email)
   await db.ref('invitations').push({
-    matchId:code, uidInvite:uid, emailInvite:email, nomInviteur:monPrenom,
+    matchId:code, uidInvite:uid, emailInvite:email, nomInviteur:monPrenom, _prenomInvite:prenom,
     uidInviteur:utilisateur.uid, statut:'en_attente', createdAt:Date.now()
   });
   toast('📧 Invitation envoyée à '+prenom+' !');
@@ -1574,6 +1581,16 @@ async function chargerAdmin() {
     else if(s==='termine') termines++;
     tousMatchsAdmin.push({id:child.key,...d});
   });
+  // Enrichir les matchs en attente avec le nom de l'invité
+  const invSnap = await db.ref('invitations').once('value');
+  const invParMatch = {};
+  invSnap.forEach(child => { const d=child.val(); invParMatch[d.matchId] = d; });
+  tousMatchsAdmin.forEach(m => {
+    if(!m.j2 && invParMatch[m.id]) {
+      const inv = invParMatch[m.id];
+      m._nomInvite = inv._prenomInvite || inv.emailInvite || '?';
+    }
+  });
   document.getElementById('admin-stats').innerHTML = `
     <div class="score-ligne"><span>Joueurs inscrits</span><span class="score-pts" style="font-size:1.1rem;">${nbUsers}</span></div>
     <div class="score-ligne"><span>Matchs actifs</span><span class="score-pts" style="font-size:1.1rem;">${enCours}</span></div>
@@ -1602,7 +1619,7 @@ async function chargerAdmin() {
           '<tr style="border-bottom:1px solid rgba(255,255,255,.06);">' +
           '<td style="padding:6px 8px;font-family:monospace;font-size:.75rem;">'+m.id+'</td>' +
           '<td style="padding:6px 8px;text-align:center;">'+(m.j1?.nom||'—')+'</td>' +
-          '<td style="padding:6px 8px;text-align:center;">'+(m.j2?.nom||'—')+'</td>' +
+          '<td style="padding:6px 8px;text-align:center;">'+(m.j2?.nom || (m._nomInvite ? '<span style="opacity:.6;font-size:.78rem;">⏳ '+m._nomInvite+'</span>' : '—'))+'</td>' +
           '<td style="padding:6px 8px;text-align:center;">'+sBadge(m.statut)+'</td>' +
           '<td style="padding:6px 8px;white-space:nowrap;">'+sActions(m)+'</td>' +
           '</tr>'
@@ -2402,7 +2419,7 @@ function rendreMatch(data) {
   let idx=etat.courseAffichee!==null?etat.courseAffichee:-1;
   if(idx===-1) idx=courses.findIndex(c=>c.statut==='ouverte');
   if(idx===-1) idx=courses.findIndex(c=>c.statut==='bloquee');
-  if(idx===-1) idx=Math.max(0,courses.length-1);
+  if(idx===-1) idx=0; // première course par défaut (pas la dernière)
   rendreZoneJeu(data,idx);
 }
 
@@ -2424,13 +2441,17 @@ function rendreProgramme(data) {
   if(titreEl) titreEl.textContent='🏁 Programme'+(hippo?' : '+hippo:'');
   let html='<p class="text-sm" style="margin-bottom:8px;">Cliquez pour pronostiquer :</p>';
   courses.forEach((c,i)=>{
-    const sl={ouverte:'<span class="course-statut statut-ouverte">Ouverte</span>',bloquee:'<span class="course-statut statut-bloquee">Bloquée</span>',terminee:'<span class="course-statut statut-terminee">Terminée</span>'}[c.statut]||'';
+    const manqueData = c.statut==='terminee' && (!(c.arrivee||[]).length || !Object.keys(c.rapports||{}).length);
+    const alerteIcone = manqueData ? '<span title="Arrivée ou rapports manquants" style="color:#ff6b6b;margin-left:4px;font-size:.85rem;">⚠️</span>' : '';
+    const statutLabel = manqueData
+      ? '<span class="course-statut" style="background:rgba(255,80,80,.2);color:#ff9090;">⚠️ Incomplet</span>'
+      : {ouverte:'<span class="course-statut statut-ouverte">Ouverte</span>',bloquee:'<span class="course-statut statut-bloquee">Bloquée</span>',terminee:'<span class="course-statut statut-terminee">Terminée</span>'}[c.statut]||'';
     const mr=etat.joueurId,mc=c['choix'+mr.toUpperCase()]||[],mx=getMainPourCourse(i)===mr?2:4;
     const ck=c.statut==='ouverte'?(mc.length===mx?'<span style="color:#6fffa0;">✅</span>':mc.length>0?`<span style="color:var(--or);font-size:.75rem;">(${mc.length}/${mx})</span>`:''):'';
-    html+=`<div class="course-item ${c.statut==='terminee'?'terminee':''}" onclick="afficherCourse(${i})">
+    html+=`<div class="course-item ${c.statut==='terminee'&&!manqueData?'terminee':''}" onclick="afficherCourse(${i})">
       <div class="course-num">${c.numOrdre}</div>
-      <div class="course-info"><strong>${c.libelle} ${ck}</strong><span>${formatHeure(c.heureDepart)}</span></div>
-      ${sl}</div>`;
+      <div class="course-info"><strong>${c.libelle} ${ck}${alerteIcone}</strong><span>${formatHeure(c.heureDepart)}</span></div>
+      ${statutLabel}</div>`;
   });
   document.getElementById('liste-courses').innerHTML=html;
 }
@@ -2636,11 +2657,14 @@ function rendreFin(data) {
     <td style="padding:6px;text-align:center;">${c.pointsJ1||0} pts</td>
     <td style="padding:6px;text-align:center;">${c.pointsJ2||0} pts</td>
     <td style="padding:6px;text-align:center;">${c.mancheGagnant==='j1'?'✅ '+j1:c.mancheGagnant==='j2'?'✅ '+j2:'🤝'}</td></tr>`;});
-  t+=`<tr style="font-weight:bold;color:var(--or-clair);"><td style="padding:6px;">Total</td><td style="padding:6px;text-align:center;">${data.manchesJ1||0}</td><td style="padding:6px;text-align:center;">${data.manchesJ2||0}</td><td></td></tr></table>`;
+  t+=`<tr style="font-weight:bold;color:var(--or-clair);"><td style="padding:6px;">Total manches</td><td style="padding:6px;text-align:center;">${data.manchesJ1||0} <span style="font-size:.78rem;font-weight:normal;opacity:.7;">(${cs.reduce((s,co)=>s+(co.pointsJ1||0),0)} pts)</span></td><td style="padding:6px;text-align:center;">${data.manchesJ2||0} <span style="font-size:.78rem;font-weight:normal;opacity:.7;">(${cs.reduce((s,co)=>s+(co.pointsJ2||0),0)} pts)</span></td><td></td></tr></table>`;
   document.getElementById('fin-contenu').innerHTML=`
     <div style="font-size:3rem;margin-bottom:12px;">${v==='egal'?'🤝':'🏆'}</div>
     <h3 style="font-size:1.5rem;color:var(--or-clair);">${v==='egal'?'Match nul !':(v==='j1'?j1:j2)+' remporte le match !'}</h3>${t}`;
 }
 </script>
+</body>
+</html>
+
 </body>
 </html>
