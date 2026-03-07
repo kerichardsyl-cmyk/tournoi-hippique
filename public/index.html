@@ -2496,8 +2496,8 @@ function rendreZoneJeu(data,idx) {
       <strong style="color:var(--or);">👁 Vue admin</strong>
       <span style="margin-left:10px;opacity:.7;">Statut : <strong>${c.statut}</strong></span>
       ${c.statut==='bloquee'||c.statut==='terminee' ? `<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
-        <span>J1 : ${(c.choixFinalJ1||[]).join(', ')||'—'}</span>
-        <span>J2 : ${(c.choixFinalJ2||[]).join(', ')||'—'}</span>
+        <span>${data.j1?.nom||'J1'}${mr==='j1'?' ⭐':''} : ${(c.choixFinalJ1||[]).join(', ')||'—'}</span>
+        <span>${data.j2?.nom||'J2'}${mr==='j2'?' ⭐':''} : ${(c.choixFinalJ2||[]).join(', ')||'—'}</span>
       </div>` : ''}
     </div>` : '';
   let html=`<div class="card"><h2>C${c.numOrdre} — ${c.libelle}</h2>
@@ -2620,26 +2620,31 @@ function rendreChoixValides(c,monRole) {
   const gN=n=>pts.find(p=>p.numero===n)?.nom||`#${n}`;
   const courseIdx=etat.matchData?.courses?.findIndex(x=>x.numOrdre===c.numOrdre)??0;
   const mainRole=getMainPourCourse(courseIdx);
-  const secRole=mainRole==='j1'?'j2':'j1';
-  const cfMain=(c['choixFinal'+mainRole.toUpperCase()]||[]).slice(0,2);
-  const cfSec=(c['choixFinal'+secRole.toUpperCase()]||[]).slice(0,2);
-  const cfSecAll=c['choix'+secRole.toUpperCase()]||[];
-  const cfSecEcartes=cfSecAll.filter(n=>!cfSec.includes(n));
-  const nomMain=etat.matchData?.[mainRole]?.nom||mainRole.toUpperCase();
-  const nomSec=etat.matchData?.[secRole]?.nom||secRole.toUpperCase();
+  // J1 toujours à gauche, J2 toujours à droite
+  const cfJ1=(c.choixFinalJ1||[]).slice(0,2);
+  const cfJ2=(c.choixFinalJ2||[]).slice(0,2);
+  const cfJ2All=c.choixJ2||[];
+  const cfJ2Ecartes=cfJ2All.filter(n=>!cfJ2.includes(n));
+  const cfJ1Ecartes=(c.choixJ1||[]).filter(n=>!cfJ1.includes(n));
+  const nomJ1=(etat.matchData?.j1?.nom||'J1')+(mainRole==='j1'?' ⭐':'');
+  const nomJ2=(etat.matchData?.j2?.nom||'J2')+(mainRole==='j2'?' ⭐':'');
+  const nbJ1=mainRole==='j1'?2:4, nbJ2=mainRole==='j2'?2:4;
   const ligneGarde=n=>`<div style="padding:6px 10px;border-radius:6px;margin-bottom:4px;background:rgba(255,204,0,.15);border-left:3px solid var(--or);font-size:.85rem;">✅ N°${n} ${gN(n)}</div>`;
   const ligneEcarte=n=>`<div style="padding:5px 10px;border-radius:6px;margin-bottom:4px;background:rgba(255,255,255,.04);font-size:.82rem;opacity:.5;">❌ N°${n} ${gN(n)}</div>`;
+  const blocJ1Ecartes=cfJ1Ecartes.length?`<hr style="border-color:rgba(255,255,255,.1);margin:6px 0;"><p style="font-size:.75rem;color:rgba(255,255,255,.4);margin-bottom:4px;">Écartés :</p>${cfJ1Ecartes.map(ligneEcarte).join('')}`:'';
+  const blocJ2Ecartes=cfJ2Ecartes.length?`<hr style="border-color:rgba(255,255,255,.1);margin:6px 0;"><p style="font-size:.75rem;color:rgba(255,255,255,.4);margin-bottom:4px;">Écartés :</p>${cfJ2Ecartes.map(ligneEcarte).join('')}`:'';
   return `<div style="padding:10px 14px;background:rgba(204,34,0,.15);border:1px solid rgba(255,204,0,.2);border-radius:8px;margin-bottom:12px;text-align:center;">
     🔒 <strong>Pronostics bloqués</strong> — En attente des résultats</div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <div style="flex:1;min-width:140px;">
-      <p style="font-size:.8rem;color:var(--or);margin-bottom:6px;">⭐ ${nomMain} — 2 chevaux</p>
-      ${cfMain.length?cfMain.map(ligneGarde).join(''):'<p class="text-sm">Aucun choix</p>'}
+      <p style="font-size:.8rem;color:var(--or);margin-bottom:6px;">${nomJ1} — ${nbJ1} chevaux</p>
+      ${cfJ1.length?cfJ1.map(ligneGarde).join(''):'<p class="text-sm">Aucun choix</p>'}
+      ${blocJ1Ecartes}
     </div>
     <div style="flex:1;min-width:140px;">
-      <p style="font-size:.8rem;color:var(--or);margin-bottom:6px;">🎯 ${nomSec} — gardés</p>
-      ${cfSec.length?cfSec.map(ligneGarde).join(''):'<p class="text-sm">Aucun choix gardé</p>'}
-      ${cfSecEcartes.length?`<hr style="border-color:rgba(255,255,255,.1);margin:6px 0;"><p style="font-size:.75rem;color:rgba(255,255,255,.4);margin-bottom:4px;">Écartés :</p>${cfSecEcartes.map(ligneEcarte).join('')}`:''}
+      <p style="font-size:.8rem;color:var(--or);margin-bottom:6px;">${nomJ2} — ${nbJ2} chevaux</p>
+      ${cfJ2.length?cfJ2.map(ligneGarde).join(''):'<p class="text-sm">Aucun choix</p>'}
+      ${blocJ2Ecartes}
     </div>
   </div>`;
 }
@@ -2662,12 +2667,14 @@ function rendreResultatsCourse(c,data) {
       <span>${pos>=0?`${pos+1}er`:''} N°${n} ${gN(n)}</span>
       <span class="rapport-val">${rapportAff}</span></div>`;
   }).join('');
+  const courseIdx2=data.courses?.findIndex(x=>x.numOrdre===c.numOrdre)??0;
+  const mainR=getMainPourCourse(courseIdx2);
   const fScore=s=>s?s+' pts':'0 pts';
   return `<hr class="separator"/>
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:160px;"><p class="text-sm" style="margin-bottom:6px;">🏅 ${jN('j1')} ${c.mancheGagnant==='j1'?'✅':''}</p>${rC('j1')}
+      <div style="flex:1;min-width:160px;"><p class="text-sm" style="margin-bottom:6px;">🏅 ${jN('j1')}${mainR==='j1'?' ⭐':''} ${c.mancheGagnant==='j1'?'✅':''}</p>${rC('j1')}
         <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Total: ${fScore(c.pointsJ1)}</p></div>
-      <div style="flex:1;min-width:160px;"><p class="text-sm" style="margin-bottom:6px;">🏅 ${jN('j2')} ${c.mancheGagnant==='j2'?'✅':''}</p>${rC('j2')}
+      <div style="flex:1;min-width:160px;"><p class="text-sm" style="margin-bottom:6px;">🏅 ${jN('j2')}${mainR==='j2'?' ⭐':''} ${c.mancheGagnant==='j2'?'✅':''}</p>${rC('j2')}
         <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Total: ${fScore(c.pointsJ2)}</p></div>
     </div>
     <p style="text-align:center;margin-top:10px;font-weight:bold;color:var(--or-clair);">
