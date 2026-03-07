@@ -127,6 +127,7 @@
     </div>
     <span id="header-user" style="font-size:.82rem;color:var(--or);font-style:italic;"></span>
     <button type="button" class="btn btn-sm btn-gris" id="btn-admin" style="display:none;" onclick="navAdmin()">⚙️ Admin</button>
+      <button type="button" class="btn btn-sm btn-gris" id="btn-toggle-admin-view" style="display:none;" onclick="toggleVueAdmin()" title="Vue admin sur les matchs">👁 Vue admin</button>
     <button type="button" class="btn btn-sm btn-gris" id="btn-deconnexion" style="display:none;" onclick="deconnexion()">Déconnexion</button>
   </div>
 </header>
@@ -502,6 +503,26 @@
 <script>
 // ── FIREBASE INIT ──────────────────────────────────
 const ADMIN_UID = 'NyXlWdthrFVUhkGjriC66ATiBIy2';
+
+function toggleVueAdmin() {
+  etat._adminView = !etat._adminView;
+  _updateBtnToggleAdmin();
+  if(etat.matchData) rendreMatch(etat.matchData);
+  toast(etat._adminView ? '👁 Vue admin activée' : '🎮 Vue joueur activée');
+}
+
+function _updateBtnToggleAdmin() {
+  const btn = document.getElementById('btn-toggle-admin-view');
+  if(!btn) return;
+  if(etat._adminView) {
+    btn.textContent = '🎮 Vue joueur';
+    btn.style.cssText += ';background:rgba(255,204,0,.2);color:var(--or);';
+  } else {
+    btn.textContent = '👁 Vue admin';
+    btn.style.background = '';
+    btn.style.color = '';
+  }
+}
 let db, auth;
 try {
   firebase.initializeApp(window.FIREBASE_CONFIG);
@@ -706,7 +727,12 @@ auth.onAuthStateChanged(async user => {
     const prenom = user.displayName || user.email;
     setHeaderStatus('👤 ' + prenom);
     document.getElementById('btn-deconnexion').style.display='block';
-    if(user.uid===ADMIN_UID) document.getElementById('btn-admin').style.display='block';
+    if(user.uid===ADMIN_UID) {
+      document.getElementById('btn-admin').style.display='block';
+      document.getElementById('btn-toggle-admin-view').style.display='block';
+      etat._adminView = false;
+      _updateBtnToggleAdmin();
+    }
     afficherNav(true);
     chargerAnnuaire(); // charger en arrière-plan pour le lobby
     const lastPage = localStorage.getItem('lastPage') || 'home';
@@ -737,6 +763,7 @@ auth.onAuthStateChanged(async user => {
     setHeaderStatus('');
     document.getElementById('btn-deconnexion').style.display='none';
     document.getElementById('btn-admin').style.display='none';
+    document.getElementById('btn-toggle-admin-view').style.display='none';
     // Vérifier si site offline
     const cfg = (await db.ref('config').once('value')).val() || {};
     if(cfg.siteOffline) {
@@ -1132,8 +1159,8 @@ async function ouvrirMatch(matchId) {
   const uid = utilisateur.uid;
   const isAdmin = uid === ADMIN_UID;
   etat.matchId = matchId;
-  // Admin : toujours vue admin, quel que soit sa participation
-  etat._adminView = isAdmin;
+  // Admin : garder l'état _adminView tel quel (piloté par le toggle)
+  if(!isAdmin) etat._adminView = false;
   if(data.uidJ1 === uid) etat.joueurId = 'j1';
   else if(data.uidJ2 === uid) etat.joueurId = 'j2';
   else etat.joueurId = 'j1'; // observateur : vue j1 par défaut
@@ -1178,7 +1205,7 @@ async function accepterInvitation(invitId, matchId) {
   toast('✅ Match démarré !');
   etat.matchId = matchId;
   etat.joueurId = 'j2';
-  etat._adminView = utilisateur.uid === ADMIN_UID;
+  // Ne pas forcer vue admin à l'ouverture
   etat.timersInitialises = false;
   ecouterMatch();
   showPage('match');
@@ -1395,7 +1422,7 @@ async function creerMatchAvecReunion(reunion, pmuDate, disc) {
   // Ouvrir directement le match pour que le créateur puisse pronostiquer
   etat.matchId = code;
   etat.joueurId = 'j1';
-  etat._adminView = utilisateur.uid === ADMIN_UID;
+  // Ne pas forcer vue admin à l'ouverture
   etat.timersInitialises = false;
   ecouterMatch();
   showPage('match');
@@ -2666,3 +2693,4 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
