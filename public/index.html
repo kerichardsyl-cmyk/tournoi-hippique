@@ -926,26 +926,32 @@ function toggleClassementComplet() {
 }
 
 async function debugPmuReunion() {
-  const pmuDate = prompt('Date JJMMAAAA (ex: 07032026):');
+  const pmuDate = prompt('Date JJMMAAAA (ex: 08032026):');
   if(!pmuDate) return;
-  const r = prompt('Numéro réunion (ex: 1):');
+  const r = prompt('Numero reunion (ex: 1):');
   if(!r) return;
   try {
     const data = await pmuGet('programme/'+pmuDate+'/R'+r);
-    // Extraire les champs clés de la réunion
-    const keys = ['audience','typeAudience','categorieStatut','premium','pariMutuelNational',
-                  'reportIndicateur','libelleStatut','statut','indicateurPrincipal','typeProduit',
-                  'audienceType','isPremium','national','typeReunion'];
-    const found = {};
-    keys.forEach(k => { if(data[k]!==undefined) found[k]=data[k]; });
-    // Aussi chercher dans reunion si imbriqué
     const src = data.reunion || data;
-    keys.forEach(k => { if(src[k]!==undefined) found['reunion.'+k]=src[k]; });
-    const msg = Object.keys(found).length
-      ? 'Champs trouvés :\n'+Object.entries(found).map(([k,v])=>k+' = '+JSON.stringify(v)).join('\n')
-      : 'Aucun champ premium détecté. Voici tous les champs :\n'+Object.keys(src).join(', ');
-    alert(msg);
-    console.log('[DEBUG PMU R'+r+']', src);
+    const flatten = (obj, prefix) => {
+      const lines = [];
+      Object.entries(obj||{}).forEach(([k,v]) => {
+        const key = prefix ? prefix+'.'+k : k;
+        if(v && typeof v === 'object' && !Array.isArray(v)) {
+          lines.push(...flatten(v, key));
+        } else {
+          lines.push(key+' = '+JSON.stringify(v));
+        }
+      });
+      return lines;
+    };
+    const lines = flatten(src, '');
+    const paysLines = lines.filter(l => /pays|nation|country|lieu|local|etranger|foreign|codeHippo/i.test(l));
+    const msg = 'Champs pays/lieu :\n'+(paysLines.length ? paysLines.join('\n') : '(aucun)')+'\n\n--- Tous les champs ---\n'+lines.join('\n');
+    try { await navigator.clipboard.writeText(msg); alert('Copie dans presse-papier OK !\n\nChamps pays/lieu :\n'+(paysLines.length ? paysLines.join('\n') : '(aucun - voir console)')); }
+    catch(e2) { alert(msg.substring(0,2000)); }
+    console.log('[DEBUG PMU R'+r+'] src:', src);
+    console.log('[DEBUG PMU R'+r+'] all fields:', lines);
   } catch(e) { alert('Erreur : '+e.message); }
 }
 
@@ -2762,6 +2768,3 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
-
-
-
