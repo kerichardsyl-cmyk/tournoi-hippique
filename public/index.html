@@ -9,17 +9,17 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="firebase-config.js"></script>
   <style>
-    :root { --vert:#cc2200; --or:#c8960a; --or-clair:#b07800; --brun:#1a1a1a; --creme:#2a2a2a; --rouge:#cc2200; --bg:#f5f2ee; --card-bg:#ffffff; --card-border:rgba(0,0,0,.1); --text:#1e1e1e; --text-soft:rgba(30,30,30,.55); }
+    :root { --vert:#cc2200; --or:#ffcc00; --or-clair:#ffe566; --brun:#111111; --creme:#fff8e8; --rouge:#ff4422; }
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:'Georgia',serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    body { font-family:'Georgia',serif; background:#1e1a16; color:var(--text); min-height:100vh; }
     header { background:linear-gradient(135deg,#1a0000 0%,#8b0000 40%,#cc2200 60%,#1a0000 100%); border-bottom:3px solid var(--or); padding:14px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
     header h1 { font-size:1.4rem; color:var(--or-clair); letter-spacing:2px; text-transform:uppercase; }
     #header-right { display:flex; align-items:center; gap:12px; }
     #header-user { font-size:.82rem; color:var(--or); font-style:italic; }
     .page { display:none; padding:24px; max-width:960px; margin:0 auto; }
     .page.active { display:block; }
-    .card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:20px; margin-bottom:16px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
-    .card h2 { color:var(--or-clair); font-size:1.1rem; margin-bottom:14px; border-bottom:1px solid rgba(0,0,0,.1); padding-bottom:8px; }
+    .card { background:rgba(255,255,255,.07); border:1px solid rgba(201,169,74,.25); border-radius:12px; padding:20px; margin-bottom:16px; }
+    .card h2 { color:var(--or-clair); font-size:1.1rem; margin-bottom:14px; border-bottom:1px solid rgba(201,169,74,.3); padding-bottom:8px; }
     .btn { display:inline-block; padding:10px 22px; border-radius:8px; border:none; cursor:pointer; font-size:.95rem; font-family:Georgia,serif; font-weight:bold; transition:all .2s; }
     .btn-or { background:linear-gradient(135deg,#ffe566,#ffcc00,#e6a800); color:#111; }
     .btn-or:hover { filter:brightness(1.15); transform:translateY(-1px); }
@@ -32,11 +32,11 @@
     .btn-nav.active { background:linear-gradient(135deg,#fff,#ffe566); box-shadow:0 0 8px rgba(255,204,0,.5); }
     .btn-gris:hover { background:rgba(255,255,255,.2); }
     .btn:disabled { opacity:.4; cursor:not-allowed; transform:none; filter:none; }
-    input[type=text], input[type=email], input[type=password] { background:#fff; border:1px solid rgba(0,0,0,.18); border-radius:6px; color:var(--text); padding:9px 12px; font-size:.95rem; width:100%; margin-bottom:10px; outline:none; }
+    input[type=text], input[type=email], input[type=password] { background:rgba(255,255,255,.1); border:1px solid rgba(201,169,74,.4); border-radius:6px; color:var(--creme); padding:9px 12px; font-size:.95rem; width:100%; margin-bottom:10px; outline:none; }
     input:focus { border-color:var(--or); }
-    input::placeholder { color:rgba(0,0,0,.3); }
-    label { font-size:.85rem; color:var(--or-clair); display:block; margin-bottom:4px; }
-    .chevaux-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:.82rem; } .chevaux-table tr { border-bottom:1px solid rgba(201,169,74,.12); cursor:pointer; transition:background .12s; } .chevaux-table tr:hover { background:rgba(0,0,0,.04); } .chevaux-table tr.selectionne { background:rgba(200,150,10,.1); border-left:3px solid var(--or); } .chevaux-table tr.verrouille { opacity:.4; cursor:not-allowed; } .chevaux-table td { padding:7px 8px; vertical-align:middle; } .chevaux-table th { padding:6px 8px; color:var(--or); font-size:.75rem; font-weight:normal; text-align:left; border-bottom:1px solid rgba(201,169,74,.3); } .num-cercle { background:#cc2200; color:#fff; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-weight:bold; font-size:.85rem; flex-shrink:0; } .avis-pos { color:#6fffa0; } .avis-neg { color:#ff8080; } .musique-cell { font-family:monospace; font-size:.75rem; color:rgba(253,246,227,.6); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .ordre-num { display:inline-flex; align-items:center; justify-content:center; background:#ffcc00; color:#111; border-radius:50%; width:18px; height:18px; font-size:.72rem; font-weight:bold; margin-left:4px; }
+    input::placeholder { color:rgba(253,246,227,.35); }
+    label { font-size:.85rem; color:var(--or); display:block; margin-bottom:4px; }
+    .chevaux-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:.82rem; } .chevaux-table tr { border-bottom:1px solid rgba(201,169,74,.12); cursor:pointer; transition:background .12s; } .chevaux-table tr:hover { background:rgba(255,255,255,.06); } .chevaux-table tr.selectionne { background:rgba(255,204,0,.15); border-left:3px solid var(--or); } .chevaux-table tr.verrouille { opacity:.4; cursor:not-allowed; } .chevaux-table td { padding:7px 8px; vertical-align:middle; } .chevaux-table th { padding:6px 8px; color:var(--or); font-size:.75rem; font-weight:normal; text-align:left; border-bottom:1px solid rgba(201,169,74,.3); } .num-cercle { background:#cc2200; color:#fff; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-weight:bold; font-size:.85rem; flex-shrink:0; } .avis-pos { color:#6fffa0; } .avis-neg { color:#ff8080; } .musique-cell { font-family:monospace; font-size:.75rem; color:rgba(253,246,227,.6); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .ordre-num { display:inline-flex; align-items:center; justify-content:center; background:#ffcc00; color:#111; border-radius:50%; width:18px; height:18px; font-size:.72rem; font-weight:bold; margin-left:4px; }
     .cheval-btn { padding:10px 8px; border-radius:8px; border:2px solid transparent; background:rgba(255,255,255,.07); color:var(--creme); cursor:pointer; font-size:.85rem; text-align:center; transition:all .15s; position:relative; }
     .cheval-btn:hover { border-color:var(--or); background:rgba(201,169,74,.12); }
     .cheval-btn.selectionne { background:rgba(26,107,60,.5); border-color:var(--or-clair); color:var(--or-clair); font-weight:bold; }
@@ -53,9 +53,9 @@
     .score-ligne.gagnant { background:rgba(204,34,0,.25); border-left:3px solid var(--rouge); }
     .score-ligne.perdant { background:rgba(176,58,46,.15); }
     .score-pts { font-size:1.4rem; font-weight:bold; color:var(--or-clair); }
-    .course-item { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; margin-bottom:6px; background:#f9f7f3; border-left:3px solid transparent; cursor:pointer; transition:all .15s; }
-    .course-item:hover { background:#f0ebe0; }
-    .course-item.terminee { border-left-color:#28a050; opacity:.65; }
+    .course-item { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; margin-bottom:6px; background:rgba(255,255,255,.05); border-left:3px solid transparent; cursor:pointer; transition:all .15s; }
+    .course-item:hover { background:rgba(255,255,255,.09); }
+    .course-item.terminee { border-left-color:var(--vert); opacity:.7; }
     .course-num { background:var(--or); color:var(--brun); border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:.85rem; flex-shrink:0; }
     .course-info { flex:1; }
     .course-info strong { display:block; font-size:.9rem; }
@@ -65,8 +65,8 @@
     .statut-bloquee { background:rgba(176,58,46,.4); color:#ffaaaa; }
     .statut-terminee { background:rgba(201,169,74,.2); color:var(--or); }
     .bandeau-joueur { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; margin-bottom:14px; flex-wrap:wrap; }
-    .bandeau-main { background:rgba(200,150,10,.08); border:1px solid rgba(180,130,10,.3); }
-    .bandeau-second { background:rgba(0,0,0,.03); border:1px solid rgba(0,0,0,.1); }
+    .bandeau-main { background:rgba(201,169,74,.15); border:1px solid var(--or); }
+    .bandeau-second { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15); }
     .role-badge { padding:3px 10px; border-radius:12px; font-size:.78rem; font-weight:bold; }
     .role-main { background:var(--or); color:var(--brun); }
     .role-second { background:rgba(255,255,255,.2); color:var(--creme); }
@@ -94,13 +94,13 @@
     .chat-input-zone input { flex:1; font-size:.85rem; padding:7px 10px; }
     .chat-input-zone button { padding:7px 14px; font-size:.85rem; }
     .chat-vide { text-align:center; color:rgba(255,248,232,.35); font-size:.82rem; margin-top:40px; }
-    .match-card { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-radius:10px; margin-bottom:10px; background:#fff; border:1px solid rgba(0,0,0,.1); gap:12px; flex-wrap:wrap; box-shadow:0 1px 3px rgba(0,0,0,.07); }
-    .match-card:hover { background:#faf7f0; cursor:pointer; }
-    .match-card.invite { border-color:rgba(180,130,10,.4); background:rgba(200,150,10,.06); }
+    .match-card { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-radius:10px; margin-bottom:10px; background:rgba(255,255,255,.06); border:1px solid rgba(201,169,74,.2); gap:12px; flex-wrap:wrap; }
+    .match-card:hover { background:rgba(255,255,255,.1); cursor:pointer; }
+    .match-card.invite { border-color:rgba(201,169,74,.6); background:rgba(201,169,74,.08); }
     .flex { display:flex; gap:10px; flex-wrap:wrap; }
     .mt8 { margin-top:8px; } .mt16 { margin-top:16px; }
     .text-or { color:var(--or-clair); }
-    .text-sm { font-size:.82rem; color:var(--text-soft); }
+    .text-sm { font-size:.82rem; color:rgba(253,246,227,.6); }
     .badge-vert { background:rgba(26,107,60,.5); color:#6fffa0; padding:2px 8px; border-radius:10px; font-size:.78rem; }
     .badge-or { background:rgba(201,169,74,.3); color:var(--or-clair); padding:2px 8px; border-radius:10px; font-size:.78rem; }
     .separator { border:none; border-top:1px solid rgba(201,169,74,.2); margin:14px 0; }
@@ -108,9 +108,9 @@
     @keyframes spin { to { transform:rotate(360deg); } }
     #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(180,30,0,.95); color:var(--or-clair); padding:12px 24px; border-radius:8px; border:1px solid var(--or); font-size:.95rem; z-index:9999; display:none; max-width:90vw; text-align:center; }
     #toast.erreur { background:rgba(176,58,46,.95); border-color:var(--rouge); }
-    .tabs { display:flex; gap:4px; margin-bottom:20px; background:rgba(0,0,0,.07); padding:4px; border-radius:10px; }
-    .tab { flex:1; padding:10px; text-align:center; border-radius:8px; cursor:pointer; font-size:.9rem; color:rgba(0,0,0,.45); transition:all .2s; border:none; background:none; font-family:Georgia,serif; }
-    .tab.active { background:#fff; color:var(--or-clair); font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+    .tabs { display:flex; gap:4px; margin-bottom:20px; background:rgba(0,0,0,.2); padding:4px; border-radius:10px; }
+    .tab { flex:1; padding:10px; text-align:center; border-radius:8px; cursor:pointer; font-size:.9rem; color:rgba(253,246,227,.6); transition:all .2s; border:none; background:none; font-family:Georgia,serif; }
+    .tab.active { background:rgba(201,169,74,.2); color:var(--or-clair); font-weight:bold; }
     @media (max-width:600px) { .chevaux-grid { grid-template-columns:repeat(3,1fr); } header h1 { font-size:1.1rem; } }
   </style>
 </head>
@@ -969,9 +969,9 @@ async function chargerReunionsAvenir() {
           <div style="font-size:.78rem;font-weight:bold;color:var(--or);padding:3px 8px;background:rgba(255,204,0,.1);border-radius:4px;margin-bottom:5px;">${labelJ}</div>`;
         reunions.forEach(r => {
           const audA=r.audience||r.reunion?.audience||'';
-          if(audA&&audA!=='NATIONAL') return;
+          if(audA && audA!=='NATIONAL' && audA!=='') return; // exclure si explicitement non-national
           const paysA=r.pays||r.hippodrome?.pays||r.lieu?.pays||r.hippodrome?.localisation?.pays||'';
-          if(paysA&&paysA!=='FRANCE'&&paysA!=='France'&&paysA!=='FR') return;
+          if(paysA && paysA!=='FRANCE' && paysA!=='France' && paysA!=='FR') return;
           const disc = detecterDiscipline(r);
           const discIcon = disc==='TROT'?'🔵':disc==='GALOP'?'🟡':'⚪';
           html += `<div style="padding:4px 8px;font-size:.82rem;border-left:2px solid rgba(255,204,0,.2);margin-bottom:2px;">
@@ -1380,10 +1380,10 @@ async function chargerReunionsCreation() {
     const now = Date.now();
     let nbFiltrees = 0;
     reunions.forEach(r => {
-      // Filtre audience : NATIONAL uniquement
+      // Filtre audience : exclure PMH/local si champ présent
       const aud = r.audience || r.reunion?.audience || '';
-      if(aud && aud !== 'NATIONAL') { nbFiltrees++; return; }
-      // Filtre pays : France uniquement (exclure étranger)
+      if(aud && aud !== 'NATIONAL' && aud !== '') { nbFiltrees++; return; }
+      // Filtre pays : exclure étranger si champ présent
       const pays = r.pays || r.hippodrome?.pays || r.lieu?.pays || r.hippodrome?.localisation?.pays || '';
       if(pays && pays !== 'FRANCE' && pays !== 'France' && pays !== 'FR') { nbFiltrees++; return; }
       const courses = r.courses || [];
@@ -1843,7 +1843,7 @@ async function chargerReunions() {
     container.innerHTML='<label style="margin-top:12px;">Choisir une réunion :</label>';
     const reunionsFrance = reunions.filter(r => {
       const aud=r.audience||r.reunion?.audience||'';
-      if(aud&&aud!=='NATIONAL') return false;
+      if(aud&&aud!=='NATIONAL'&&aud!=='') return false;
       const pays=r.pays||r.hippodrome?.pays||r.lieu?.pays||r.hippodrome?.localisation?.pays||'';
       if(pays&&pays!=='FRANCE'&&pays!=='France'&&pays!=='FR') return false;
       return true;
