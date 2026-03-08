@@ -104,6 +104,12 @@
     .badge-vert { background:rgba(26,107,60,.5); color:#6fffa0; padding:2px 8px; border-radius:10px; font-size:.78rem; }
     .badge-or { background:rgba(201,169,74,.3); color:var(--or-clair); padding:2px 8px; border-radius:10px; font-size:.78rem; }
     .separator { border:none; border-top:1px solid rgba(201,169,74,.2); margin:14px 0; }
+    .arene-pref-btn { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); color:var(--creme); font-size:.85rem; padding:8px 14px; border-radius:8px; cursor:pointer; transition:all .2s; font-family:Georgia,serif; }
+    .arene-pref-btn.actif { background:rgba(201,169,74,.25); border-color:var(--or); color:var(--or-clair); font-weight:bold; }
+    .arene-match-card { background:rgba(255,255,255,.06); border:1px solid rgba(201,169,74,.2); border-radius:10px; padding:14px 16px; margin-bottom:10px; cursor:pointer; transition:background .15s; }
+    .arene-match-card:hover { background:rgba(255,255,255,.1); }
+    .arene-match-card.mon-match { border-color:var(--or); background:rgba(201,169,74,.1); }
+    .arene-exempt { opacity:.5; font-style:italic; text-align:center; padding:10px; font-size:.85rem; }
     .elo-tooltip-trigger { position:relative; cursor:help; border-bottom:1px dashed rgba(255,204,0,.5); }
     .elo-tooltip { display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:#1a150e; border:1px solid rgba(255,204,0,.4); border-radius:8px; padding:12px 14px; font-size:.78rem; line-height:1.6; color:var(--creme); white-space:nowrap; z-index:100; box-shadow:0 4px 16px rgba(0,0,0,.5); min-width:260px; font-weight:normal; }
     .elo-tooltip-trigger:hover .elo-tooltip { display:block; }
@@ -124,6 +130,7 @@
     <div id="header-nav" style="display:none;gap:4px;">
       <button type="button" class="btn btn-sm btn-nav" id="nav-home" onclick="navHome()">🏠 Accueil</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-matchs" onclick="navMatchs()" style="position:relative;">🎮 Mes matchs<span id="badge-matchs" style="display:none;position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:50%;width:17px;height:17px;font-size:.65rem;font-weight:bold;line-height:17px;text-align:center;pointer-events:none;"></span></button>
+      <button type="button" class="btn btn-sm btn-nav" id="nav-arene" onclick="navArene()">⚔️ Arène</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-reglement" onclick="navReglement()">📋 Règlement</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-profil" onclick="navProfil()">👤 Profil</button>
@@ -405,10 +412,20 @@
     <!-- Outils admin -->
     <div class="card" style="margin-top:0;">
       <h2>🔧 Outils</h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
         <button class="btn btn-gris btn-sm" onclick="recalculerTousElo()">♟ Recalculer ELO (tous matchs terminés)</button>
         <button class="btn btn-gris btn-sm" onclick="reinitialiserTousElo()">⚠️ Remettre ELO à zéro</button>
       </div>
+      <hr class="separator"/>
+      <h2 style="margin-top:4px;">⚔️ Générer l'Arène</h2>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
+        <div>
+          <label>Date de la réunion (JJ/MM/AAAA)</label>
+          <input type="text" id="arene-gen-date" placeholder="ex: 09/03/2026" style="width:160px;margin-bottom:0;" />
+        </div>
+        <button class="btn btn-or" id="arene-gen-btn" onclick="genererArene()">⚔️ Générer</button>
+      </div>
+      <p id="arene-gen-log" class="text-sm" style="opacity:.7;margin-top:4px;"></p>
     </div>
 
     <!-- Liste matchs admin -->
@@ -459,6 +476,28 @@
     <label>Confirmer</label>
     <input type="password" id="profil-mdp-confirm" placeholder="••••••••" />
     <button type="button" class="btn btn-nav" style="width:100%;margin-top:8px;" onclick="changerMotDePasse()">Modifier le mot de passe</button>
+  </div>
+</div>
+
+<!-- PAGE ARÈNE -->
+<div id="page-arene" class="page">
+  <div style="max-width:640px;margin:0 auto;">
+    <div class="card">
+      <h2>⚔️ Arène</h2>
+      <p class="text-sm" style="margin-bottom:14px;opacity:.7;">Choisissez votre type de participation. Vos choix seront pris en compte lors du prochain tirage au sort.</p>
+      <div id="arene-prefs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+        <button type="button" class="btn arene-pref-btn" id="arene-pref-trot" onclick="setArenePreference('trot')">🔵 Trot uniquement</button>
+        <button type="button" class="btn arene-pref-btn" id="arene-pref-galop" onclick="setArenePreference('galop')">🟡 Galop uniquement</button>
+        <button type="button" class="btn arene-pref-btn" id="arene-pref-both" onclick="setArenePreference('both')">⚡ Trot + Galop (2 matchs)</button>
+        <button type="button" class="btn arene-pref-btn" id="arene-pref-none" onclick="setArenePreference('none')">⛔ Ne pas participer</button>
+      </div>
+      <p id="arene-pref-status" class="text-sm" style="margin-top:8px;color:var(--or);"></p>
+      <p class="text-sm" style="opacity:.45;margin-top:4px;font-style:italic;">Les changements sont effectifs sur les tirages à venir, pas sur le jour même.</p>
+    </div>
+    <div class="card">
+      <h2 id="arene-matchs-titre">🗓 Matchs du jour</h2>
+      <div id="arene-matchs-liste"><p class="text-sm">Aucun tirage généré pour aujourd'hui.</p></div>
+    </div>
   </div>
 </div>
 
@@ -589,6 +628,7 @@ window.addEventListener('popstate', e => {
   if(!page || page==='auth') { if(utilisateur) navAccueil(); return; }
   if(page==='accueil') navHome();
   else if(page==='matchs-list') navMatchs();
+  else if(page==='arene') navArene();
   else if(page==='annuaire') navAnnuaire();
   else if(page==='admin') navAdmin();
   else if(page==='lobby'||page==='match') { /* rester sur la page actuelle */ showPage(page, false); }
@@ -627,6 +667,217 @@ function navAdmin() {
   chargerAdmin();
 }
 
+
+// ══════════════════════════════════════════════════
+// ARÈNE
+// ══════════════════════════════════════════════════
+
+function navArene() {
+  showPage('arene'); setNavActive('arene');
+  chargerArene();
+}
+
+async function chargerArene() {
+  const prefSnap = await db.ref('utilisateurs/'+utilisateur.uid+'/arenePreference').once('value');
+  const pref = prefSnap.val() || 'none';
+  _updateArenePrefsUI(pref);
+  const today = _areneToday();
+  const snap = await db.ref('arene/'+today).once('value');
+  _afficherAreneMatchs(snap.val());
+}
+
+function _areneToday() {
+  const d = new Date();
+  return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');
+}
+
+function _updateArenePrefsUI(pref) {
+  ['trot','galop','both','none'].forEach(p => {
+    const btn = document.getElementById('arene-pref-'+p);
+    if(btn) btn.classList.toggle('actif', pref===p);
+  });
+  const labels = {trot:'Trot uniquement', galop:'Galop uniquement', both:'Trot + Galop', none:'Ne pas participer'};
+  const el = document.getElementById('arene-pref-status');
+  if(el) el.textContent = pref && pref!=='none'
+    ? '✅ Participation enregistrée : '+labels[pref]
+    : 'Vous ne participez pas à l\'Arène actuellement.';
+}
+
+async function setArenePreference(pref) {
+  await db.ref('utilisateurs/'+utilisateur.uid+'/arenePreference').set(pref);
+  _updateArenePrefsUI(pref);
+  toast(pref==='none' ? '⛔ Participation Arène désactivée' : '✅ Préférence enregistrée');
+}
+
+function _afficherAreneMatchs(data) {
+  const el = document.getElementById('arene-matchs-liste');
+  const titre = document.getElementById('arene-matchs-titre');
+  if(!data || !data.matchs) {
+    el.innerHTML = '<p class="text-sm">Aucun tirage généré pour aujourd\'hui.</p>';
+    return;
+  }
+  const dateLabel = data.date ? data.date.split('-').reverse().join('/') : '';
+  if(titre) titre.textContent = '🗓 Matchs du '+(dateLabel||'jour');
+  let html = '';
+  const matchs = Object.values(data.matchs||{});
+  matchs.forEach(m => {
+    const estMon = m.uidJ1===utilisateur.uid || m.uidJ2===utilisateur.uid;
+    const discIcon = m.discipline==='TROT'?'🔵 Trot':m.discipline==='GALOP'?'🟡 Galop':'⚪';
+    const statutBadge = m.statut==='termine'
+      ? '<span class="badge-or" style="font-size:.75rem;">Terminé</span>'
+      : m.statut==='en_cours'
+      ? '<span style="font-size:.75rem;color:#6fffa0;">En cours</span>'
+      : '<span style="font-size:.75rem;opacity:.6;">En attente</span>';
+    const clickable = estMon && m.matchId ? `onclick="ouvrirMatch('${m.matchId}')"` : '';
+    html += `<div class="arene-match-card${estMon?' mon-match':''}" ${clickable}>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <strong>${m.j1||'?'} vs ${m.j2||'?'}</strong>${estMon?' <span style="color:var(--or);font-size:.75rem;">← Votre match</span>':''}
+          <div class="text-sm" style="margin-top:3px;">${discIcon} · ${m.hippodrome||'?'}</div>
+        </div>
+        ${statutBadge}
+      </div>
+    </div>`;
+  });
+  if(data.exempts && data.exempts.length) {
+    html += `<p class="arene-exempt">Exempt ce jour : ${data.exempts.join(', ')}</p>`;
+  }
+  el.innerHTML = html || '<p class="text-sm">Aucun match.</p>';
+}
+
+// ── ADMIN : Générer l'Arène ─────────────────────
+async function genererArene() {
+  const dateStr = document.getElementById('arene-gen-date').value.trim();
+  if(!dateStr) { toast('⚠️ Entrez une date', true); return; }
+  const p = dateStr.split('/');
+  if(p.length!==3) { toast('⚠️ Format JJ/MM/AAAA', true); return; }
+  const pmuDate = p[0].padStart(2,'0')+p[1].padStart(2,'0')+p[2];
+  const isoDate = p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+
+  const btn = document.getElementById('arene-gen-btn');
+  const log = document.getElementById('arene-gen-log');
+  btn.disabled = true; btn.textContent = '⏳ Chargement programme…';
+  log.textContent = '';
+
+  try {
+    // 1. Charger le programme PMU
+    const prog = await pmuGet('programme/'+pmuDate);
+    const toutesReunions = (prog.programme?.reunions || prog.reunions || prog || [])
+      .filter(r => r.audience==='NATIONAL' && r.pays?.code==='FRA'
+        && !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||''));
+
+    // 2. Sélectionner la réunion avec la plus grosse somme de montantPrix par discipline
+    const _meilleureReunion = (reunions, disc) => {
+      const filtered = reunions.filter(r => detecterDiscipline(r)===disc);
+      if(!filtered.length) return null;
+      return filtered.reduce((best, r) => {
+        const total = (r.courses||[]).reduce((s,co) => s+(co.montantPrix||0), 0);
+        const bestTotal = (best.courses||[]).reduce((s,co) => s+(co.montantPrix||0), 0);
+        return total > bestTotal ? r : best;
+      });
+    };
+    const reunionTrot = _meilleureReunion(toutesReunions, 'TROT');
+    const reunionGalop = _meilleureReunion(toutesReunions, 'GALOP');
+
+    const allTrot = reunionTrot ? (reunionTrot.courses||[]).reduce((s,co)=>s+(co.montantPrix||0),0) : 0;
+    const allGalop = reunionGalop ? (reunionGalop.courses||[]).reduce((s,co)=>s+(co.montantPrix||0),0) : 0;
+    log.textContent = `Réunion trot : ${reunionTrot ? nH(reunionTrot.hippodrome?.libelleLong||reunionTrot.hippodrome?.libelleCourt||'?')+' ('+allTrot.toLocaleString('fr-FR')+'€)' : 'aucune'} | Réunion galop : ${reunionGalop ? nH(reunionGalop.hippodrome?.libelleLong||reunionGalop.hippodrome?.libelleCourt||'?')+' ('+allGalop.toLocaleString('fr-FR')+'€)' : 'aucune'}`;
+
+    if(!reunionTrot && !reunionGalop) {
+      toast('⚠️ Aucune réunion disponible ce jour', true);
+      btn.disabled=false; btn.textContent='⚔️ Générer'; return;
+    }
+
+    // 3. Charger les joueurs participants
+    btn.textContent = '⏳ Chargement joueurs…';
+    const usersSnap = await db.ref('utilisateurs').once('value');
+    const joueurs = [];
+    usersSnap.forEach(child => {
+      const d = child.val();
+      const pref = d.arenePreference || 'none';
+      if(pref==='none') return;
+      const peutTrot = (pref==='trot'||pref==='both') && !!reunionTrot;
+      const peutGalop = (pref==='galop'||pref==='both') && !!reunionGalop;
+      if(peutTrot || peutGalop) {
+        joueurs.push({uid:child.key, nom:d.prenom||d.email||child.key, pref, peutTrot, peutGalop});
+      }
+    });
+
+    if(joueurs.length < 2) {
+      toast('⚠️ Moins de 2 joueurs disponibles', true);
+      btn.disabled=false; btn.textContent='⚔️ Générer'; return;
+    }
+
+    // 4. Tirage
+    const _shuffle = arr => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+    const matchsACreer = [];
+    const exempts = [];
+
+    const _apparier = (pool, reunion, disc) => {
+      const p = _shuffle([...pool]);
+      if(p.length%2!==0) {
+        const ei = Math.floor(Math.random()*p.length);
+        exempts.push(p[ei].nom+' ('+disc.toLowerCase()+')');
+        p.splice(ei,1);
+      }
+      for(let i=0;i<p.length;i+=2) matchsACreer.push({j1:p[i], j2:p[i+1], discipline:disc, reunion});
+    };
+
+    if(reunionTrot) _apparier(_shuffle(joueurs.filter(j=>j.peutTrot)), reunionTrot, 'TROT');
+    if(reunionGalop) _apparier(_shuffle(joueurs.filter(j=>j.peutGalop)), reunionGalop, 'GALOP');
+
+    if(!matchsACreer.length) {
+      toast('⚠️ Impossible de former des paires', true);
+      btn.disabled=false; btn.textContent='⚔️ Générer'; return;
+    }
+
+    // 5. Créer les matchs Firebase
+    btn.textContent = '⏳ Création des matchs…';
+    const matchsCreated = {};
+
+    for(const m of matchsACreer) {
+      const code = genCode();
+      const reunion = m.reunion;
+      const allC = reunion.courses||[];
+      const nb = allC.length%2===0 ? allC.length : allC.length-1;
+      const serieCourses = [];
+      for(const co of allC.slice(0, nb)) {
+        try {
+          const pData = await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${co.numOrdre}/participants`);
+          const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0,urlCasaque:p.urlCasaque||''}));
+          serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants,choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
+        } catch(e) {
+          serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants:[],choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
+        }
+      }
+      const matchData = {
+        code, statut:'attente', arene:true,
+        uidJ1:m.j1.uid, uidJ2:m.j2.uid,
+        j1:{nom:m.j1.nom, uid:m.j1.uid},
+        j2:{nom:m.j2.nom, uid:m.j2.uid},
+        createdAt:Date.now(),
+        reunion:{hippodrome:nH(reunion.hippodrome?.libelleLong||reunion.hippodrome?.libelleCourt), numReunion:reunion.numOfficiel, pmuDate, discipline:m.discipline},
+        courses:serieCourses,
+        premierMain:Math.random()<0.5?'j1':'j2'
+      };
+      await db.ref('matchs/'+code).set(matchData);
+      matchsCreated[code] = {matchId:code, uidJ1:m.j1.uid, uidJ2:m.j2.uid, j1:m.j1.nom, j2:m.j2.nom, discipline:m.discipline, hippodrome:matchData.reunion.hippodrome, statut:'attente'};
+    }
+
+    // 6. Sauvegarder le tirage
+    await db.ref('arene/'+isoDate).set({date:isoDate, matchs:matchsCreated, exempts, generatedAt:Date.now(), generatedBy:utilisateur.uid});
+
+    log.textContent = `✅ ${matchsACreer.length} match(s) créé(s)${exempts.length ? ' · Exempts : '+exempts.join(', ') : ''}`;
+    toast('✅ Arène générée : '+matchsACreer.length+' match(s)');
+    chargerAdmin();
+
+  } catch(e) {
+    toast('❌ Erreur : '+e.message, true);
+    log.textContent = 'Erreur : '+e.message;
+  } finally {
+    btn.disabled=false; btn.textContent='⚔️ Générer';
+  }
+}
 function navReglement() {
   showPage('reglement'); setNavActive('reglement');
 }
