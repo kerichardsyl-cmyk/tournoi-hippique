@@ -838,10 +838,9 @@ async function genererArene() {
     for(const m of matchsACreer) {
       const code = genCode();
       const reunion = m.reunion;
-      const allC = reunion.courses||[];
-      const nb = allC.length%2===0 ? allC.length : allC.length-1;
+      const areneCoursesFiltered = filtrerCoursesPaires(reunion.courses||[]);
       const serieCourses = [];
-      for(const co of allC.slice(0, nb)) {
+      for(const co of areneCoursesFiltered) {
         try {
           const pData = await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${co.numOrdre}/participants`);
           const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0,urlCasaque:p.urlCasaque||''}));
@@ -1676,12 +1675,23 @@ async function chargerReunionsCreation() {
   } catch(e) { container.innerHTML=`<p style="color:var(--rouge);">Erreur : ${e.message}</p>`; }
 }
 
+
+// Retourne un tableau pair de courses : si impair, retire celle avec le plus faible montantPrix
+// (en cas d'ex aequo, la dernière dans l'ordre du programme est retirée)
+function filtrerCoursesPaires(courses) {
+  if(!courses || courses.length%2===0) return courses||[];
+  // Trouver l'index de la course avec le montantPrix le plus faible (dernière en cas d'ex aequo)
+  let minPrix = Infinity, minIdx = courses.length-1;
+  for(let i=courses.length-1;i>=0;i--) {
+    const p = courses[i].montantPrix||0;
+    if(p <= minPrix) { minPrix=p; minIdx=i; }
+  }
+  return courses.filter((_,i)=>i!==minIdx);
+}
 async function creerMatchAvecReunion(reunion, pmuDate, disc) {
   if(!_creationAdv) { toast('⚠️ Aucun adversaire', true); return; }
   const container = document.getElementById('creation-liste-reunions');
-  const allC = reunion.courses||[];
-  const nb = allC.length%2===0 ? allC.length : allC.length-1;
-  const courses = allC.slice(0, nb);
+  const courses = filtrerCoursesPaires(reunion.courses||[]);
   container.innerHTML = '<span class="spinner"></span> Chargement des partants…';
   const serieCourses = [], errs = [];
   for(let i=0; i<courses.length; i++) {
@@ -2121,9 +2131,7 @@ async function chargerReunions() {
 }
 
 async function selectionnerReunion(reunion, pmuDate) {
-  const allCourses=reunion.courses||[];
-  const nbCourses=allCourses.length%2===0?allCourses.length:allCourses.length-1;
-  const courses=allCourses.slice(0,nbCourses);
+  const courses=filtrerCoursesPaires(reunion.courses||[]);
   const container=document.getElementById('liste-reunions');
   container.innerHTML=`<span class="spinner"></span> Chargement partants… 0/${courses.length}`;
   const coursesSerialisees=[], erreurs=[];
@@ -3156,4 +3164,5 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
