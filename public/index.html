@@ -904,7 +904,7 @@ async function genererArene() {
         premierMain:Math.random()<0.5?'j1':'j2'
       };
       await db.ref('matchs/'+code).set(matchData);
-      matchsCreated[code] = {matchId:code, uidJ1:m.j1.uid, uidJ2:m.j2.uid, j1:m.j1.nom, j2:m.j2.nom, discipline:m.discipline, hippodrome:matchData.reunion.hippodrome, statut:'attente'};
+      matchsCreated[code] = {matchId:code, uidJ1:m.j1.uid, uidJ2:m.j2.uid, j1:m.j1.nom, j2:m.j2.nom, discipline:m.discipline, hippodrome:matchData.reunion.hippodrome, statut:'pret'};
     }
 
     // 6. Sauvegarder le tirage
@@ -3391,3 +3391,4 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
