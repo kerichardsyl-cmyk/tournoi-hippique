@@ -104,6 +104,9 @@
     .badge-vert { background:rgba(26,107,60,.5); color:#6fffa0; padding:2px 8px; border-radius:10px; font-size:.78rem; }
     .badge-or { background:rgba(201,169,74,.3); color:var(--or-clair); padding:2px 8px; border-radius:10px; font-size:.78rem; }
     .separator { border:none; border-top:1px solid rgba(201,169,74,.2); margin:14px 0; }
+    .elo-tooltip-trigger { position:relative; cursor:help; border-bottom:1px dashed rgba(255,204,0,.5); }
+    .elo-tooltip { display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:#1a150e; border:1px solid rgba(255,204,0,.4); border-radius:8px; padding:12px 14px; font-size:.78rem; line-height:1.6; color:var(--creme); white-space:nowrap; z-index:100; box-shadow:0 4px 16px rgba(0,0,0,.5); min-width:260px; font-weight:normal; }
+    .elo-tooltip-trigger:hover .elo-tooltip { display:block; }
     .spinner { display:inline-block; width:20px; height:20px; border:2px solid rgba(201,169,74,.3); border-top-color:var(--or); border-radius:50%; animation:spin .8s linear infinite; vertical-align:middle; margin-right:8px; }
     @keyframes spin { to { transform:rotate(360deg); } }
     #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(180,30,0,.95); color:var(--or-clair); padding:12px 24px; border-radius:8px; border:1px solid var(--or); font-size:.95rem; z-index:9999; display:none; max-width:90vw; text-align:center; }
@@ -172,7 +175,7 @@
     <!-- Classement + Derniers matchs -->
     <div style="flex:1;min-width:260px;">
       <div class="card">
-        <h2>🏆 Classement ELO</h2>
+        <h2>🏆 Classement <span class="elo-tooltip-trigger">ELO<span class="elo-tooltip">Le classement ELO mesure le niveau de chaque joueur.<br><br>• Départ à <strong>1200 pts</strong> pour tous<br>• Gagner contre un adversaire fort = beaucoup de points<br>• Gagner contre un adversaire faible = peu de points<br>• Perdre contre plus fort = peu de points perdus<br>• Perdre contre plus faible = beaucoup de points perdus<br><br>Coefficient K = 32 · Calculs séparés Trot / Galop</span></span></h2>
         <div style="display:flex;gap:4px;margin-bottom:10px;">
           <button class="tab active" id="tab-elo-gen" onclick="switchClassement('general')">Général</button>
           <button class="tab" id="tab-elo-trot" onclick="switchClassement('trot')">🔵 Trot</button>
@@ -397,6 +400,15 @@
         <div id="admin-stats"><p class="text-sm">Chargement…</p></div>
       </div>
 
+    </div>
+
+    <!-- Outils admin -->
+    <div class="card" style="margin-top:0;">
+      <h2>🔧 Outils</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-gris btn-sm" onclick="recalculerTousElo()">♟ Recalculer ELO (tous matchs terminés)</button>
+        <button class="btn btn-gris btn-sm" onclick="reinitialiserTousElo()">⚠️ Remettre ELO à zéro</button>
+      </div>
     </div>
 
     <!-- Liste matchs admin -->
@@ -2313,6 +2325,97 @@ async function mettreAJourScores() {
 }
 
 
+
+// ── RECALCUL ELO GLOBAL ──────────────────────────
+async function reinitialiserTousElo() {
+  if(!confirm('⚠️ Remettre TOUS les ELO et stats à zéro (1200) ?\nCette action est irréversible.')) return;
+  toast('⏳ Remise à zéro en cours…');
+  const usersSnap = await db.ref('utilisateurs').once('value');
+  const updates = {};
+  usersSnap.forEach(child => {
+    updates['utilisateurs/'+child.key+'/elo'] = {general:1200, trot:1200, galop:1200};
+    updates['utilisateurs/'+child.key+'/stats'] = {matchsJoues:0, victoires:0, defaites:0, egalites:0};
+  });
+  await db.ref('/').update(updates);
+  toast('✅ ELO remis à zéro pour tous les joueurs');
+}
+
+async function recalculerTousElo() {
+  if(!confirm('Recalculer l\'ELO sur tous les matchs terminés dans l\'ordre chronologique ?\nLes ELO actuels seront d\'abord remis à zéro.')) return;
+  toast('⏳ Recalcul ELO en cours…');
+
+  // 1. Remettre tous les ELO et stats à zéro
+  const usersSnap = await db.ref('utilisateurs').once('value');
+  const resetUpdates = {};
+  usersSnap.forEach(child => {
+    resetUpdates['utilisateurs/'+child.key+'/elo'] = {general:1200, trot:1200, galop:1200};
+    resetUpdates['utilisateurs/'+child.key+'/stats'] = {matchsJoues:0, victoires:0, defaites:0, egalites:0};
+  });
+  await db.ref('/').update(resetUpdates);
+
+  // 2. Charger tous les matchs terminés triés par date
+  const matchsSnap = await db.ref('matchs').orderByChild('createdAt').once('value');
+  const matchsTermines = [];
+  matchsSnap.forEach(child => {
+    const d = child.val();
+    if(d.statut === 'termine') matchsTermines.push({id: child.key, ...d});
+  });
+  matchsTermines.sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+
+  const K = 32;
+  const calcElo = (eA, eB, sA) => Math.round(K * (sA - 1/(1+Math.pow(10,(eB-eA)/400))));
+
+  // 3. Rejouer chaque match
+  let nb = 0;
+  for(const match of matchsTermines) {
+    const uidJ1 = match.uidJ1, uidJ2 = match.uidJ2;
+    if(!uidJ1 || !uidJ2) continue;
+
+    const eloJ1Raw = (await db.ref('utilisateurs/'+uidJ1+'/elo').once('value')).val() || {general:1200,trot:1200,galop:1200};
+    const eloJ2Raw = (await db.ref('utilisateurs/'+uidJ2+'/elo').once('value')).val() || {general:1200,trot:1200,galop:1200};
+    const statsJ1Raw = (await db.ref('utilisateurs/'+uidJ1+'/stats').once('value')).val() || {matchsJoues:0,victoires:0,defaites:0,egalites:0};
+    const statsJ2Raw = (await db.ref('utilisateurs/'+uidJ2+'/stats').once('value')).val() || {matchsJoues:0,victoires:0,defaites:0,egalites:0};
+
+    const v = match.vainqueur;
+    const scoreJ1 = v==='j1'?1:v==='egal'?0.5:0;
+    const scoreJ2 = 1 - scoreJ1;
+    const disc = match.reunion?.discipline || 'MIXTE';
+    const discKey = disc==='TROT'?'trot':disc==='GALOP'?'galop':null;
+
+    const newEloJ1 = {...eloJ1Raw};
+    const newEloJ2 = {...eloJ2Raw};
+    newEloJ1.general = (eloJ1Raw.general||1200) + calcElo(eloJ1Raw.general||1200, eloJ2Raw.general||1200, scoreJ1);
+    newEloJ2.general = (eloJ2Raw.general||1200) + calcElo(eloJ2Raw.general||1200, eloJ1Raw.general||1200, scoreJ2);
+    if(discKey) {
+      newEloJ1[discKey] = (eloJ1Raw[discKey]||1200) + calcElo(eloJ1Raw[discKey]||1200, eloJ2Raw[discKey]||1200, scoreJ1);
+      newEloJ2[discKey] = (eloJ2Raw[discKey]||1200) + calcElo(eloJ2Raw[discKey]||1200, eloJ1Raw[discKey]||1200, scoreJ2);
+    }
+
+    const appliquerStats = (s, role) => {
+      const ns = {...s};
+      ns.matchsJoues = (ns.matchsJoues||0)+1;
+      if(v==='egal') ns.egalites = (ns.egalites||0)+1;
+      else if(v===role) ns.victoires = (ns.victoires||0)+1;
+      else ns.defaites = (ns.defaites||0)+1;
+      return ns;
+    };
+
+    const eloSnapshot = {};
+    eloSnapshot[uidJ1] = {eloBefore: eloJ1Raw, statsBefore: statsJ1Raw};
+    eloSnapshot[uidJ2] = {eloBefore: eloJ2Raw, statsBefore: statsJ2Raw};
+
+    await db.ref('utilisateurs/'+uidJ1+'/elo').set(newEloJ1);
+    await db.ref('utilisateurs/'+uidJ1+'/stats').set(appliquerStats(statsJ1Raw,'j1'));
+    await db.ref('utilisateurs/'+uidJ2+'/elo').set(newEloJ2);
+    await db.ref('utilisateurs/'+uidJ2+'/stats').set(appliquerStats(statsJ2Raw,'j2'));
+    await db.ref('matchs/'+match.id+'/eloSnapshot').set(eloSnapshot);
+    nb++;
+  }
+
+  toast('✅ ELO recalculé sur '+nb+' match(s) !');
+  chargerAdmin();
+}
+
 // ── CLÔTURE MATCH ──────────────────────────────────
 async function cloturerMatch(matchId) {
   matchId = matchId || etat.matchId;
@@ -2770,3 +2873,4 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
