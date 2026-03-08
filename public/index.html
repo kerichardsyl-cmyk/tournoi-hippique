@@ -775,7 +775,7 @@ function _afficherAreneMatchs(data) {
       : m.statut==='en_cours'
       ? '<span style="font-size:.75rem;color:#6fffa0;">En cours</span>'
       : '<span style="font-size:.75rem;opacity:.6;">En attente</span>';
-    const clickable = estMon && m.matchId ? `onclick="ouvrirMatch('${m.matchId}')"` : '';
+    const clickable = m.matchId ? `onclick="ouvrirMatch('${m.matchId}')"` : '';
     html += `<div class="arene-match-card${estMon?' mon-match':''}" ${clickable}>
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <div>
@@ -894,10 +894,10 @@ async function genererArene() {
         }
       }
       const matchData = {
-        code, statut:'attente', arene:true,
+        code, statut:'pret', arene:true,
         uidJ1:m.j1.uid, uidJ2:m.j2.uid,
-        j1:{nom:m.j1.nom, uid:m.j1.uid},
-        j2:{nom:m.j2.nom, uid:m.j2.uid},
+        j1:{nom:m.j1.nom, uid:m.j1.uid, connecte:false},
+        j2:{nom:m.j2.nom, uid:m.j2.uid, connecte:false},
         createdAt:Date.now(),
         reunion:{hippodrome:nH(reunion.hippodrome?.libelleLong||reunion.hippodrome?.libelleCourt), numReunion:reunion.numOfficiel, pmuDate, discipline:m.discipline},
         courses:serieCourses,
@@ -1687,7 +1687,8 @@ async function ouvrirMatch(matchId) {
   document.getElementById('lobby-code').textContent = matchId;
   if (etat.joueurId==='j1' && !etat._adminView) document.getElementById('bloc-arbitre').style.display='block';
   ecouterMatch();
-  if (data.statut==='attente'||data.statut==='pret') showPage('lobby');
+  if (data.arene && (data.statut==='pret'||data.statut==='attente')) { showPage('match'); }
+  else if (data.statut==='attente'||data.statut==='pret') showPage('lobby');
   else if (data.statut==='en_cours') showPage('match');
   else if (data.statut==='pret_cloture') { showPage('fin'); rendreFin(data); }
   else if (data.statut==='termine') { showPage('fin'); rendreFin(data); }
@@ -3390,8 +3391,3 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
-
-
-
-
-
