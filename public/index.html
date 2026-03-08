@@ -516,6 +516,7 @@
 // ── FIREBASE INIT ──────────────────────────────────
 const ADMIN_UID = 'NyXlWdthrFVUhkGjriC66ATiBIy2';
 function nH(s) { return (s||'').replace(/HIPPODROME (DE |D'|DU |DE L'|DES )/gi,'').replace(/HIPPODROME /gi,'').trim(); }
+function fPmuDate(d) { if(!d||d.length<8) return ''; return d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4); }
 
 function toggleVueAdmin() {
   etat._adminView = !etat._adminView;
@@ -853,7 +854,7 @@ async function chargerAccueil() {
       <div class="match-historique" style="padding:8px 10px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.05);font-size:.85rem;cursor:pointer;" onclick="ouvrirMatch('${m.id}')">
         <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'?'}</strong>
         <span style="float:right;color:var(--or-clair);">🏆 ${m.vainqueur==='j1'?m.j1?.nom:m.vainqueur==='j2'?m.j2?.nom:'Nul'}</span>
-        <div class="text-sm" style="margin-top:2px;">${discIcon(m.reunion?.discipline)}${m.reunion?.hippodrome||''} · ${m.manchesJ1||0}-${m.manchesJ2||0} manches</div>
+        <div class="text-sm" style="margin-top:2px;">${discIcon(m.reunion?.discipline)}${fPmuDate(m.reunion?.pmuDate)} · ${m.reunion?.hippodrome||''} · ${m.manchesJ1||0}-${m.manchesJ2||0} manches</div>
       </div>`).join('')
     : '<p class="text-sm">Aucun match terminé encore.</p>';
 
@@ -1075,7 +1076,7 @@ function chargerTableauBord() {
         <div class="match-card" onclick="ouvrirMatch('${m.id}')">
           <div style="flex:1;">
             <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom || (m._nomInvite ? '<span style="opacity:.6;font-style:italic;">⏳ '+m._nomInvite+'</span>' : '<span style="opacity:.5;font-style:italic;">En attente…</span>')}</strong>
-            <div class="text-sm" style="margin-top:2px;">${m.reunion?.hippodrome||'Non configuré'}</div>
+            <div class="text-sm" style="margin-top:2px;">${fPmuDate(m.reunion?.pmuDate)} · ${m.reunion?.hippodrome||'Non configuré'}</div>
             ${m.statut==='en_cours'?(()=>{
               const cs=m.courses||[];
               const p1=cs.reduce((s,c)=>s+(c.pointsJ1||0),0);
@@ -1130,7 +1131,7 @@ function chargerTableauBord() {
         const mSnap = await db.ref('matchs/'+inv.matchId).once('value');
         const m = mSnap.val() || {};
         inv._hippodrome = m.reunion?.hippodrome || '';
-        inv._date = m.createdAt ? new Date(m.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+        inv._date = fPmuDate(m.reunion?.pmuDate) || (m.createdAt ? new Date(m.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '');
       } catch(e) {}
       return inv;
     }));
@@ -1157,7 +1158,7 @@ function chargerTableauBord() {
         const mSnap = await db.ref('matchs/'+inv.matchId).once('value');
         const m = mSnap.val() || {};
         inv._hippodrome = m.reunion?.hippodrome || '';
-        inv._date = m.createdAt ? new Date(m.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+        inv._date = fPmuDate(m.reunion?.pmuDate) || (m.createdAt ? new Date(m.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '');
       } catch(e) {}
       return inv;
     }));
@@ -1692,7 +1693,7 @@ async function chargerAdmin() {
         tousMatchsAdmin.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(m =>
           '<tr style="border-bottom:1px solid rgba(255,255,255,.06);">' +
           '<td style="padding:6px 8px;font-family:monospace;font-size:.75rem;">'+m.id+'</td>' +
-          '<td style="padding:6px 8px;text-align:center;font-size:.75rem;opacity:.8;">'+(m.createdAt?new Date(m.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):'—')+'</td>' +
+          '<td style="padding:6px 8px;text-align:center;font-size:.75rem;opacity:.8;">'+(m.reunion?.pmuDate?fPmuDate(m.reunion.pmuDate):(m.createdAt?new Date(m.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):'—'))+'</td>' +
           '<td style="padding:6px 8px;text-align:center;font-size:.75rem;opacity:.8;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(m.reunion?.hippodrome||'—')+'</td>' +
           '<td style="padding:6px 8px;text-align:center;">'+(m.j1?.nom||'—')+'</td>' +
           '<td style="padding:6px 8px;text-align:center;">'+(m.j2?.nom || (m._nomInvite ? '<span style="opacity:.6;font-size:.78rem;">⏳ '+m._nomInvite+'</span>' : '—'))+'</td>' +
@@ -2643,7 +2644,9 @@ function rendreProgramme(data) {
   const courses=data.courses||[];
   const hippo=data.reunion?.hippodrome||'';
   const titreEl=document.getElementById('titre-programme');
-  if(titreEl) titreEl.textContent='🏁 Programme'+(hippo?' : '+hippo:'');
+  const pmuDateReu = data.reunion?.pmuDate || (data.courses?.[0]?.pmuDate) || '';
+  const dateLabel = fPmuDate(pmuDateReu);
+  if(titreEl) titreEl.textContent='🏁 Programme'+(hippo?' : '+hippo:'')+(dateLabel?' · '+dateLabel:'');
   let html='<p class="text-sm" style="margin-bottom:8px;">Cliquez pour pronostiquer :</p>';
   courses.forEach((c,i)=>{
     const manqueData = c.statut==='terminee' && (!(c.arrivee||[]).length || !Object.keys(c.rapports||{}).length);
@@ -2890,5 +2893,3 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
-
-
