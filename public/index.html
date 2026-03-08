@@ -2379,7 +2379,16 @@ async function recalculerTousElo() {
     const v = match.vainqueur;
     const scoreJ1 = v==='j1'?1:v==='egal'?0.5:0;
     const scoreJ2 = 1 - scoreJ1;
-    const disc = match.reunion?.discipline || 'MIXTE';
+    // Détecter discipline depuis reunion.discipline ou depuis les courses si absent
+    let disc = match.reunion?.discipline || '';
+    if(!disc && match.courses?.length) {
+      const specs = (match.courses||[]).map(co => co.specialite||co.discipline||'').filter(Boolean);
+      const hasTrot = specs.some(s=>s.includes('TROT'));
+      const hasGalop = specs.some(s=>s.includes('PLAT')||s.includes('OBSTACLE')||s.includes('HAIES')||s.includes('STEEPLE'));
+      if(hasTrot && !hasGalop) disc = 'TROT';
+      else if(hasGalop && !hasTrot) disc = 'GALOP';
+    }
+    if(!disc) disc = 'MIXTE';
     const discKey = disc==='TROT'?'trot':disc==='GALOP'?'galop':null;
 
     const newEloJ1 = {...eloJ1Raw};
@@ -2467,7 +2476,15 @@ async function cloturerMatch(matchId) {
   // ── Calcul ELO ──
   const scoreJ1 = v==='j1'?1:v==='egal'?0.5:0;
   const scoreJ2 = 1 - scoreJ1;
-  const disc = data.reunion?.discipline || 'MIXTE';
+  let disc = data.reunion?.discipline || '';
+  if(!disc && data.courses?.length) {
+    const specs = (data.courses||[]).map(co => co.specialite||co.discipline||'').filter(Boolean);
+    const hasTrot = specs.some(s=>s.includes('TROT'));
+    const hasGalop = specs.some(s=>s.includes('PLAT')||s.includes('OBSTACLE')||s.includes('HAIES')||s.includes('STEEPLE'));
+    if(hasTrot && !hasGalop) disc = 'TROT';
+    else if(hasGalop && !hasTrot) disc = 'GALOP';
+  }
+  if(!disc) disc = 'MIXTE';
   const discKey = disc==='TROT'?'trot':disc==='GALOP'?'galop':null;
   const newEloJ1 = {...eloJ1};
   const newEloJ2 = {...eloJ2};
@@ -2873,4 +2890,5 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
