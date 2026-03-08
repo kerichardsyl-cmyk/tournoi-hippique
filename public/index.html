@@ -493,6 +493,7 @@
       </div>
       <p id="arene-pref-status" class="text-sm" style="margin-top:8px;color:var(--or);"></p>
       <p class="text-sm" style="opacity:.45;margin-top:4px;font-style:italic;">Les changements sont effectifs sur les tirages à venir, pas sur le jour même.</p>
+      <p class="text-sm" style="opacity:.55;margin-top:8px;">🏆 Chaque jour, la réunion retenue par discipline est celle dont la somme des allocations est la plus élevée — garantissant les courses les mieux dotées.</p>
     </div>
     <div class="card">
       <h2 id="arene-matchs-titre">🗓 Matchs du jour</h2>
@@ -767,20 +768,17 @@ async function genererArene() {
         && !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||''));
 
     // 2. Sélectionner la réunion avec la plus grosse somme de montantPrix par discipline
+    const _sommeCourses = r => filtrerCoursesPaires(r.courses||[]).reduce((s,co)=>s+(co.montantPrix||0),0);
     const _meilleureReunion = (reunions, disc) => {
       const filtered = reunions.filter(r => detecterDiscipline(r)===disc);
       if(!filtered.length) return null;
-      return filtered.reduce((best, r) => {
-        const total = (r.courses||[]).reduce((s,co) => s+(co.montantPrix||0), 0);
-        const bestTotal = (best.courses||[]).reduce((s,co) => s+(co.montantPrix||0), 0);
-        return total > bestTotal ? r : best;
-      });
+      return filtered.reduce((best, r) => _sommeCourses(r) > _sommeCourses(best) ? r : best);
     };
     const reunionTrot = _meilleureReunion(toutesReunions, 'TROT');
     const reunionGalop = _meilleureReunion(toutesReunions, 'GALOP');
 
-    const allTrot = reunionTrot ? (reunionTrot.courses||[]).reduce((s,co)=>s+(co.montantPrix||0),0) : 0;
-    const allGalop = reunionGalop ? (reunionGalop.courses||[]).reduce((s,co)=>s+(co.montantPrix||0),0) : 0;
+    const allTrot = reunionTrot ? _sommeCourses(reunionTrot) : 0;
+    const allGalop = reunionGalop ? _sommeCourses(reunionGalop) : 0;
     log.textContent = `Réunion trot : ${reunionTrot ? nH(reunionTrot.hippodrome?.libelleLong||reunionTrot.hippodrome?.libelleCourt||'?')+' ('+allTrot.toLocaleString('fr-FR')+'€)' : 'aucune'} | Réunion galop : ${reunionGalop ? nH(reunionGalop.hippodrome?.libelleLong||reunionGalop.hippodrome?.libelleCourt||'?')+' ('+allGalop.toLocaleString('fr-FR')+'€)' : 'aucune'}`;
 
     if(!reunionTrot && !reunionGalop) {
