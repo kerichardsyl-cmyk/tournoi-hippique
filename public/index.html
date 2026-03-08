@@ -2016,9 +2016,15 @@ function reprendreTimers(data) {
 
 function programmerBlocageCourse(idx,course) {
   const ts=course.heureDepart; if(!ts) return;
-  const msM=ts-Date.now()-10*60*1000, msS=ts-Date.now()-5*60*1000;
-  if(msM>0) setTimeout(()=>bloquerChoixMain(idx),msM); else bloquerChoixMain(idx);
-  if(msS>0) setTimeout(()=>bloquerEtValider(idx),msS); else bloquerEtValider(idx);
+  const now=Date.now();
+  const msM=ts-now-10*60*1000, msS=ts-now-5*60*1000;
+  // Ne bloquer immédiatement que si la course démarre vraiment dans moins de 10/5 min
+  // (évite de bloquer des courses futures dont le match vient juste d'être ouvert)
+  const GRACE = 60*60*1000; // 1h de grâce : si heureDepart est dans plus d'1h, ne pas bloquer immédiatement
+  if(msM>0) setTimeout(()=>bloquerChoixMain(idx),msM);
+  else if(ts-now > -GRACE) bloquerChoixMain(idx); // bloquer seulement si la course est dans moins d'1h (passée ou imminente)
+  if(msS>0) setTimeout(()=>bloquerEtValider(idx),msS);
+  else if(ts-now > -GRACE) bloquerEtValider(idx);
 }
 
 function getMainPourCourse(idx) {
@@ -2028,7 +2034,10 @@ function getMainPourCourse(idx) {
 
 async function bloquerChoixMain(idx) {
   const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
-  if(data.courses[idx].statut!=='ouverte') return;
+  const co = data.courses[idx];
+  if(co.statut!=='ouverte') return;
+  // Vérifier que le départ est réellement dans moins de 15 min
+  if(co.heureDepart && co.heureDepart - Date.now() > 15*60*1000) return;
   await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({mainBloquee:true});
 }
 
@@ -2036,6 +2045,8 @@ async function bloquerEtValider(idx) {
   const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
   const c=data.courses[idx];
   if(c.statut==='bloquee'||c.statut==='terminee') return;
+  // Vérifier que le départ est réellement dans moins de 10 min
+  if(c.heureDepart && c.heureDepart - Date.now() > 10*60*1000) return;
   const mr=getMainPourCourse(idx), sr=mr==='j1'?'j2':'j1';
   const cm=c['choix'+mr.toUpperCase()]||[], cs=c['choix'+sr.toUpperCase()]||[];
   const cfs=cs.filter(n=>!cm.includes(n)).slice(0,2); // toujours 2 max, même si main n'a pas choisi
@@ -2893,3 +2904,4 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
