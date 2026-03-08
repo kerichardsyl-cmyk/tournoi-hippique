@@ -2454,7 +2454,8 @@ async function cloturerMatch(matchId) {
     if(!confirm("Certaines courses n'ont pas leurs résultats. Clôturer quand même ?")) return;
   }
   const m1=data.manchesJ1||0, m2=data.manchesJ2||0;
-  const vainqueur = data.vainqueur || calculerVainqueur(courses,m1,m2);
+  // Toujours recalculer le vainqueur à la clôture (ne pas utiliser le cache)
+  const vainqueur = calculerVainqueur(courses,m1,m2);
   const v = vainqueur;
   const uidJ1 = data.uidJ1, uidJ2 = data.uidJ2;
   const K = 32;
