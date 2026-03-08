@@ -110,9 +110,6 @@
     .arene-match-card:hover { background:rgba(255,255,255,.1); }
     .arene-match-card.mon-match { border-color:var(--or); background:rgba(201,169,74,.1); }
     .arene-exempt { opacity:.5; font-style:italic; text-align:center; padding:10px; font-size:.85rem; }
-    .arene-classement-ligne { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-radius:8px; margin-bottom:4px; background:rgba(255,255,255,.04); }
-    .arene-classement-ligne.moi { outline:2px solid var(--or); background:rgba(201,169,74,.08); }
-    .arene-palmares-mois { background:rgba(255,255,255,.04); border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-size:.85rem; }
     .elo-tooltip-trigger { position:relative; cursor:help; border-bottom:1px dashed rgba(255,204,0,.5); }
     .elo-tooltip { display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:#1a150e; border:1px solid rgba(255,204,0,.4); border-radius:8px; padding:12px 14px; font-size:.78rem; line-height:1.6; color:var(--creme); white-space:nowrap; z-index:100; box-shadow:0 4px 16px rgba(0,0,0,.5); min-width:260px; font-weight:normal; }
     .elo-tooltip-trigger:hover .elo-tooltip { display:block; }
@@ -429,12 +426,6 @@
         <button class="btn btn-or" id="arene-gen-btn" onclick="genererArene()">⚔️ Générer</button>
       </div>
       <p id="arene-gen-log" class="text-sm" style="opacity:.7;margin-top:4px;"></p>
-      <hr class="separator" style="margin-top:12px;"/>
-      <h3 style="color:var(--or-clair);margin:8px 0;">Gestion mensuelle</h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-gris btn-sm" onclick="_cloturerJourneeDepuisAdmin()">📋 Attribuer points exempts</button>
-        <button class="btn btn-gris btn-sm" onclick="archiverMoisArene()">🗄 Archiver mois précédent</button>
-      </div>
     </div>
 
     <!-- Liste matchs admin -->
@@ -508,33 +499,6 @@
       <h2 id="arene-matchs-titre">🗓 Matchs du jour</h2>
       <div id="arene-matchs-liste"><p class="text-sm">Aucun tirage généré pour aujourd'hui.</p></div>
     </div>
-
-    <!-- Classement mensuel Arène -->
-    <div class="card">
-      <h2>🏅 Classement Arène — <span id="arene-classement-mois-label">ce mois</span></h2>
-      <p class="text-sm" style="opacity:.6;margin-bottom:10px;">2 pts par victoire · 1 pt si exempté · Départage : manches puis points totaux</p>
-      <div id="arene-classement-mensuel"><p class="text-sm">Chargement…</p></div>
-    </div>
-
-    <!-- Bloc ELO (même que accueil) -->
-    <div class="card">
-      <h2>🏆 Classement <span class="elo-tooltip-trigger">ELO<span class="elo-tooltip">Le classement ELO mesure le niveau de chaque joueur.<br><br>• Départ à <strong>1200 pts</strong> pour tous<br>• Gagner contre un adversaire fort = beaucoup de points<br>• Gagner contre un adversaire faible = peu de points<br>• Perdre contre plus fort = peu de points perdus<br>• Perdre contre plus faible = beaucoup de points perdus<br><br>Coefficient K = 32 · Calculs séparés Trot / Galop</span></span></h2>
-      <div style="display:flex;gap:4px;margin-bottom:10px;">
-        <button class="tab active" id="arene-tab-elo-gen" onclick="switchAreneElo('general')">Général</button>
-        <button class="tab" id="arene-tab-elo-trot" onclick="switchAreneElo('trot')">🔵 Trot</button>
-        <button class="tab" id="arene-tab-elo-galop" onclick="switchAreneElo('galop')">🟡 Galop</button>
-      </div>
-      <div id="arene-elo-classement"><p class="text-sm">Chargement…</p></div>
-      <div id="arene-elo-classement-suite" style="display:none;"></div>
-      <button id="arene-btn-voir-tout" type="button" class="btn btn-gris btn-sm" style="width:100%;margin-top:8px;display:none;" onclick="toggleAreneEloComplet()">▼ Voir le classement complet</button>
-    </div>
-
-    <!-- Palmarès mois précédents -->
-    <div class="card">
-      <h2>🎖 Palmarès Arène</h2>
-      <div id="arene-palmares"><p class="text-sm">Chargement…</p></div>
-    </div>
-
   </div>
 </div>
 
@@ -719,8 +683,16 @@ async function chargerArene() {
   const pref = prefSnap.val() || 'none';
   _updateArenePrefsUI(pref);
   const today = _areneToday();
-  const snap = await db.ref('arene/'+today).once('value');
-  _afficherAreneMatchs(snap.val());
+  const areneSnap = await db.ref('arene').once('value');
+  let bestData = null;
+  if(areneSnap.val()) {
+    const keys = Object.keys(areneSnap.val()).sort();
+    const futur = keys.filter(k => k >= today);
+    const passe = keys.filter(k => k < today);
+    const bestKey = futur.length ? futur[0] : (passe.length ? passe[passe.length-1] : null);
+    if(bestKey) bestData = areneSnap.val()[bestKey];
+  }
+  _afficherAreneMatchs(bestData);
   chargerAreneClassements();
 }
 
@@ -758,8 +730,9 @@ function _afficherAreneMatchs(data) {
   if(titre) titre.textContent = '🗓 Matchs du '+(dateLabel||'jour');
   let html = '';
   const matchs = Object.values(data.matchs||{});
+  const monUid = utilisateur?.uid || '';
   matchs.forEach(m => {
-    const estMon = m.uidJ1===utilisateur.uid || m.uidJ2===utilisateur.uid;
+    const estMon = m.uidJ1===monUid || m.uidJ2===monUid;
     const discIcon = m.discipline==='TROT'?'🔵 Trot':m.discipline==='GALOP'?'🟡 Galop':'⚪';
     const statutBadge = m.statut==='termine'
       ? '<span class="badge-or" style="font-size:.75rem;">Terminé</span>'
@@ -912,288 +885,6 @@ async function genererArene() {
     btn.disabled=false; btn.textContent='⚔️ Générer';
   }
 }
-
-// ── CLASSEMENT ARÈNE ───────────────────────────────
-
-let _areneEloDiscipline = 'general';
-let _areneEloComplet = false;
-
-async function chargerAreneClassements() {
-  chargerAreneClassementMensuel();
-  chargerAreneElo();
-  chargerArenePalmares();
-}
-
-// ── Classement mensuel ──
-async function chargerAreneClassementMensuel() {
-  const el = document.getElementById('arene-classement-mensuel');
-  const now = new Date();
-  const moisLabel = now.toLocaleDateString('fr-FR', {month:'long', year:'numeric'});
-  document.getElementById('arene-classement-mois-label').textContent = moisLabel;
-
-  const isoMois = now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0');
-
-  // Charger tous les tirages du mois depuis arene/
-  const snap = await db.ref('arene').once('value');
-  if(!snap.val()) { el.innerHTML='<p class="text-sm">Aucune donnée ce mois.</p>'; return; }
-
-  // Charger les prénoms joueurs
-  const usersSnap = await db.ref('utilisateurs').once('value');
-  const prenoms = {};
-  usersSnap.forEach(child => { prenoms[child.key] = child.val().prenom || child.val().email || child.key; });
-
-  // Agréger : points, victoires, manches, ptsMatch
-  const scores = {}; // uid -> {pts, victoires, manchesGagnees, ptsTotal, nom}
-
-  const _get = uid => scores[uid] || (scores[uid] = {pts:0, victoires:0, manchesGagnees:0, ptsTotal:0, nom:prenoms[uid]||'?'});
-
-  snap.forEach(daySnap => {
-    const dayKey = daySnap.key; // YYYY-MM-DD
-    if(!dayKey.startsWith(isoMois)) return;
-    const dayData = daySnap.val();
-
-    // Points exempts
-    (dayData.exempts_uids || []).forEach(uid => { _get(uid).pts += 1; });
-
-    // Points matchs
-    const matchs = dayData.matchs || {};
-    Object.values(matchs).forEach(m => {
-      if(!m.matchId) return;
-      // On lira les résultats depuis Firebase matchs/
-    });
-  });
-
-  // Charger les matchs Arène terminés du mois depuis Firebase
-  const matchsSnap = await db.ref('matchs').orderByChild('createdAt').once('value');
-  const debut = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const fin = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59).getTime();
-
-  matchsSnap.forEach(child => {
-    const m = child.val();
-    if(!m.arene) return;
-    if(m.statut !== 'termine') return;
-    if(m.createdAt < debut || m.createdAt > fin) return;
-    const uidJ1 = m.uidJ1, uidJ2 = m.uidJ2;
-    if(!uidJ1 || !uidJ2) return;
-    const v = m.vainqueur;
-    const courses = m.courses || [];
-    const manchesJ1 = courses.filter(c=>c.mancheGagnant==='j1').length;
-    const manchesJ2 = courses.filter(c=>c.mancheGagnant==='j2').length;
-    const ptsJ1 = courses.reduce((s,c)=>s+(c.pointsJ1||0),0);
-    const ptsJ2 = courses.reduce((s,c)=>s+(c.pointsJ2||0),0);
-
-    _get(uidJ1).manchesGagnees += manchesJ1;
-    _get(uidJ1).ptsTotal += ptsJ1;
-    _get(uidJ2).manchesGagnees += manchesJ2;
-    _get(uidJ2).ptsTotal += ptsJ2;
-
-    if(v==='j1') { _get(uidJ1).pts += 2; _get(uidJ1).victoires += 1; }
-    else if(v==='j2') { _get(uidJ2).pts += 2; _get(uidJ2).victoires += 1; }
-    else if(v==='egal') { _get(uidJ1).pts += 1; _get(uidJ2).pts += 1; }
-  });
-
-  const liste = Object.entries(scores)
-    .map(([uid, s]) => ({uid, ...s}))
-    .sort((a,b) => {
-      if(b.pts !== a.pts) return b.pts - a.pts;
-      if(b.manchesGagnees !== a.manchesGagnees) return b.manchesGagnees - a.manchesGagnees;
-      return b.ptsTotal - a.ptsTotal;
-    });
-
-  if(!liste.length) { el.innerHTML='<p class="text-sm">Aucun match Arène terminé ce mois.</p>'; return; }
-
-  const medals = ['🥇','🥈','🥉'];
-  const uid = utilisateur?.uid;
-  el.innerHTML = liste.map((j,i) => {
-    const isMe = j.uid === uid;
-    const medal = medals[i] || `<span style="font-size:.8rem;opacity:.5;">${i+1}.</span>`;
-    const bg = i===0?'linear-gradient(90deg,rgba(255,215,0,.2),transparent)':i===1?'linear-gradient(90deg,rgba(192,192,192,.15),transparent)':i===2?'linear-gradient(90deg,rgba(205,127,50,.15),transparent)':'';
-    return `<div class="arene-classement-ligne${isMe?' moi':''}" style="${bg?'background:'+bg+';border:1px solid rgba(255,255,255,.1);':''}">
-      <span style="display:flex;align-items:center;gap:6px;">
-        <span>${medal}</span>
-        <strong>${j.nom}</strong>
-        ${isMe?'<span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}
-      </span>
-      <span style="font-size:.82rem;text-align:right;">
-        <strong style="color:var(--or);">${j.pts} pt${j.pts>1?'s':''}</strong>
-        <span class="text-sm" style="opacity:.6;display:block;">${j.victoires}V · ${j.manchesGagnees} manches · ${j.ptsTotal} pts</span>
-      </span>
-    </div>`;
-  }).join('');
-}
-
-// ── ELO Arène (même données que accueil, onglets indépendants) ──
-function switchAreneElo(discipline) {
-  _areneEloDiscipline = discipline;
-  ['gen','trot','galop'].forEach(d => {
-    document.getElementById('arene-tab-elo-'+(d==='gen'?'gen':d))?.classList.remove('active');
-  });
-  document.getElementById('arene-tab-elo-'+(discipline==='general'?'gen':discipline))?.classList.add('active');
-  _afficherAreneElo();
-}
-
-function _afficherAreneElo() {
-  const key = _areneEloDiscipline;
-  const uid = utilisateur?.uid;
-  const joueurs = _joueursCache.filter(j => {
-    if(key==='general') return (j.stats?.matchsJoues||0) > 0;
-    return (j.elo?.[key]||1200) !== 1200 || (j.stats?.matchsJoues||0) > 0;
-  }).sort((a,b) => (b.elo?.[key]||1200) - (a.elo?.[key]||1200));
-
-  const top10 = joueurs.slice(0,10), reste = joueurs.slice(10);
-  const el = document.getElementById('arene-elo-classement');
-  const suiteEl = document.getElementById('arene-elo-classement-suite');
-  const btnEl = document.getElementById('arene-btn-voir-tout');
-
-  el.innerHTML = joueurs.length
-    ? top10.map((j,i) => ligneClassement(j,i,uid,key)).join('')
-    : '<p class="text-sm">Aucun joueur classé.</p>';
-
-  if(reste.length > 0) {
-    suiteEl.innerHTML = reste.map((j,i) => ligneClassement(j,i+10,uid,key)).join('');
-    suiteEl.style.display = _areneEloComplet ? 'block' : 'none';
-    btnEl.style.display = 'block';
-    btnEl.textContent = _areneEloComplet ? '▲ Réduire' : `▼ Voir tout (${joueurs.length} joueurs)`;
-  } else {
-    suiteEl.style.display = 'none';
-    btnEl.style.display = 'none';
-  }
-}
-
-function chargerAreneElo() {
-  if(_joueursCache.length) { _afficherAreneElo(); return; }
-  // Si cache vide, charger depuis Firebase
-  db.ref('utilisateurs').once('value').then(snap => {
-    _joueursCache = [];
-    snap.forEach(child => { _joueursCache.push({uid:child.key, ...child.val()}); });
-    _afficherAreneElo();
-  });
-}
-
-function toggleAreneEloComplet() {
-  _areneEloComplet = !_areneEloComplet;
-  const suiteEl = document.getElementById('arene-elo-classement-suite');
-  const btnEl = document.getElementById('arene-btn-voir-tout');
-  suiteEl.style.display = _areneEloComplet ? 'block' : 'none';
-  const total = _joueursCache.filter(j=>(j.stats?.matchsJoues||0)>0).length;
-  btnEl.textContent = _areneEloComplet ? '▲ Réduire' : `▼ Voir tout (${total} joueurs)`;
-}
-
-// ── Palmarès mois précédents ──
-async function chargerArenePalmares() {
-  const el = document.getElementById('arene-palmares');
-  const snap = await db.ref('arene_palmares').once('value');
-  const data = snap.val();
-  if(!data) { el.innerHTML='<p class="text-sm">Aucun palmarès disponible.</p>'; return; }
-
-  const mois = Object.entries(data).sort((a,b) => b[0].localeCompare(a[0]));
-  if(!mois.length) { el.innerHTML='<p class="text-sm">Aucun palmarès disponible.</p>'; return; }
-
-  el.innerHTML = mois.map(([key, m]) => {
-    const [annee, moisNum] = key.split('-');
-    const label = new Date(+annee, +moisNum-1, 1).toLocaleDateString('fr-FR',{month:'long', year:'numeric'});
-    return `<div class="arene-palmares-mois">
-      <span style="opacity:.7;">${label}</span>
-      <span><strong>${m.vainqueur||'?'}</strong> <span style="opacity:.6;font-size:.8rem;">${m.pts} pts</span></span>
-    </div>`;
-  }).join('');
-}
-
-// ── Attribution point exempt lors clôture journée (admin) ──
-function _cloturerJourneeDepuisAdmin() {
-  const dateStr = document.getElementById('arene-gen-date').value.trim();
-  let isoDate = null;
-  if(dateStr) {
-    const p = dateStr.split('/');
-    if(p.length===3) isoDate = p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
-  }
-  cloturerJourneeArene(isoDate);
-}
-async function cloturerJourneeArene(isoDate) {
-  if(!isoDate) {
-    const d = new Date(); 
-    isoDate = d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');
-  }
-  const snap = await db.ref('arene/'+isoDate).once('value');
-  const data = snap.val();
-  if(!data) { toast('⚠️ Aucun tirage pour cette date', true); return; }
-  if(data.exempts_uids_traites) { toast('⚠️ Exempts déjà traités pour cette date', true); return; }
-
-  // Charger les prénoms
-  const usersSnap = await db.ref('utilisateurs').once('value');
-  const prenoms = {};
-  usersSnap.forEach(child => { prenoms[child.key] = child.val().prenom || child.val().email || child.key; });
-
-  // Retrouver les UIDs exempts depuis la liste de noms
-  const exemptNoms = data.exempts || [];
-  // Les UIDs exempts sont aussi stockés dans les matchs générés - on les retrouve par nom
-  const exemptUids = [];
-  usersSnap.forEach(child => {
-    const nom = child.val().prenom || child.val().email || child.key;
-    // Cherche si ce joueur apparaît dans les exempts (en retirant le suffixe discipline ex: "Jean (trot)")
-    if(exemptNoms.some(e => e.startsWith(nom))) exemptUids.push(child.key);
-  });
-
-  // Sauvegarder les UIDs exempts pour le classement
-  await db.ref('arene/'+isoDate+'/exempts_uids').set(exemptUids);
-  await db.ref('arene/'+isoDate+'/exempts_uids_traites').set(true);
-
-  toast(`✅ ${exemptUids.length} exempt(s) enregistré(s)`);
-  chargerAreneClassementMensuel();
-}
-
-// ── Archiver le mois Arène en fin de mois (admin) ──
-async function archiverMoisArene() {
-  const now = new Date();
-  const moisPrecedent = new Date(now.getFullYear(), now.getMonth()-1, 1);
-  const isoMois = moisPrecedent.getFullYear()+'-'+(moisPrecedent.getMonth()+1).toString().padStart(2,'0');
-
-  // Recalculer classement du mois précédent
-  const usersSnap = await db.ref('utilisateurs').once('value');
-  const prenoms = {};
-  usersSnap.forEach(child => { prenoms[child.key] = child.val().prenom || child.val().email || child.key; });
-
-  const scores = {};
-  const _get = uid => scores[uid] || (scores[uid] = {pts:0, victoires:0, manchesGagnees:0, ptsTotal:0});
-
-  const areneSnap = await db.ref('arene').once('value');
-  areneSnap.forEach(daySnap => {
-    if(!daySnap.key.startsWith(isoMois)) return;
-    (daySnap.val().exempts_uids||[]).forEach(uid => { _get(uid).pts += 1; });
-  });
-
-  const debut = moisPrecedent.getTime();
-  const fin = new Date(moisPrecedent.getFullYear(), moisPrecedent.getMonth()+1, 0, 23,59,59).getTime();
-  const matchsSnap = await db.ref('matchs').once('value');
-  matchsSnap.forEach(child => {
-    const m = child.val();
-    if(!m.arene || m.statut!=='termine') return;
-    if(m.createdAt<debut || m.createdAt>fin) return;
-    const courses = m.courses||[];
-    const mJ1=courses.filter(c=>c.mancheGagnant==='j1').length, mJ2=courses.filter(c=>c.mancheGagnant==='j2').length;
-    _get(m.uidJ1).manchesGagnees+=mJ1; _get(m.uidJ1).ptsTotal+=courses.reduce((s,c)=>s+(c.pointsJ1||0),0);
-    _get(m.uidJ2).manchesGagnees+=mJ2; _get(m.uidJ2).ptsTotal+=courses.reduce((s,c)=>s+(c.pointsJ2||0),0);
-    if(m.vainqueur==='j1'){_get(m.uidJ1).pts+=2;_get(m.uidJ1).victoires+=1;}
-    else if(m.vainqueur==='j2'){_get(m.uidJ2).pts+=2;_get(m.uidJ2).victoires+=1;}
-    else if(m.vainqueur==='egal'){_get(m.uidJ1).pts+=1;_get(m.uidJ2).pts+=1;}
-  });
-
-  const liste = Object.entries(scores)
-    .map(([uid,s])=>({uid,...s}))
-    .sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.manchesGagnees!==a.manchesGagnees?b.manchesGagnees-a.manchesGagnees:b.ptsTotal-a.ptsTotal);
-
-  if(!liste.length) { toast('⚠️ Aucune donnée pour ce mois', true); return; }
-  const vainqueur = liste[0];
-  await db.ref('arene_palmares/'+isoMois).set({
-    vainqueur: prenoms[vainqueur.uid]||'?',
-    uid: vainqueur.uid,
-    pts: vainqueur.pts,
-    victoires: vainqueur.victoires,
-    manchesGagnees: vainqueur.manchesGagnees
-  });
-  toast('✅ Mois archivé : '+prenoms[vainqueur.uid]+' ('+vainqueur.pts+' pts)');
-  chargerArenePalmares();
-}
 function navReglement() {
   showPage('reglement'); setNavActive('reglement');
 }
@@ -1332,6 +1023,8 @@ auth.onAuthStateChanged(async user => {
       showPage('admin'); setNavActive(''); chargerAdmin();
     } else if(lastPage === 'reglement') {
       showPage('reglement'); setNavActive('reglement');
+    } else if(lastPage === 'arene') {
+      showPage('arene'); setNavActive('arene'); chargerArene();
     } else {
       showPage('accueil'); setNavActive('home'); chargerAccueil();
     }
@@ -3481,6 +3174,7 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
 
 
