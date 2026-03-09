@@ -94,7 +94,7 @@
     .stat-lbl { font-size: .68rem; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .08em; margin-top: .3rem; }
 
     /* ── CARDS ── */
-    .card { background: white; border-radius: 8px; border: 1px solid rgba(0,0,0,.07); box-shadow: 0 1px 4px rgba(0,0,0,.06); overflow: hidden; margin-bottom: 1.1rem; padding: 0; }
+    .card { background: white; border-radius: 8px; border: 1px solid rgba(0,0,0,.07); box-shadow: 0 1px 4px rgba(0,0,0,.06); overflow: visible; margin-bottom: 1.1rem; padding: 0; }
     .card h2 {
       font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 700;
       color: var(--turf); padding: .9rem 1.2rem; border-bottom: 1px solid var(--cream2);
@@ -106,7 +106,7 @@
     .card-head h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 700; color: var(--turf); }
 
     /* ── AUTH PAGE ── */
-    #page-auth { background: linear-gradient(160deg, var(--ink) 0%, var(--turf) 55%, var(--turf2) 100%); min-height: calc(100vh - 60px); display: flex; align-items: center; justify-content: center; padding: 2rem; }
+    #page-auth.active { background: linear-gradient(160deg, var(--ink) 0%, var(--turf) 55%, var(--turf2) 100%); min-height: calc(100vh - 60px); display: flex !important; align-items: center; justify-content: center; padding: 2rem; }
     #page-auth .card { max-width: 400px; width: 100%; border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,.3); }
     #page-auth .card h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 700; color: var(--turf); text-align: center; border-bottom: 1px solid var(--cream2); padding: 1.5rem; }
     #form-connexion { padding: 1.5rem; }
@@ -116,7 +116,7 @@
       background: white; border: 1.5px solid var(--cream2); border-radius: 4px;
       color: var(--text); padding: .65rem .9rem; font-size: .9rem;
       font-family: 'Outfit', sans-serif;
-      width: 100%; margin-bottom: 0; outline: none; transition: border-color .2s;
+      width: 100%; margin-bottom: .75rem; outline: none; transition: border-color .2s;
     }
     input:focus { border-color: var(--gold); }
     input::placeholder { color: rgba(100,80,50,.4); }
@@ -338,7 +338,7 @@
 <div id="page-auth" class="page active">
   <div class="card" style="max-width:400px;margin:0 auto;">
     <h2>Se connecter</h2>
-    <div id="form-connexion">
+    <div id="form-connexion" style="padding:1.5rem;">
       <label>Adresse email</label>
       <input type="email" id="login-email" placeholder="votre@email.com" />
       <label style="margin-top:.75rem;">Mot de passe</label>
@@ -3634,5 +3634,6 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
 
