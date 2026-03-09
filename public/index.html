@@ -21,10 +21,10 @@
       --or:#c8a84b; --or-clair:#e2c97e; --creme:#f7f2e8; --rouge:#b33a2a;
       --vert:#2d8a55; --brun:#0d1f16;
     }
-    body { font-family:'Outfit',sans-serif; background:var(--cream); color:var(--text); min-height:100vh; }
+    body { font-family:'Outfit',sans-serif; background:var(--cream); color:var(--text); min-height:100vh; overflow-x:hidden; max-width:100vw; }
 
     /* ── HEADER ── */
-    header { background:var(--ink); height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 1.25rem; border-bottom:1px solid rgba(200,168,75,.25); position:sticky; top:0; z-index:200; gap:8px; overflow:hidden; }
+    header { background:var(--ink); height:auto; min-height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 1rem; border-bottom:1px solid rgba(200,168,75,.25); position:sticky; top:0; z-index:200; gap:8px; flex-wrap:wrap; }
     header h1 { font-family:'Cormorant Garamond',serif; font-size:1.25rem; font-weight:700; color:var(--gold); letter-spacing:.05em; white-space:nowrap; cursor:pointer; flex-shrink:0; }
     header h1 em { color:rgba(255,255,255,.35); font-style:normal; font-weight:300; }
     #header-right { display:flex; align-items:center; gap:4px; flex-wrap:nowrap; overflow:hidden; }
@@ -199,14 +199,14 @@
     .role-second { background:rgba(0,0,0,.08); color:var(--muted); }
 
     /* ── ARÈNE PRÉF BTNS ── */
-    .arene-pref-btn { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); color:var(--cream); font-size:.84rem; padding:8px 14px; border-radius:8px; cursor:pointer; transition:all .2s; font-family:'Outfit',sans-serif; }
-    .arene-pref-btn:hover { border-color:rgba(200,168,75,.5); }
-    .arene-pref-btn.actif { background:var(--gold); border-color:var(--gold2); color:var(--ink); font-weight:700; }
+    .arene-pref-btn { background:white; border:1.5px solid var(--cream2); color:var(--text); font-size:.84rem; padding:8px 14px; border-radius:8px; cursor:pointer; transition:all .2s; font-family:'Outfit',sans-serif; }
+    .arene-pref-btn:hover { border-color:var(--gold); background:rgba(200,168,75,.06); }
+    .arene-pref-btn.actif { background:var(--gold); border-color:var(--gold); color:var(--ink); font-weight:700; }
     .arene-match-card { background:white; border:1px solid var(--cream2); border-radius:8px; padding:.85rem 1.05rem; margin-bottom:.6rem; cursor:pointer; transition:all .2s; }
     .arene-match-card:hover { border-color:var(--gold); box-shadow:0 3px 10px rgba(200,168,75,.1); }
     .arene-match-card.mon-match { border-color:var(--gold); background:rgba(200,168,75,.04); }
     .arene-exempt { opacity:.55; font-style:italic; text-align:center; padding:8px; font-size:.84rem; color:var(--muted); }
-    .arene-classement-ligne { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-radius:8px; margin-bottom:4px; background:rgba(0,0,0,.03); }
+    .arene-classement-ligne { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-radius:8px; margin-bottom:4px; background:rgba(0,0,0,.03); color:var(--text); }
     .arene-classement-ligne.moi { outline:2px solid var(--gold); background:rgba(200,168,75,.07); }
     .arene-palmares-mois { background:rgba(200,168,75,.05); border:1px solid rgba(200,168,75,.18); border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-size:.85rem; }
 
@@ -296,13 +296,24 @@
       .home-col { min-width:100%; }
       .hero-title { font-size:1.5rem; }
       .score-manches { font-size:2.4rem; }
+      .score-display { gap:1.2rem; }
       .stats-row { display:none; }
-      .container, .page-inner { padding:1.1rem 1rem; }
-      .hero-band { padding:1.25rem 1rem; }
-      .score-band { padding:1.1rem 1rem; }
+      .container, .page-inner { padding:.9rem .85rem; }
+      .hero-band { padding:1.1rem .85rem; }
+      .score-band { padding:1rem .85rem; }
+      .card-head, .card-body { padding:.75rem .85rem; }
+      header { padding:4px 10px; min-height:44px; gap:4px; }
       header h1 em { display:none; }
-      #header-nav .btn-nav { padding:.28rem .5rem!important; font-size:.7rem!important; }
+      #header-right { gap:2px; flex-shrink:0; }
+      #header-nav { gap:1px; }
+      #header-nav .btn-nav { padding:.22rem .38rem!important; font-size:.66rem!important; letter-spacing:0!important; }
+      #header-user { display:none; }
+      body { padding-top:0; overflow-x:hidden; }
       .chevaux-grid { grid-template-columns:repeat(3,1fr)!important; }
+      .match-card { padding:.75rem .85rem; }
+      .admin-band { padding:.5rem .85rem; gap:.4rem; }
+      .admin-band .btn-sm { font-size:.65rem!important; padding:.2rem .5rem!important; }
+      table th, table td { padding:.5rem .6rem; font-size:.78rem; }
     }
   </style>
 </head>
@@ -659,7 +670,7 @@
       </div>
       <p id="arene-gen-log" class="text-sm" style="opacity:.7;margin-top:4px;"></p>
       <hr class="separator" style="margin-top:12px;"/>
-      <h3 style="color:var(--or-clair);margin:8px 0;">Gestion mensuelle</h3>
+      <h3 style="color:var(--turf);margin:8px 0;">Gestion mensuelle</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-gris btn-sm" onclick="_cloturerJourneeDepuisAdmin()">📋 Attribuer points exempts</button>
         <button class="btn btn-gris btn-sm" onclick="archiverMoisArene()">🗄 Archiver mois précédent</button>
@@ -1610,13 +1621,26 @@ async function chargerAccueil() {
   derniers.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const discIcon = d => d==='TROT'?'🔵 ':d==='GALOP'?'🟡 ':'';
   document.getElementById('home-derniers-matchs').innerHTML = derniers.length
-    ? derniers.slice(0,10).map(m=>`
-      <div class="match-historique" style="padding:8px 10px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.05);font-size:.85rem;cursor:pointer;" onclick="ouvrirMatch('${m.id}')">
-        <strong>${m.j1?.nom||'?'} vs ${m.j2?.nom||'?'}</strong>
-        <span style="float:right;color:var(--or-clair);">🏆 ${m.vainqueur==='j1'?m.j1?.nom:m.vainqueur==='j2'?m.j2?.nom:'Nul'}</span>
-        <div class="text-sm" style="margin-top:2px;">${discIcon(m.reunion?.discipline)}${fPmuDate(m.reunion?.pmuDate)} · ${m.reunion?.hippodrome||''} · ${m.manchesJ1||0}-${m.manchesJ2||0} manches</div>
-      </div>`).join('')
-    : '<p class="text-sm">Aucun match terminé encore.</p>';
+    ? derniers.slice(0,10).map(m=>{
+        const vNom = m.vainqueur==='j1'?m.j1?.nom:m.vainqueur==='j2'?m.j2?.nom:'Nul';
+        const cs = m.courses||[];
+        const p1 = cs.reduce((s,co)=>s+(co.pointsJ1||0),0);
+        const p2 = cs.reduce((s,co)=>s+(co.pointsJ2||0),0);
+        const areneTag = m.arene ? '<span class="badge badge-gold" style="margin-left:.3rem;">⚔️</span>' : '';
+        return `<div class="match-card" style="margin-bottom:.5rem;" onclick="ouvrirMatch('${m.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.4rem;flex-wrap:wrap;">
+            <div>
+              <div class="match-vs">${m.j1?.nom||'?'} vs ${m.j2?.nom||'?'}${areneTag}</div>
+              <div class="match-meta">${discIcon(m.reunion?.discipline)}${m.reunion?.hippodrome||''} · ${fPmuDate(m.reunion?.pmuDate)}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <span class="badge badge-gold">🏆 ${vNom}</span>
+              <div style="font-size:.72rem;color:var(--muted);margin-top:.2rem;">${m.manchesJ1||0} (${p1}pts) — ${m.manchesJ2||0} (${p2}pts)</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')
+    : '<p class="text-sm" style="padding:.5rem;">Aucun match terminé encore.</p>';
 
   // Réunions à venir
   chargerReunionsAvenir();
@@ -1887,8 +1911,17 @@ function chargerTableauBord() {
           const cardCls = isVictoire?'victoire':isNul?'nul':'defaite';
           const badgeCls = isVictoire?'badge-green':isNul?'badge-gold':'badge-red';
           const badgeTxt = isVictoire?`✅ ${mM}–${mA}`:`${isNul?'🤝':'❌'} ${mM}–${mA}`;
-          const eloDelta = m['eloGain_'+monRole];
-          const eloTxt = eloDelta!=null ? (eloDelta>0?`+${eloDelta}`:eloDelta)+' ELO' : '';
+          // eloGain stocké depuis v11 ; pour les anciens matchs, déduire depuis eloSnapshot
+          let eloDelta = m['eloGain_'+monRole];
+          if(eloDelta==null && m.eloSnapshot) {
+            const myUid = monRole==='j1' ? m.uidJ1 : m.uidJ2;
+            const snap = m.eloSnapshot?.[myUid];
+            if(snap?.eloBefore?.general != null) {
+              // On ne connaît pas le nouvel ELO ici — on affiche rien pour les anciens
+              eloDelta = null;
+            }
+          }
+          const eloTxt = eloDelta!=null ? (eloDelta>0?`+${eloDelta}`:String(eloDelta))+' ELO' : '';
           const areneTag = m.arene ? '<span class="badge badge-gold" style="margin-left:.3rem;">⚔️</span>' : '';
           return `<div class="match-card ${cardCls}" onclick="ouvrirMatch('${m.id}')">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.3rem;">
@@ -2422,7 +2455,7 @@ async function adminCreerJoueur() {
           stats:{matchsJoues:0,victoires:0,defaites:0,egalites:0}, statut:'absent'
         });
         resultEl.innerHTML=`<div style="padding:14px;background:rgba(255,204,0,.15);border:1px solid var(--or);border-radius:8px;">
-          <p style="font-weight:bold;color:var(--or-clair);margin-bottom:8px;">✅ Profil récupéré pour ${prenom}</p>
+          <p style="font-weight:bold;color:var(--turf);margin-bottom:8px;">✅ Profil récupéré pour ${prenom}</p>
           <p class="text-sm">Email : <strong>${email}</strong> — Mot de passe inchangé</p>
         </div>`;
         chargerAdmin(); return;
@@ -2439,10 +2472,10 @@ async function adminCreerJoueur() {
       elo:{general:1200, trot:1200, galop:1200}
     });
     resultEl.innerHTML = `<div style="padding:14px;background:rgba(255,204,0,.15);border:1px solid var(--or);border-radius:8px;">
-      <p style="font-weight:bold;color:var(--or-clair);margin-bottom:8px;">✅ Compte créé pour ${prenom}</p>
+      <p style="font-weight:bold;color:var(--turf);margin-bottom:8px;">✅ Compte créé pour ${prenom}</p>
       <p class="text-sm" style="margin-bottom:4px;">Email : <strong>${email}</strong></p>
       <p class="text-sm" style="margin-bottom:12px;">Mot de passe temporaire :</p>
-      <div style="background:#111;border:2px solid var(--or);border-radius:8px;padding:12px;text-align:center;font-size:1.4rem;font-family:monospace;letter-spacing:4px;color:var(--or-clair);">${mdp}</div>
+      <div style="background:#111;border:2px solid var(--or);border-radius:8px;padding:12px;text-align:center;font-size:1.4rem;font-family:monospace;letter-spacing:4px;color:var(--turf);">${mdp}</div>
       <p class="text-sm" style="margin-top:8px;color:rgba(255,248,232,.5);">Communiquez ces identifiants au joueur. Il pourra changer son mot de passe dans son profil.</p>
     </div>`;
     document.getElementById('admin-new-prenom').value='';
@@ -3355,7 +3388,9 @@ async function cloturerMatch(matchId) {
   if(uidJ2) eloSnapshot[uidJ2] = {eloBefore: eloJ2Raw||{general:1200,trot:1200,galop:1200}, statsBefore: statsJ2Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}};
 
   // ── Appliquer ──
-  await db.ref('matchs/'+matchId).update({statut:'termine', vainqueur, manchesJ1:m1, manchesJ2:m2, eloSnapshot});
+  const eloGain_j1 = uidJ1 ? deltaJ1gen : 0;
+  const eloGain_j2 = uidJ2 ? deltaJ2gen : 0;
+  await db.ref('matchs/'+matchId).update({statut:'termine', vainqueur, manchesJ1:m1, manchesJ2:m2, eloSnapshot, eloGain_j1, eloGain_j2});
   if(uidJ1 && newStatsJ1) { await db.ref('utilisateurs/'+uidJ1+'/stats').set(newStatsJ1); await db.ref('utilisateurs/'+uidJ1+'/elo').set(newEloJ1); await db.ref('utilisateurs/'+uidJ1+'/statut').set('disponible'); }
   if(uidJ2 && newStatsJ2) { await db.ref('utilisateurs/'+uidJ2+'/stats').set(newStatsJ2); await db.ref('utilisateurs/'+uidJ2+'/elo').set(newEloJ2); await db.ref('utilisateurs/'+uidJ2+'/statut').set('disponible'); }
   await viderChatMatch(matchId);
@@ -3738,7 +3773,7 @@ function rendreResultatsCourse(c,data) {
       <div style="flex:1;min-width:160px;"><p class="text-sm" style="margin-bottom:6px;">🏅 ${jN('j2')}${mainR==='j2'?' ⭐':''} ${c.mancheGagnant==='j2'?'✅':''}</p>${rC('j2')}
         <p class="text-or" style="text-align:right;margin-top:4px;font-size:.85rem;">Total: ${fScore(c.pointsJ2)}</p></div>
     </div>
-    <p style="text-align:center;margin-top:10px;font-weight:bold;color:var(--or-clair);">
+    <p style="text-align:center;margin-top:10px;font-weight:bold;color:var(--turf);">
       ${c.mancheGagnant==='egal'?'🤝 Égalité':'🏆 Manche : '+jN(c.mancheGagnant)}</p>
     <p class="text-sm" style="text-align:center;margin-top:6px;">🏁 ${arr.slice(0,3).map((n,i)=>`${i+1}. N°${n} ${gN(n)}`).join(' · ')}</p>`;
 }
@@ -3753,7 +3788,7 @@ function rendreFin(data) {
     <td style="padding:6px;text-align:center;">${c.pointsJ1||0} pts</td>
     <td style="padding:6px;text-align:center;">${c.pointsJ2||0} pts</td>
     <td style="padding:6px;text-align:center;">${c.mancheGagnant==='j1'?'✅ '+j1:c.mancheGagnant==='j2'?'✅ '+j2:'🤝'}</td></tr>`;});
-  t+=`<tr style="font-weight:bold;color:var(--or-clair);"><td style="padding:6px;">Total manches</td><td style="padding:6px;text-align:center;">${data.manchesJ1||0} <span style="font-size:.78rem;font-weight:normal;opacity:.7;">(${cs.reduce((s,co)=>s+(co.pointsJ1||0),0)} pts)</span></td><td style="padding:6px;text-align:center;">${data.manchesJ2||0} <span style="font-size:.78rem;font-weight:normal;opacity:.7;">(${cs.reduce((s,co)=>s+(co.pointsJ2||0),0)} pts)</span></td><td></td></tr></table>`;
+  t+=`<tr style="font-weight:bold;color:var(--turf);"><td style="padding:6px;">Total manches</td><td style="padding:6px;text-align:center;">${data.manchesJ1||0} <span style="font-size:.78rem;font-weight:normal;opacity:.7;">(${cs.reduce((s,co)=>s+(co.pointsJ1||0),0)} pts)</span></td><td style="padding:6px;text-align:center;">${data.manchesJ2||0} <span style="font-size:.78rem;font-weight:normal;opacity:.7;">(${cs.reduce((s,co)=>s+(co.pointsJ2||0),0)} pts)</span></td><td></td></tr></table>`;
   // Détail des courses (toggle)
   const detailId = 'fin-detail-courses';
   const detailHtml = cs.map((co,i)=>{
@@ -3764,7 +3799,7 @@ function rendreFin(data) {
 
   document.getElementById('fin-contenu').innerHTML=`
     <div style="font-size:3rem;margin-bottom:12px;">${v==='egal'?'🤝':'🏆'}</div>
-    <h3 style="font-size:1.5rem;color:var(--or-clair);">${v==='egal'?'Match nul !':(v==='j1'?j1:j2)+' remporte le match !'}</h3>${t}
+    <h3 style="font-size:1.5rem;color:var(--turf);font-family:'Cormorant Garamond',serif;">${v==='egal'?'Match nul !':(v==='j1'?j1:j2)+' remporte le match !'}</h3>${t}
     <div style="margin-top:16px;">
       <button class="btn btn-gris" onclick="const d=this.nextElementSibling;d.style.display=d.style.display===\`none\`?\`block\`:\`none\`;this.textContent=d.style.display===\`none\`?\`📋 Voir le détail des courses\`:\`📋 Masquer le détail\`;">📋 Voir le détail des courses</button>
       <div id="${detailId}" style="display:none;margin-top:16px;">${detailHtml}</div>
