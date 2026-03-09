@@ -1660,7 +1660,8 @@ async function chargerAccueil() {
             </div>
             <div style="text-align:right;flex-shrink:0;">
               <span class="badge badge-gold">🏆 ${vNom}</span>
-              <div style="font-size:.72rem;color:var(--muted);margin-top:.2rem;">${m.manchesJ1||0} (${p1}pts) — ${m.manchesJ2||0} (${p2}pts)</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:700;color:var(--gold);margin-top:.2rem;line-height:1;">${m.manchesJ1||0} – ${m.manchesJ2||0}</div>
+              ${(p1||p2)?'<div style="font-size:.7rem;color:var(--muted);">('+p1+' pts) — ('+p2+' pts)</div>':''}
             </div>
           </div>
         </div>`;
@@ -1897,20 +1898,26 @@ function chargerTableauBord() {
       ? enCoursEnrichis.map(m => {
           const discIcon = m.reunion?.discipline==='TROT'?'🔵':m.reunion?.discipline==='GALOP'?'🟡':'⚪';
           const areneTag = m.arene ? '<span class="badge badge-gold" style="margin-left:.3rem;">⚔️ Arène</span>' : '';
-          const scoreInfo = m.statut==='en_cours'?(()=>{
+          const advNom = m.j2?.nom || (m._nomInvite ? '⏳ '+m._nomInvite : 'En attente…');
+          let scoreBloc = '';
+          if(m.statut==='en_cours') {
             const cs=m.courses||[];
             const p1=cs.reduce((s,c)=>s+(c.pointsJ1||0),0);
             const p2=cs.reduce((s,c)=>s+(c.pointsJ2||0),0);
-            return `<span class="badge badge-gold" style="margin-left:auto;">${m.manchesJ1||0}M (${p1}pts) – ${m.manchesJ2||0}M (${p2}pts)</span>`;
-          })():`<span class="badge badge-${m.statut==='pret_cloture'?'red':'gray'}">${m.statut==='pret_cloture'?'Fin':m.statut==='pret'?'Prêt':'Attente'}</span>`;
-          const advNom = m.j2?.nom || (m._nomInvite ? '⏳ '+m._nomInvite : 'En attente…');
+            scoreBloc = '<div style="text-align:right;flex-shrink:0;">'+
+              '<div class="score-pts-val" style="font-size:1.3rem;margin-top:.2rem;line-height:1;">'+(m.manchesJ1||0)+' – '+(m.manchesJ2||0)+'</div>'+
+              '<div style="font-size:.7rem;color:var(--muted);margin-top:.15rem;">('+p1+' pts) — ('+p2+' pts)</div>'+
+              '</div>';
+          } else {
+            scoreBloc = '<span class="badge badge-'+(m.statut==='pret_cloture'?'red':'gray')+'">'+(m.statut==='pret_cloture'?'Fin':m.statut==='pret'?'Prêt':'Attente')+'</span>';
+          }
           return `<div class="match-card en-cours" onclick="ouvrirMatch('${m.id}')">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.3rem;">
               <div>
                 <div class="match-vs">vs ${advNom}${areneTag}</div>
                 <div class="match-meta">${discIcon} ${m.reunion?.hippodrome||'Non configuré'} · ${fPmuDate(m.reunion?.pmuDate)}</div>
               </div>
-              ${scoreInfo}
+              ${scoreBloc}
             </div>
             <button type="button" class="btn btn-gris btn-sm" style="position:absolute;top:.6rem;right:.6rem;" onclick="event.stopPropagation();supprimerMatch('${m.id}')">🗑</button>
           </div>`;
@@ -1936,33 +1943,32 @@ function chargerTableauBord() {
           const cardCls = isVictoire?'victoire':isNul?'nul':'defaite';
           const badgeCls = isVictoire?'badge-green':isNul?'badge-gold':'badge-red';
           const badgeTxt = isVictoire?`✅ ${mM}–${mA}`:`${isNul?'🤝':'❌'} ${mM}–${mA}`;
-          // eloGain stocké depuis v11 ; pour les anciens matchs, déduire depuis eloSnapshot
+          // eloGain stocké depuis v12+ ; sinon calculer depuis eloSnapshot.eloAfter-eloBefore
           let eloDelta = m['eloGain_'+monRole];
           if(eloDelta==null && m.eloSnapshot) {
             const myUid = monRole==='j1' ? m.uidJ1 : m.uidJ2;
             const snap = m.eloSnapshot?.[myUid];
-            if(snap?.eloBefore?.general != null) {
-              // On ne connaît pas le nouvel ELO ici — on affiche rien pour les anciens
-              eloDelta = null;
+            if(snap?.eloAfter?.general != null && snap?.eloBefore?.general != null) {
+              eloDelta = snap.eloAfter.general - snap.eloBefore.general;
             }
           }
-          const eloTxt = eloDelta!=null ? (eloDelta>0?`+${eloDelta}`:String(eloDelta))+' ELO' : '';
+          const eloTxt = eloDelta!=null ? (eloDelta>0?'+'+eloDelta:String(eloDelta))+' ELO' : '';
           const areneTag = m.arene ? '<span class="badge badge-gold" style="margin-left:.3rem;">⚔️</span>' : '';
           const cs2=m.courses||[];
           const p1t=cs2.reduce((s,co)=>s+(co.pointsJ1||0),0);
           const p2t=cs2.reduce((s,co)=>s+(co.pointsJ2||0),0);
           const pm=monRole==='j1'?p1t:p2t, pa=monRole==='j1'?p2t:p1t;
-          const ptsHtml = (pm||pa) ? '<div class="match-meta" style="color:var(--gold);font-weight:600;">('+pm+' pts) — ('+pa+' pts)</div>' : '';
+          const ptsHtml = (pm||pa) ? '<div style="font-size:.7rem;color:var(--gold);font-weight:600;margin-top:.18rem;">('+pm+' pts) — ('+pa+' pts)</div>' : '';
           return `<div class="match-card ${cardCls}" onclick="ouvrirMatch('${m.id}')">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.3rem;">
               <div>
                 <div class="match-vs">vs ${adv}${areneTag}</div>
                 <div class="match-meta">${discIcon}${m.reunion?.hippodrome||'?'} · ${d}</div>
-                ${ptsHtml}
               </div>
               <div style="text-align:right;flex-shrink:0;">
                 <span class="badge ${badgeCls}">${badgeTxt}</span>
-                ${eloTxt?`<div style="font-size:.7rem;color:var(--muted);margin-top:.2rem;">${eloTxt}</div>`:''}
+                ${ptsHtml}
+                ${eloTxt?`<div style="font-size:.7rem;color:var(--muted);margin-top:.1rem;">${eloTxt}</div>`:''}
               </div>
             </div>
           </div>`;
@@ -2299,13 +2305,18 @@ async function chargerReunionsCreation() {
       btn.onclick = () => creerMatchAvecReunion(r, pmuDate, disc);
       container.appendChild(btn);
     });
-    if(!container.children.length) {
+    const nbGardees = container.querySelectorAll('button').length;
+    const nbTotal = reunions.length;
+    if(!nbGardees) {
       container.innerHTML = '<p class="text-sm" style="color:rgba(255,200,100,.8);">Aucune réunion disponible — toutes les réunions démarrent dans moins de 15 min ou sont déjà lancées.</p>';
-    } else if(nbFiltrees > 0) {
-      const note = document.createElement('p');
-      note.className = 'text-sm'; note.style.cssText = 'opacity:.45;margin-top:6px;';
-      note.textContent = `${nbFiltrees} réunion(s) masquée(s) car démarrée(s) ou < 15 min.`;
-      container.appendChild(note);
+    } else {
+      const nbEcartees = nbTotal - nbGardees;
+      if(nbEcartees > 0) {
+        const note = document.createElement('p');
+        note.className = 'text-sm'; note.style.cssText = 'opacity:.45;margin-top:6px;';
+        note.textContent = nbEcartees + ' réunion(s) écartée(s) sur ' + nbTotal + ' (démarrée(s) ou < 15 min).';
+        container.appendChild(note);
+      }
     }
   } catch(e) { container.innerHTML=`<p style="color:var(--rouge);">Erreur : ${e.message}</p>`; }
 }
@@ -3463,8 +3474,8 @@ async function cloturerMatch(matchId) {
 
   // ── Snapshot pour pouvoir annuler si on re-clôture ──
   const eloSnapshot = {};
-  if(uidJ1) eloSnapshot[uidJ1] = {eloBefore: eloJ1Raw||{general:1200,trot:1200,galop:1200}, statsBefore: statsJ1Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}};
-  if(uidJ2) eloSnapshot[uidJ2] = {eloBefore: eloJ2Raw||{general:1200,trot:1200,galop:1200}, statsBefore: statsJ2Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}};
+  if(uidJ1) eloSnapshot[uidJ1] = {eloBefore: eloJ1Raw||{general:1200,trot:1200,galop:1200}, eloAfter: newEloJ1, statsBefore: statsJ1Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}};
+  if(uidJ2) eloSnapshot[uidJ2] = {eloBefore: eloJ2Raw||{general:1200,trot:1200,galop:1200}, eloAfter: newEloJ2, statsBefore: statsJ2Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}};
 
   // ── Appliquer ──
   const eloGain_j1 = uidJ1 ? deltaJ1gen : 0;
@@ -3876,9 +3887,31 @@ function rendreFin(data) {
     return `<div style="margin-bottom:20px;"><h4 style="color:var(--or);margin-bottom:8px;">C${co.numOrdre} — ${co.libelle}</h4>${rendreResultatsCourse(co,data)}</div>`;
   }).join('');
 
+  // ── ELO delta depuis eloGain ou eloSnapshot ──
+  const uidJ1fin = data.uidJ1, uidJ2fin = data.uidJ2;
+  const myRole = etat.joueurId || 'j1';
+  const myUidFin = myRole==='j1' ? uidJ1fin : uidJ2fin;
+  let eloJ1delta = data.eloGain_j1;
+  let eloJ2delta = data.eloGain_j2;
+  if((eloJ1delta==null||eloJ2delta==null) && data.eloSnapshot) {
+    const snapJ1 = data.eloSnapshot?.[uidJ1fin];
+    const snapJ2 = data.eloSnapshot?.[uidJ2fin];
+    if(snapJ1?.eloAfter?.general!=null) eloJ1delta = snapJ1.eloAfter.general - snapJ1.eloBefore.general;
+    if(snapJ2?.eloAfter?.general!=null) eloJ2delta = snapJ2.eloAfter.general - snapJ2.eloBefore.general;
+  }
+  const fEloBadge = (delta, nom) => {
+    if(delta==null) return '';
+    const sign = delta>0?'+':'';
+    const col = delta>0?'var(--green)':delta<0?'var(--red)':'var(--muted)';
+    return '<span style="display:inline-block;background:rgba(0,0,0,.05);border-radius:100px;padding:.18rem .65rem;font-size:.78rem;font-weight:600;color:'+col+';margin:.15rem .2rem;">'+nom+' '+sign+delta+' ELO</span>';
+  };
+  const eloLine = (eloJ1delta!=null||eloJ2delta!=null)
+    ? '<div style="margin-top:.75rem;">'+fEloBadge(eloJ1delta,j1)+fEloBadge(eloJ2delta,j2)+'</div>'
+    : '';
   document.getElementById('fin-contenu').innerHTML=`
     <div style="font-size:3rem;margin-bottom:12px;">${v==='egal'?'🤝':'🏆'}</div>
-    <h3 style="font-size:1.5rem;color:var(--turf);font-family:'Cormorant Garamond',serif;">${v==='egal'?'Match nul !':(v==='j1'?j1:j2)+' remporte le match !'}</h3>${t}
+    <h3 style="font-size:1.5rem;color:var(--turf);font-family:'Cormorant Garamond',serif;">${v==='egal'?'Match nul !':(v==='j1'?j1:j2)+' remporte le match !'}</h3>
+    ${eloLine}${t}
     <div style="margin-top:16px;">
       <button class="btn btn-gris" onclick="const d=this.nextElementSibling;d.style.display=d.style.display===\`none\`?\`block\`:\`none\`;this.textContent=d.style.display===\`none\`?\`📋 Voir le détail des courses\`:\`📋 Masquer le détail\`;">📋 Voir le détail des courses</button>
       <div id="${detailId}" style="display:none;margin-top:16px;">${detailHtml}</div>
@@ -3888,6 +3921,7 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
+
 
 
 
