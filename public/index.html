@@ -100,8 +100,7 @@
       color: var(--turf); padding: .9rem 1.2rem; border-bottom: 1px solid var(--cream2);
       margin-bottom: 0;
     }
-    .card > *:not(h2):not(.card-head) { padding: 1rem 1.2rem; }
-    .card > h2 + * { padding-top: .9rem; }
+    .card > h2 + * { padding: .9rem 1.2rem; }
     .card-head { padding: .9rem 1.2rem; border-bottom: 1px solid var(--cream2); display: flex; justify-content: space-between; align-items: center; }
     .card-head h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 700; color: var(--turf); }
 
@@ -312,6 +311,84 @@
 
     /* ── MISC ── */
     @media (max-width:600px) { .chevaux-grid { grid-template-columns: repeat(3,1fr); } header h1 { font-size: 1rem; } .stats-row { display: none; } #header-nav { gap: 2px; } .btn-nav { padding: .32rem .6rem !important; font-size: .72rem !important; } }
+
+    /* ══ LAYOUT AMÉLIORATIONS EVT ══ */
+
+    /* Score band pleine largeur page match */
+    .match-score-band {
+      background: linear-gradient(135deg, var(--ink) 0%, var(--turf) 100%);
+      padding: 1.1rem 1.5rem; margin-bottom: 1.2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; flex-wrap: wrap; border-radius: 8px;
+    }
+    .match-score-band .joueur-nom { font-family:'Cormorant Garamond',serif; font-size:1.1rem; color:white; font-weight:600; }
+    .match-score-band .score-num  { font-family:'Cormorant Garamond',serif; font-size:2.2rem; font-weight:700; color:var(--gold); line-height:1; }
+    .match-score-band .score-sep  { color:rgba(255,255,255,.25); font-size:1.4rem; }
+    .match-score-band .manche-lbl { font-size:.7rem; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.1em; }
+
+    /* Card-head séparé */
+    .card-head { padding:.85rem 1.2rem; border-bottom:1px solid var(--cream2); display:flex; justify-content:space-between; align-items:center; }
+    .card-head h3 { font-family:'Cormorant Garamond',serif; font-size:1.05rem; font-weight:700; color:var(--turf); }
+    .card-body { padding:.9rem 1.2rem; }
+
+    /* 2 colonnes arène */
+    .arene-cols { display:flex; gap:1.25rem; flex-wrap:wrap; }
+    .arene-col-left  { flex:1; min-width:280px; }
+    .arene-col-right { flex:1; min-width:280px; }
+
+    /* Stats perso en grille */
+    .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem; margin-bottom:.8rem; }
+    .stats-grid-elo { display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem; }
+    .stat-box { background:var(--cream); border:1px solid var(--cream2); border-radius:6px; padding:.7rem .5rem; text-align:center; }
+    .stat-box-val { font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:700; color:var(--turf); }
+    .stat-box-lbl { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-top:.15rem; }
+    .stat-box.elo-box { background:rgba(200,168,75,.06); border-color:rgba(200,168,75,.2); }
+    .stat-box.elo-box .stat-box-val { color:var(--gold); }
+
+    /* Table chevaux EVT */
+    .chevaux-table thead { position:sticky; top:0; z-index:1; }
+    .chevaux-table tr.selectionne td { color:var(--turf); font-weight:600; }
+
+    /* Réunions à venir — style card-row */
+    .reunion-row { display:flex; align-items:center; justify-content:space-between; padding:.6rem 1.2rem; border-bottom:1px solid var(--cream2); font-size:.86rem; gap:.5rem; flex-wrap:wrap; }
+    .reunion-row:last-child { border-bottom:none; }
+    .reunion-row:hover { background:rgba(200,168,75,.03); }
+    .reunion-hippo { font-weight:600; color:var(--turf); }
+    .reunion-meta  { font-size:.75rem; color:var(--muted); }
+    .reunion-disc  { font-size:.72rem; padding:.15rem .5rem; border-radius:100px; font-weight:600; }
+    .disc-trot  { background:rgba(50,120,255,.1); color:#2a6abf; }
+    .disc-galop { background:rgba(200,168,75,.15); color:#8a6a20; }
+    .disc-mixte { background:rgba(100,180,100,.1); color:var(--green); }
+
+    /* Derniers matchs — style ligne propre */
+    .match-history-row { display:flex; align-items:center; gap:.75rem; padding:.65rem 1.2rem; border-bottom:1px solid var(--cream2); font-size:.85rem; cursor:pointer; transition:background .12s; }
+    .match-history-row:last-child { border-bottom:none; }
+    .match-history-row:hover { background:rgba(200,168,75,.04); }
+    .mhr-badge { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.8rem; flex-shrink:0; }
+    .mhr-badge.v { background:rgba(45,138,85,.12); color:var(--green); }
+    .mhr-badge.d { background:rgba(179,58,42,.1); color:var(--red); }
+    .mhr-badge.n { background:rgba(200,168,75,.12); color:#8a6a20; }
+
+    /* Profil — stat boxes */
+    .profil-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:.7rem; margin:.9rem 1.2rem; }
+
+    /* Règlement — headers */
+    #page-reglement h3 { font-family:'Cormorant Garamond',serif; font-size:1.1rem; font-weight:700; color:var(--turf); margin:1.2rem 0 .45rem; }
+    #page-reglement p, #page-reglement li { color:var(--text); line-height:1.7; font-size:.9rem; }
+    #page-reglement ul { padding-left:1.2rem; }
+
+    /* Nav active indicator */
+    .btn-nav.active::after { content:''; display:block; height:2px; background:var(--gold); border-radius:2px; margin-top:1px; }
+
+    /* Page-inner max-width cohérent */
+    .page-inner { max-width:1060px; margin:0 auto; padding:1.8rem 1.5rem; }
+
+    @media(max-width:700px) {
+      .match-score-band { padding:.8rem 1rem; }
+      .match-score-band .score-num { font-size:1.7rem; }
+      .stats-grid, .stats-grid-elo { grid-template-columns:repeat(3,1fr); }
+      .page-inner { padding:1.2rem 1rem; }
+    }
   </style>
 </head>
 <body>
@@ -375,38 +452,45 @@
         <button type="button" class="btn btn-or" style="margin-top:12px;width:100%;" onclick="navMatchs()">🎮 Jouer maintenant</button>
       </div>
       <div class="card">
-        <h2>📊 Mes statistiques</h2>
-        <div id="home-stats-perso"><p class="text-sm">Chargement…</p></div>
+        <div class="card-head"><h3>📊 Mes statistiques</h3></div>
+        <div class="card-body" id="home-stats-perso"><p class="text-sm">Chargement…</p></div>
       </div>
       <div class="card">
-        <h2>📅 Réunions à venir <span style="font-size:.75rem;font-weight:normal;color:rgba(255,248,232,.5);">7 jours · France</span></h2>
-        <div id="home-reunions-avenir"><p class="text-sm"><span class="spinner"></span> Chargement…</p></div>
+        <div class="card-head">
+          <h3>📅 Réunions à venir</h3>
+          <span style="font-size:.72rem;color:var(--muted);">7 jours · France</span>
+        </div>
+        <div id="home-reunions-avenir"><p class="text-sm" style="padding:1rem 1.2rem;"><span class="spinner"></span> Chargement…</p></div>
       </div>
     </div>
 
     <!-- Classement + Derniers matchs -->
     <div class="home-col">
       <div class="card">
-        <h2>🏆 Classement <span class="elo-tooltip-trigger">ELO<span class="elo-tooltip">Le classement ELO mesure le niveau de chaque joueur.<br><br>• Départ à <strong>1200 pts</strong> pour tous<br>• Gagner contre un adversaire fort = beaucoup de points<br>• Gagner contre un adversaire faible = peu de points<br>• Perdre contre plus fort = peu de points perdus<br>• Perdre contre plus faible = beaucoup de points perdus<br><br>Coefficient K = 32 · Calculs séparés Trot / Galop</span></span></h2>
-        <div style="display:flex;gap:4px;margin-bottom:10px;">
-          <button class="tab active" id="tab-elo-gen" onclick="switchClassement('general')">Général</button>
-          <button class="tab" id="tab-elo-trot" onclick="switchClassement('trot')">🔵 Trot</button>
-          <button class="tab" id="tab-elo-galop" onclick="switchClassement('galop')">🟡 Galop</button>
+        <div class="card-head">
+          <h3>🏆 Classement <span class="elo-tooltip-trigger">ELO<span class="elo-tooltip">Le classement ELO mesure le niveau de chaque joueur.<br><br>• Départ à <strong>1200 pts</strong> pour tous<br>• Gagner contre un adversaire fort = beaucoup de points<br>• Gagner contre un adversaire faible = peu de points<br>• Perdre contre plus fort = peu de points perdus<br>• Perdre contre plus faible = beaucoup de points perdus<br><br>Coefficient K = 32 · Calculs séparés Trot / Galop</span></span></h3>
         </div>
-        <div id="home-classement"><p class="text-sm">Chargement…</p></div>
-        <div id="home-classement-suite" style="display:none;"></div>
-        <button id="btn-voir-tout" type="button" class="btn btn-gris btn-sm" style="width:100%;margin-top:8px;display:none;" onclick="toggleClassementComplet()">▼ Voir le classement complet</button>
+        <div class="card-body">
+          <div class="tabs">
+            <button class="tab active" id="tab-elo-gen" onclick="switchClassement('general')">Général</button>
+            <button class="tab" id="tab-elo-trot" onclick="switchClassement('trot')">🔵 Trot</button>
+            <button class="tab" id="tab-elo-galop" onclick="switchClassement('galop')">🟡 Galop</button>
+          </div>
+          <div id="home-classement"><p class="text-sm">Chargement…</p></div>
+          <div id="home-classement-suite" style="display:none;"></div>
+          <button id="btn-voir-tout" type="button" class="btn btn-gris btn-sm" style="width:100%;margin-top:8px;display:none;" onclick="toggleClassementComplet()">▼ Voir le classement complet</button>
+        </div>
       </div>
       <div class="card">
-        <h2>🕒 Derniers matchs</h2>
-        <div id="home-derniers-matchs"><p class="text-sm">Chargement…</p></div>
+        <div class="card-head"><h3>🕒 Derniers matchs</h3></div>
+        <div id="home-derniers-matchs"><p class="text-sm" style="padding:1rem 1.2rem;">Chargement…</p></div>
       </div>
     </div>
 
     <!-- Chat accueil -->
     <div style="flex:1;min-width:260px;">
       <div class="card" style="padding-bottom:0;">
-        <h2>💬 Chat général</h2>
+        <div class="card-head"><h3>💬 Chat général</h3></div>
         <div class="chat-box">
           <div class="chat-messages" id="chat-accueil-messages"></div>
           <div class="chat-input-zone">
@@ -546,17 +630,42 @@
     <button type="button" class="btn-back" onclick="navAccueil()">← Accueil</button>
     <h2 id="match-titre">Match en cours</h2>
   </div>
-  <div id="bandeau-attente-adv" style="display:none;background:rgba(255,160,0,.12);border:1px solid rgba(255,160,0,.35);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:.85rem;color:rgba(255,235,170,.9);"></div>
-  <div id="admin-match-banner" style="display:none;background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.4);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.85rem;"></div>
-  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
-    <div style="flex:0 0 260px;">
-      <div class="card"><h2>📊 Scores</h2><div id="scores-display"></div></div>
-      <div class="card"><h2 id="titre-programme">🏁 Programme</h2><div id="liste-courses"></div></div>
+  <!-- Score band pleine largeur -->
+  <div class="match-score-band" id="match-score-band" style="display:none;">
+    <div style="text-align:left;">
+      <div class="manche-lbl">Joueur</div>
+      <div class="joueur-nom" id="msb-j1">—</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="display:flex;align-items:center;gap:.7rem;">
+        <span class="score-num" id="msb-pts1">0</span>
+        <span class="score-sep">·</span>
+        <span class="score-num" id="msb-pts2">0</span>
+      </div>
+      <div class="manche-lbl" id="msb-manches">0 – 0 manches</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="manche-lbl">Adversaire</div>
+      <div class="joueur-nom" id="msb-j2">—</div>
+    </div>
+  </div>
+  <div id="bandeau-attente-adv" style="display:none;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.3);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:.85rem;color:var(--turf);"></div>
+  <div id="admin-match-banner" style="display:none;background:rgba(200,168,75,.07);border:1px solid rgba(200,168,75,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.85rem;"></div>
+  <div style="display:flex;gap:1.25rem;flex-wrap:wrap;margin-bottom:1rem;">
+    <div style="flex:0 0 250px;">
+      <div class="card">
+        <div class="card-head"><h3>📊 Scores</h3></div>
+        <div class="card-body" id="scores-display"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3 id="titre-programme">🏁 Programme</h3></div>
+        <div id="liste-courses"></div>
+      </div>
     </div>
     <div style="flex:1;min-width:280px;">
       <div id="zone-jeu"></div>
-      <div class="card" style="margin-top:0;padding-bottom:0;">
-        <h2>💬 Chat du match</h2>
+      <div class="card" style="padding-bottom:0;">
+        <div class="card-head"><h3>💬 Chat</h3></div>
         <div class="chat-box">
           <div class="chat-messages" id="chat-match-messages"></div>
           <div class="chat-input-zone">
@@ -577,7 +686,7 @@
   <div class="page-inner">
   <div style="max-width:800px;margin:0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
-      <h2 style="color:var(--or-clair);font-size:1.2rem;">⚙️ Administration</h2>
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:var(--turf);">⚙️ Administration</h2>
       <button type="button" class="btn btn-gris btn-sm" onclick="showPage('accueil')">← Retour</button>
     </div>
 
@@ -693,18 +802,23 @@
 <div id="page-profil" class="page">
   <div class="hero-band"><div class="hero-inner"><h1 class="hero-title">👤 <span>Mon profil</span></h1></div></div>
   <div class="page-inner">
-  <div class="card" style="max-width:480px;margin:0 auto;">
-    <h2>👤 Mon profil</h2>
-    <div id="profil-info" style="margin-bottom:20px;"></div>
-    <hr class="separator" />
-    <h2 style="margin-top:4px;">🔑 Changer mon mot de passe</h2>
-    <label>Mot de passe actuel</label>
-    <input type="password" id="profil-mdp-actuel" placeholder="••••••••" />
-    <label>Nouveau mot de passe</label>
-    <input type="password" id="profil-mdp-new" placeholder="Minimum 6 caractères" />
-    <label>Confirmer</label>
-    <input type="password" id="profil-mdp-confirm" placeholder="••••••••" />
-    <button type="button" class="btn btn-nav" style="width:100%;margin-top:8px;" onclick="changerMotDePasse()">Modifier le mot de passe</button>
+  <div style="max-width:540px;margin:0 auto;">
+    <div class="card">
+      <div class="card-head"><h3>👤 Mon profil</h3></div>
+      <div class="card-body" id="profil-info"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>🔑 Changer mon mot de passe</h3></div>
+      <div class="card-body">
+        <label>Mot de passe actuel</label>
+        <input type="password" id="profil-mdp-actuel" placeholder="••••••••" />
+        <label>Nouveau mot de passe</label>
+        <input type="password" id="profil-mdp-new" placeholder="Minimum 6 caractères" />
+        <label>Confirmer</label>
+        <input type="password" id="profil-mdp-confirm" placeholder="••••••••" />
+        <button type="button" class="btn btn-or" style="width:100%;margin-top:1rem;" onclick="changerMotDePasse()">Modifier le mot de passe</button>
+      </div>
+    </div>
   </div>
 
 </div></div>
@@ -713,49 +827,64 @@
 <div id="page-arene" class="page">
   <div class="hero-band"><div class="hero-inner"><h1 class="hero-title">⚔️ <span>Arène</span></h1><div class="hero-sub">Tirage quotidien · Réunions les mieux dotées</div></div></div>
   <div class="page-inner">
-  <div style="max-width:640px;margin:0 auto;">
-    <div class="card">
-      <h2>⚔️ Arène</h2>
-      <p class="text-sm" style="margin-bottom:14px;opacity:.7;">Choisissez votre type de participation. Vos choix seront pris en compte lors du prochain tirage au sort.</p>
-      <div id="arene-prefs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
-        <button type="button" class="btn arene-pref-btn" id="arene-pref-trot" onclick="setArenePreference('trot')">🔵 Trot uniquement</button>
-        <button type="button" class="btn arene-pref-btn" id="arene-pref-galop" onclick="setArenePreference('galop')">🟡 Galop uniquement</button>
-        <button type="button" class="btn arene-pref-btn" id="arene-pref-both" onclick="setArenePreference('both')">⚡ Trot + Galop (2 matchs)</button>
-        <button type="button" class="btn arene-pref-btn" id="arene-pref-none" onclick="setArenePreference('none')">⛔ Ne pas participer</button>
+  <div class="arene-cols">
+
+    <!-- Colonne gauche : préfs + matchs -->
+    <div class="arene-col-left">
+      <div class="card">
+        <div class="card-head"><h3>⚔️ Ma participation</h3></div>
+        <div class="card-body">
+          <p class="text-sm" style="margin-bottom:.9rem;color:var(--muted);">Choisissez votre type de participation. Pris en compte lors du prochain tirage.</p>
+          <div id="arene-prefs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <button type="button" class="btn arene-pref-btn" id="arene-pref-trot" onclick="setArenePreference('trot')">🔵 Trot</button>
+            <button type="button" class="btn arene-pref-btn" id="arene-pref-galop" onclick="setArenePreference('galop')">🟡 Galop</button>
+            <button type="button" class="btn arene-pref-btn" id="arene-pref-both" onclick="setArenePreference('both')">⚡ Trot + Galop</button>
+            <button type="button" class="btn arene-pref-btn" id="arene-pref-none" onclick="setArenePreference('none')">⛔ Ne pas participer</button>
+          </div>
+          <p id="arene-pref-status" class="text-sm" style="color:var(--gold);"></p>
+          <p class="text-sm" style="color:var(--muted);margin-top:.5rem;font-style:italic;font-size:.76rem;">Les changements sont effectifs sur les tirages à venir.</p>
+        </div>
       </div>
-      <p id="arene-pref-status" class="text-sm" style="margin-top:8px;color:var(--or);"></p>
-      <p class="text-sm" style="opacity:.45;margin-top:4px;font-style:italic;">Les changements sont effectifs sur les tirages à venir, pas sur le jour même.</p>
-      <p class="text-sm" style="opacity:.55;margin-top:8px;">🏆 Chaque jour, la réunion retenue par discipline est celle dont la somme des allocations est la plus élevée — garantissant les courses les mieux dotées.</p>
-    </div>
-    <div class="card">
-      <h2 id="arene-matchs-titre">🗓 Matchs du jour</h2>
-      <div id="arene-matchs-liste"><p class="text-sm">Aucun tirage généré pour aujourd'hui.</p></div>
-    </div>
-
-    <!-- Classement mensuel Arène -->
-    <div class="card">
-      <h2>🏅 Classement Arène — <span id="arene-classement-mois-label">ce mois</span></h2>
-      <p class="text-sm" style="opacity:.6;margin-bottom:10px;">2 pts par victoire · 1 pt si exempté · Départage : manches puis points totaux</p>
-      <div id="arene-classement-mensuel"><p class="text-sm">Chargement…</p></div>
-    </div>
-
-    <!-- Bloc ELO -->
-    <div class="card">
-      <h2>🏆 Classement <span class="elo-tooltip-trigger">ELO<span class="elo-tooltip">Le classement ELO mesure le niveau de chaque joueur.<br><br>• Départ à <strong>1200 pts</strong> pour tous<br>• Gagner contre un adversaire fort = beaucoup de points<br>• Gagner contre un adversaire faible = peu de points<br>• Perdre contre plus fort = peu de points perdus<br>• Perdre contre plus faible = beaucoup de points perdus<br><br>Coefficient K = 32 · Calculs séparés Trot / Galop</span></span></h2>
-      <div style="display:flex;gap:4px;margin-bottom:10px;">
-        <button class="tab active" id="arene-tab-elo-gen" onclick="switchAreneElo('general')">Général</button>
-        <button class="tab" id="arene-tab-elo-trot" onclick="switchAreneElo('trot')">🔵 Trot</button>
-        <button class="tab" id="arene-tab-elo-galop" onclick="switchAreneElo('galop')">🟡 Galop</button>
+      <div class="card">
+        <div class="card-head">
+          <h3 id="arene-matchs-titre">🗓 Matchs du jour</h3>
+        </div>
+        <div class="card-body" id="arene-matchs-liste"><p class="text-sm">Aucun tirage généré pour aujourd'hui.</p></div>
       </div>
-      <div id="arene-elo-classement"><p class="text-sm">Chargement…</p></div>
-      <div id="arene-elo-classement-suite" style="display:none;"></div>
-      <button id="arene-btn-voir-tout" type="button" class="btn btn-gris btn-sm" style="width:100%;margin-top:8px;display:none;" onclick="toggleAreneEloComplet()">▼ Voir le classement complet</button>
     </div>
 
-    <!-- Palmarès -->
-    <div class="card">
-      <h2>🎖 Palmarès Arène</h2>
-      <div id="arene-palmares"><p class="text-sm">Chargement…</p></div>
+    <!-- Colonne droite : classement + palmarès -->
+    <div class="arene-col-right">
+      <div class="card">
+        <div class="card-head">
+          <h3>🏅 Classement — <span id="arene-classement-mois-label">ce mois</span></h3>
+        </div>
+        <div class="card-body">
+          <p class="text-sm" style="color:var(--muted);margin-bottom:.8rem;font-size:.76rem;">2 pts victoire · 1 pt exempté · Départage : manches → points</p>
+          <div id="arene-classement-mensuel"><p class="text-sm">Chargement…</p></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>🏆 Classement <span class="elo-tooltip-trigger">ELO<span class="elo-tooltip">Le classement ELO mesure le niveau de chaque joueur.<br><br>• Départ à <strong>1200 pts</strong> pour tous<br>• Gagner contre un adversaire fort = beaucoup de points<br>• Gagner contre un adversaire faible = peu de points<br>• Perdre contre plus fort = peu de points perdus<br>• Perdre contre plus faible = beaucoup de points perdus<br><br>Coefficient K = 32 · Calculs séparés Trot / Galop</span></span></h3>
+        </div>
+        <div class="card-body">
+          <div class="tabs" style="margin-bottom:.8rem;">
+            <button class="tab active" id="arene-tab-elo-gen" onclick="switchAreneElo('general')">Général</button>
+            <button class="tab" id="arene-tab-elo-trot" onclick="switchAreneElo('trot')">🔵 Trot</button>
+            <button class="tab" id="arene-tab-elo-galop" onclick="switchAreneElo('galop')">🟡 Galop</button>
+          </div>
+          <div id="arene-elo-classement"><p class="text-sm">Chargement…</p></div>
+          <div id="arene-elo-classement-suite" style="display:none;"></div>
+          <button id="arene-btn-voir-tout" type="button" class="btn btn-gris btn-sm" style="width:100%;margin-top:8px;display:none;" onclick="toggleAreneEloComplet()">▼ Voir le classement complet</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>🎖 Palmarès Arène</h3></div>
+        <div class="card-body" id="arene-palmares"><p class="text-sm">Chargement…</p></div>
+      </div>
     </div>
 
   </div>
@@ -770,16 +899,16 @@
     <h2>📋 Règlement du Tournoi Hippique</h2>
     <div style="line-height:1.7;font-size:.92rem;">
 
-      <h3 style="color:var(--or-clair);margin:16px 0 8px;">🎯 Principe du jeu</h3>
+      <h3 style="margin:1.2rem 0 .45rem;">🎯 Principe du jeu</h3>
       <p>Deux joueurs s'affrontent sur une réunion PMU. Pour chaque course, chacun choisit des chevaux et marque des points selon les rapports officiels PMU. Le joueur avec le plus de points à la fin remporte la manche. Celui qui remporte le plus de manches gagne le match.</p>
 
-      <h3 style="color:var(--or-clair);margin:16px 0 8px;">⭐ Le joueur principal (la main)</h3>
+      <h3 style="margin:1.2rem 0 .45rem;">⭐ Le joueur principal (la main)</h3>
       <p>Pour chaque course, un joueur a <strong>la main</strong> (alternance à chaque course). Il choisit <strong>2 chevaux</strong> et ses choix se ferment <strong>10 minutes avant le départ</strong>.</p>
 
-      <h3 style="color:var(--or-clair);margin:16px 0 8px;">🎯 Le joueur secondaire</h3>
+      <h3 style="margin:1.2rem 0 .45rem;">🎯 Le joueur secondaire</h3>
       <p>Il choisit <strong>4 chevaux dans l'ordre de préférence</strong>, ses choix se ferment <strong>5 minutes avant le départ</strong>. Ses 4 chevaux sont ensuite filtrés : ceux déjà choisis par le joueur principal sont retirés, et il ne garde que les <strong>2 premiers restants</strong>.</p>
 
-      <h3 style="color:var(--or-clair);margin:16px 0 8px;">💰 Calcul des points</h3>
+      <h3 style="margin:1.2rem 0 .45rem;">💰 Calcul des points</h3>
       <p>Pour chaque cheval sélectionné, les points sont calculés ainsi :</p>
       <ul style="padding-left:20px;margin-top:6px;">
         <li style="margin-bottom:4px;"><strong>Gagnant :</strong> rapport officiel PMU × 10 (ex: cote 4.50€ → 45 pts)</li>
@@ -788,13 +917,13 @@
       </ul>
       <p style="margin-top:8px;">Le score total d'un joueur pour une course est la <strong>somme des points</strong> de ses 2 chevaux.</p>
 
-      <h3 style="color:var(--or-clair);margin:16px 0 8px;">🏆 Victoire</h3>
+      <h3 style="margin:1.2rem 0 .45rem;">🏆 Victoire</h3>
       <p>Le joueur qui remporte le plus de <strong>manches</strong> (courses) gagne le match. En cas d'égalité de manches, c'est le total de points sur l'ensemble des courses qui départage. Si toujours égalité : match nul.</p>
 
-      <h3 style="color:var(--or-clair);margin:16px 0 8px;">🎲 Tirage au sort</h3>
+      <h3 style="margin:1.2rem 0 .45rem;">🎲 Tirage au sort</h3>
       <p>Au lancement du match, un tirage au sort détermine quel joueur a <strong>la main en premier</strong> (course 1). La main alterne ensuite à chaque course.</p>
 
-      <h3 style="color:var(--or-clair);margin:16px 0 8px;">⚙️ Organisation</h3>
+      <h3 style="margin:1.2rem 0 .45rem;">⚙️ Organisation</h3>
       <p>Le créateur du match est l'<strong>arbitre</strong> : il choisit la réunion PMU et lance le match une fois l'adversaire connecté. Les résultats sont récupérés automatiquement après chaque course.</p>
     </div>
   </div>
@@ -1539,29 +1668,29 @@ async function chargerAccueil() {
     </div>`;
     // Hero stats cards
   const heroStats = document.getElementById('hero-stats');
-  if(heroStats && s) {
-    const elo = (s.elo?.general || 1200);
-    const eloTrot = (s.elo?.trot || 1200);
-    const v = s.stats?.victoires||0, m = s.stats?.matchsJoues||0;
-    const pct = m>0 ? Math.round(v/m*100) : 0;
+  if(heroStats) {
+    const eloGen  = elo.general || 1200;
+    const eloTrot = elo.trot    || 1200;
+    const v = s.victoires||0, m = s.matchsJoues||0;
+    const winPct = m>0 ? Math.round(v/m*100) : 0;
     heroStats.innerHTML = `
-      <div class="stat-card"><div class="stat-val">${elo}</div><div class="stat-lbl">ELO Général</div></div>
+      <div class="stat-card"><div class="stat-val">${eloGen}</div><div class="stat-lbl">ELO Général</div></div>
       <div class="stat-card"><div class="stat-val">${eloTrot}</div><div class="stat-lbl">ELO Trot</div></div>
       <div class="stat-card"><div class="stat-val">${v}</div><div class="stat-lbl">Victoires</div></div>
-      <div class="stat-card"><div class="stat-val">${pct}%</div><div class="stat-lbl">Win rate</div></div>
+      <div class="stat-card"><div class="stat-val">${winPct}%</div><div class="stat-lbl">Win rate</div></div>
     `;
   }
   document.getElementById('home-stats-perso').innerHTML =
-    `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-      ${fEloBox(s.matchsJoues||0,'Matchs','rgba(255,204,0,.1)')}
-      ${fEloBox(s.victoires||0,'Victoires','rgba(255,204,0,.1)')}
-      ${fEloBox(pct+'%','Win rate','rgba(255,204,0,.1)')}
+    `<div class="stats-grid">
+      <div class="stat-box"><div class="stat-box-val">${s.matchsJoues||0}</div><div class="stat-box-lbl">Matchs</div></div>
+      <div class="stat-box"><div class="stat-box-val">${s.victoires||0}</div><div class="stat-box-lbl">Victoires</div></div>
+      <div class="stat-box"><div class="stat-box-val">${pct}%</div><div class="stat-box-lbl">Win rate</div></div>
     </div>
-    <p style="font-size:.75rem;color:rgba(255,248,232,.5);margin-bottom:6px;text-align:center;">Mes ELO</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      ${fEloBox(elo.general||1200,'Général','rgba(150,150,255,.12)')}
-      ${fEloBox(elo.trot||1200,'🔵 Trot','rgba(50,120,255,.12)')}
-      ${fEloBox(elo.galop||1200,'🟡 Galop','rgba(255,200,0,.1)')}
+    <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.5rem;padding:0 .1rem;">Classement ELO</div>
+    <div class="stats-grid-elo">
+      <div class="stat-box elo-box"><div class="stat-box-val">${elo.general||1200}</div><div class="stat-box-lbl">Général</div></div>
+      <div class="stat-box elo-box"><div class="stat-box-val">${elo.trot||1200}</div><div class="stat-box-lbl">🔵 Trot</div></div>
+      <div class="stat-box elo-box"><div class="stat-box-val">${elo.galop||1200}</div><div class="stat-box-lbl">🟡 Galop</div></div>
     </div>`;
 
   // Charger tous les joueurs
@@ -1712,17 +1841,22 @@ async function chargerReunionsAvenir() {
       const data = await pmuGet('programme/'+pmuDate);
       const reunions = data.programme?.reunions||[];
       if(reunions.length) {
-        html += `<div style="margin-bottom:10px;">
-          <div style="font-size:.78rem;font-weight:bold;color:var(--or);padding:3px 8px;background:rgba(255,204,0,.1);border-radius:4px;margin-bottom:5px;">${labelJ}</div>`;
-        reunions.filter(r=>r.audience==='NATIONAL' && r.pays?.code==='FRA' && !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'')).forEach(r => {
-          const disc = detecterDiscipline(r);
-          const discIcon = disc==='TROT'?'🔵':disc==='GALOP'?'🟡':'⚪';
-          html += `<div style="padding:4px 8px;font-size:.82rem;border-left:2px solid rgba(255,204,0,.2);margin-bottom:2px;">
-            ${discIcon} ${nH(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?')}
-            <span class="text-sm" style="color:rgba(255,248,232,.45);"> (${r.courses?.length||0} courses)</span>
-          </div>`;
-        });
-        html += '</div>';
+        const filtered = reunions.filter(r=>r.audience==='NATIONAL' && r.pays?.code==='FRA' && !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||''));
+        if(filtered.length) {
+          html += `<div style="padding:.35rem 1.2rem;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);background:rgba(200,168,75,.06);border-bottom:1px solid var(--cream2);">${labelJ}</div>`;
+          filtered.forEach(r => {
+            const disc = detecterDiscipline(r);
+            const discCls = disc==='TROT'?'disc-trot':disc==='GALOP'?'disc-galop':'disc-mixte';
+            const discLbl = disc==='TROT'?'Trot':disc==='GALOP'?'Galop':'Mixte';
+            html += `<div class="reunion-row">
+              <div>
+                <div class="reunion-hippo">${nH(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'?')}</div>
+                <div class="reunion-meta">${r.courses?.length||0} courses · R${r.numOfficiel||r.numReunion||'?'}</div>
+              </div>
+              <span class="reunion-disc ${discCls}">${discLbl}</span>
+            </div>`;
+          });
+        }
       }
     } catch(e) { /* pas de réunion ce jour */ }
   }
@@ -1737,14 +1871,22 @@ function navProfil() {
   db.ref('utilisateurs/'+uid).once('value').then(snap => {
     const d = snap.val() || {};
     const elo = d.elo || {general:1200,trot:1200,galop:1200};
+    const wPct = (d.stats?.matchsJoues||0)>0 ? Math.round((d.stats?.victoires||0)/(d.stats?.matchsJoues||1)*100) : 0;
     document.getElementById('profil-info').innerHTML = `
-      <div class="score-ligne"><span>Prénom</span><strong>${d.prenom||'?'}</strong></div>
-      <div class="score-ligne"><span>Email</span><span>${utilisateur.email}</span></div>
-      <div class="score-ligne"><span>Matchs joués</span><strong>${d.stats?.matchsJoues||0}</strong></div>
-      <div class="score-ligne"><span>Victoires</span><strong>${d.stats?.victoires||0}</strong></div>
-      <div class="score-ligne"><span>ELO Général</span><strong>${elo.general||1200}</strong></div>
-      <div class="score-ligne"><span>ELO Trot</span><strong>${elo.trot||1200}</strong></div>
-      <div class="score-ligne"><span>ELO Galop</span><strong>${elo.galop||1200}</strong></div>`;
+      <div class="score-ligne" style="margin-bottom:.5rem;"><span>Prénom</span><strong>${d.prenom||'?'}</strong></div>
+      <div class="score-ligne" style="margin-bottom:1rem;"><span>Email</span><span style="font-size:.82rem;color:var(--muted);">${utilisateur.email}</span></div>
+      <div class="profil-stats">
+        <div class="stat-box"><div class="stat-box-val">${d.stats?.matchsJoues||0}</div><div class="stat-box-lbl">Matchs</div></div>
+        <div class="stat-box"><div class="stat-box-val">${d.stats?.victoires||0}</div><div class="stat-box-lbl">Victoires</div></div>
+        <div class="stat-box"><div class="stat-box-val">${d.stats?.defaites||0}</div><div class="stat-box-lbl">Défaites</div></div>
+        <div class="stat-box"><div class="stat-box-val">${wPct}%</div><div class="stat-box-lbl">Win rate</div></div>
+      </div>
+      <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin:.9rem 0 .5rem;">Classement ELO</div>
+      <div class="stats-grid-elo">
+        <div class="stat-box elo-box"><div class="stat-box-val">${elo.general||1200}</div><div class="stat-box-lbl">Général</div></div>
+        <div class="stat-box elo-box"><div class="stat-box-val">${elo.trot||1200}</div><div class="stat-box-lbl">🔵 Trot</div></div>
+        <div class="stat-box elo-box"><div class="stat-box-val">${elo.galop||1200}</div><div class="stat-box-lbl">🟡 Galop</div></div>
+      </div>`;
   });
 }
 
@@ -3383,10 +3525,21 @@ function rendreScores(data) {
   const courses=data.courses||[];
   const p1=courses.reduce((s,c)=>s+(c.pointsJ1||0),0);
   const p2=courses.reduce((s,c)=>s+(c.pointsJ2||0),0);
+  // Score band pleine largeur
+  const band=document.getElementById('match-score-band');
+  if(band){
+    band.style.display='flex';
+    document.getElementById('msb-j1').textContent=(etat.joueurId==='j1'?'👤 ':'')+j1;
+    document.getElementById('msb-j2').textContent=(etat.joueurId==='j2'?'👤 ':'')+j2;
+    document.getElementById('msb-pts1').textContent=m1;
+    document.getElementById('msb-pts2').textContent=m2;
+    document.getElementById('msb-manches').textContent=`${p1} pts – ${p2} pts`;
+  }
+  // Détail dans la card latérale
   document.getElementById('scores-display').innerHTML=`
     <div class="score-ligne ${m1>m2?'gagnant':m2>m1?'perdant':''}"><span>${etat.joueurId==='j1'?'👤 ':''}${j1}</span><span class="score-pts">${m1} <span style="font-size:.75rem;font-weight:normal;opacity:.7;">(${p1} pts)</span></span></div>
     <div class="score-ligne ${m2>m1?'gagnant':m1>m2?'perdant':''}"><span>${etat.joueurId==='j2'?'👤 ':''}${j2}</span><span class="score-pts">${m2} <span style="font-size:.75rem;font-weight:normal;opacity:.7;">(${p2} pts)</span></span></div>
-    <p class="text-sm" style="text-align:center;margin-top:8px;">manches · points totaux</p>`;
+    <p class="text-sm" style="text-align:center;margin-top:8px;color:var(--muted);">manches · points totaux</p>`;
 }
 
 function rendreProgramme(data) {
@@ -3643,7 +3796,6 @@ function rendreFin(data) {
 </script>
 </body>
 </html>
-
 
 
 
