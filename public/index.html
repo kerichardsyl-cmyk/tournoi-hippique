@@ -437,7 +437,10 @@
 </head>
 <body>
 <header>
-  <h1 onclick="navHome()" style="cursor:pointer;font-size:1rem;">TH – Les joutes hippiques <em style="font-size:.72rem;font-weight:300;color:rgba(255,255,255,.35);">Vivez les courses autrement et intensément !</em></h1>
+  <div onclick="navHome()" style="cursor:pointer;line-height:1.2;">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:700;color:var(--gold);letter-spacing:.02em;">TH – Les joutes hippiques</div>
+    <div style="font-size:.65rem;font-weight:300;color:rgba(255,255,255,.45);font-style:italic;letter-spacing:.02em;">Vivez les courses autrement et intensément !</div>
+  </div>
   <div id="header-right" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
     <div id="header-nav" style="display:none;gap:4px;">
       <button type="button" class="btn btn-sm btn-nav" id="nav-arene" onclick="navArene()">⚔️ Arène</button>
@@ -631,7 +634,7 @@
   <div class="page-header">
     <button type="button" class="btn-back" onclick="navAccueil()">← Accueil</button>
     <h2>🎯 Salle d'attente</h2>
-    <button type="button" class="btn btn-gris btn-sm" onclick="supprimerMatchCourant()">🗑 Supprimer</button>
+
   </div>
   <div class="card">
     <h2>Code : <span id="lobby-code" class="text-or"></span></h2>
@@ -800,6 +803,7 @@
       </div>
       <div id="arene-gen-preview" style="margin-bottom:6px;"></div>
       <p id="arene-gen-log" class="text-sm" style="opacity:.7;margin-top:4px;"></p>
+      <p class="text-sm" style="color:var(--muted);font-size:.72rem;margin-top:4px;">ℹ️ Si une réunion a un nombre impair de courses, la moins dotée (ou la plus tardive à égalité) est automatiquement retirée pour rééquilibrer.</p>
       <hr class="separator" style="margin-top:12px;"/>
       <h3 style="color:var(--turf);margin:8px 0;">Gestion mensuelle</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -904,7 +908,11 @@
           <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">1️⃣</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">Inscrivez-vous sur les réunions PMU qui vous intéressent (onglets ci-dessous). Vous pouvez vous inscrire <strong style="color:var(--gold2);">à l'avance sur les réunions des prochains jours</strong> et saisir vos choix dès maintenant — plus vous anticipez, moins vous serez pressé !</span></div>
           <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">2️⃣</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">Faites vos <strong style="color:var(--gold2);">4 choix par course</strong> dans votre ordre de préférence avant la limite de saisie (20 min avant le départ de la 1ère course).</span></div>
           <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">3️⃣</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">L'admin génère les matchs <strong style="color:var(--gold2);">à partir de 2h avant</strong> la 1ère course. Le tirage désigne qui a <strong style="color:var(--gold2);">la main</strong> — ce joueur joue ses 2 premiers choix. L'adversaire garde ses 4 choix en réserve : ils sont pris <strong style="color:var(--gold2);">par ordre de priorité parmi ceux qui n'ont pas été pris par le joueur ayant la main</strong>. Modifiables jusqu'à <strong style="color:var(--gold2);">10 min</strong> avant départ (5 min si vous avez la main).</span></div>
-          <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">🏆</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">Chaque manche gagnée = 1 point Arène. En cas d'égalité de manches et de points, chacun marque <strong style="color:var(--gold2);">1 point</strong> au classement. Le <strong style="color:var(--gold2);">classement ELO évolue uniquement sur les matchs Arène</strong>.</span></div>
+          <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">🏆</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">
+  <strong style="color:var(--gold2);">Classement Arène :</strong> Victoire = <strong style="color:var(--gold2);">2 pts</strong>, Nul = <strong style="color:var(--gold2);">1 pt chacun</strong>, Exempté = <strong style="color:var(--gold2);">1 pt</strong>. 
+  <em style="opacity:.8;">(À ne pas confondre avec les points de courses au sein d'un match : ce sont les rapports PMU qui comptent pour chaque manche.)</em>
+  En cas d'égalité au classement : départage par manches gagnées, puis par points de courses. Le <strong style="color:var(--gold2);">classement ELO évolue uniquement sur les matchs Arène</strong>.
+</span></div>
         </div>
       </div>
     </details>
@@ -960,7 +968,7 @@
             <h3>📊 Classement Arène — <span id="arene-classement-mois-label">ce mois</span></h3>
           </div>
           <div class="card-body" style="padding:.5rem .9rem;">
-            <p class="text-sm" style="color:var(--muted);margin-bottom:.6rem;font-size:.73rem;">2 pts victoire · 1 pt exempté · Départage : manches → points</p>
+            <p class="text-sm" style="color:var(--muted);margin-bottom:.6rem;font-size:.73rem;">Classement Arène : 2 pts Victoire · 1 pt Nul · 1 pt Exempté · Départage : manches gagnées → points PMU</p>
             <div class="arene-section-tabs" id="arene-tabs-mensuel">
               <div class="arene-stab active" onclick="switchAreneMensuel('general',this)">Général</div>
               <div class="arene-stab" onclick="switchAreneMensuel('trot',this)">🔵 Trot</div>
@@ -1067,7 +1075,7 @@
       <div style="width:1.5rem;"></div>
     </div>
     <div class="card"><div id="classement-detail-content" style="padding:0;"><p class="text-sm" style="padding:.9rem;">Chargement…</p></div></div>
-    <p style="font-size:.67rem;color:var(--muted);margin-top:.5rem;padding:.2rem;">Pts = points Arène du mois · V/N/D = victoires/nuls/défaites · ELO = classement Arène · 🔵🟡 = disciplines jouées</p>
+    <p style="font-size:.67rem;color:var(--muted);margin-top:.5rem;padding:.2rem;">Pts = points Arène du mois (Victoire=2, Nul=1, Exempté=1) · V/N/D = victoires/nuls/défaites · ELO = classement Arène uniquement · 🔵🟡 = disciplines jouées</p>
   </div>
 </div>
 
@@ -1185,7 +1193,13 @@
             <div class="arene-stab" onclick="switchTcDisc('trot',this)">🔵 Trot</div>
             <div class="arene-stab" onclick="switchTcDisc('galop',this)">🟡 Galop</div>
           </div>
-          <div id="tc-classement-perma"><p class="text-sm">Chargement…</p></div>
+          <div id="tc-classement-perma">
+    <div style="background:rgba(200,168,75,.06);border:1px solid rgba(200,168,75,.15);border-radius:8px;padding:.75rem 1rem;font-size:.8rem;color:var(--muted);text-align:center;">
+      <div style="font-size:1.4rem;margin-bottom:.4rem;">⭐</div>
+      <div style="color:var(--text);font-weight:600;margin-bottom:.3rem;">Classement en cours de constitution</div>
+      <div style="font-size:.74rem;line-height:1.5;">Les points Top Choix sont attribués au fur et à mesure des réunions. Revenez après la première réunion pour voir le classement !</div>
+    </div>
+  </div>
         </div>
       </div>
     </div>
@@ -2951,7 +2965,7 @@ function chargerTableauBord() {
               </div>
               ${scoreBloc}
             </div>
-            <button type="button" class="btn btn-gris btn-sm" style="position:absolute;top:.6rem;right:.6rem;" onclick="event.stopPropagation();supprimerMatch('${m.id}')">🗑</button>
+
           </div>`;
         }).join('')
       : '<p class="text-sm">Aucun match en cours.</p>';
@@ -3477,8 +3491,7 @@ function afficherAnnuaire(joueurs) {
           ${(elo.galop&&elo.galop!==1200)?'<span style="font-size:.7rem;color:#8a6a20;">🟡'+elo.galop+'</span>':''}
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;flex-shrink:0;">
-        <div style="font-size:.82rem;">${areneBadge}</div>
+      <div style="flex-shrink:0;">
         <button type="button" class="btn btn-vert btn-sm" data-uid="${j.uid}" data-prenom="${j.prenom}" data-email="${j.email||''}" onclick="inviterDepuisAnnuaire(this.dataset.uid,this.dataset.prenom,this.dataset.email)">Inviter</button>
       </div>
     </div>`;
@@ -5210,7 +5223,10 @@ async function _chargerTcClassementPerma() {
     const data = snap.val() || {};
     const myUid = utilisateur?.uid;
     const joueurs = Object.entries(data).map(([uid, d]) => ({uid, prenom:d.prenom||uid, pts:d.pts||0})).sort((a,b) => b.pts-a.pts);
-    if (!joueurs.length) { el.innerHTML = '<p class="text-sm">Aucun classement pour cette période.</p>'; return; }
+    if (!joueurs.length) {
+      el.innerHTML = '<div style="background:rgba(200,168,75,.06);border:1px solid rgba(200,168,75,.15);border-radius:8px;padding:.75rem 1rem;font-size:.8rem;color:var(--muted);text-align:center;"><div style="font-size:1.4rem;margin-bottom:.4rem;">⭐</div><div style="color:var(--text);font-weight:600;margin-bottom:.3rem;">Classement en cours de constitution</div><div style="font-size:.74rem;line-height:1.5;">Les points Top Choix sont attribués au fur et à mesure des réunions. Revenez après la première réunion !</div></div>';
+      return;
+    }
     el.innerHTML = joueurs.map((j,i) => {
       const rang = i<3?['🥇','🥈','🥉'][i]:(i+1);
       const isMe = j.uid===myUid;
