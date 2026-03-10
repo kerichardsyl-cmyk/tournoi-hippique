@@ -458,6 +458,7 @@
 <div id="page-auth" class="page active">
   <div class="card" style="max-width:400px;margin:0 auto;">
     <h2>Se connecter</h2>
+    <div id="auth-error-msg" style="display:none;background:rgba(179,58,42,.12);border:1px solid rgba(179,58,42,.35);border-radius:7px;padding:.55rem .85rem;font-size:.8rem;color:#7a1a0a;margin-bottom:.75rem;"></div>
     <div id="form-connexion">
       <label>Adresse email</label>
       <input type="email" id="login-email" placeholder="votre@email.com" />
@@ -1220,10 +1221,18 @@ function _updateBtnToggleAdmin() {
 }
 let db, auth;
 try {
+  if (!window.FIREBASE_CONFIG) throw new Error('firebase-config.js manquant ou non chargé');
   firebase.initializeApp(window.FIREBASE_CONFIG);
   db = firebase.database();
   auth = firebase.auth();
-} catch(e) { console.error("Firebase:",e); }
+} catch(e) {
+  console.error("Firebase init failed:", e);
+  // Afficher une erreur visible sur la page de connexion
+  setTimeout(() => {
+    const el = document.getElementById('auth-error-msg');
+    if (el) { el.style.display = 'block'; el.innerHTML = '⚠️ Impossible de se connecter au serveur. Vérifiez que vous accédez bien à <a href="https://tournoi-hippique.pages.dev" style="color:var(--red);">tournoi-hippique.pages.dev</a> et non à un fichier local.'; }
+  }, 100);
+}
 
 // ── ÉTAT ──────────────────────────────────────────
 let utilisateur = null; // Firebase Auth user
@@ -2440,11 +2449,15 @@ function switchTab(tab) {
 }
 
 async function seConnecter() {
+  if (!auth) { toast('❌ Connexion Firebase non initialisée — vérifiez l'URL', true); return; }
   const email=document.getElementById('login-email').value.trim();
   const mdp=document.getElementById('login-mdp').value;
   if(!email||!mdp) { toast('⚠️ Remplissez tous les champs',true); return; }
+  const btn = document.querySelector('#form-connexion .btn-or');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Connexion…'; }
   try { await auth.signInWithEmailAndPassword(email,mdp); }
   catch(e) { toast('❌ '+tradErreurAuth(e.code),true); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = 'Se connecter →'; } }
 }
 
 async function sInscrire() {
@@ -5211,9 +5224,6 @@ async function _chargerTcClassementPerma() {
 </script>
 </body>
 </html>
-
-
-
 
 
 
