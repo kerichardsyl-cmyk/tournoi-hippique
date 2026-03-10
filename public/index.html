@@ -2536,15 +2536,19 @@ auth.onAuthStateChanged(async user => {
     document.getElementById('btn-deconnexion').style.display='none';
     document.getElementById('btn-admin').style.display='none';
     document.getElementById('btn-toggle-admin-view').style.display='none';
-    // Vérifier si site offline
-    const cfg = (await db.ref('config').once('value')).val() || {};
-    if(cfg.siteOffline) {
-      const msg = cfg.messageOffline || 'Le site est temporairement indisponible. Revenez bientôt !';
-      const el = document.getElementById('page-auth');
-      el.innerHTML = '<div style="max-width:420px;margin:80px auto;text-align:center;"><div class="card"><div style="font-size:3rem;margin-bottom:16px;">🔧</div><h2 style="color:var(--or-clair);margin-bottom:12px;">Site en maintenance</h2><p id="msg-offline" style="color:rgba(253,246,227,.7);"></p></div></div>';
-      document.getElementById('msg-offline').textContent = msg;
-    }
     afficherNav(false); showPage('auth');
+    // Vérifier si site offline (sans bloquer l'affichage de la page auth)
+    db.ref('config').once('value').then(snap => {
+      const cfg = snap.val() || {};
+      if(cfg.siteOffline) {
+        const msg = cfg.messageOffline || 'Le site est temporairement indisponible. Revenez bientôt !';
+        const el = document.getElementById('page-auth');
+        if(el) {
+          el.innerHTML = '<div style="max-width:420px;margin:80px auto;text-align:center;"><div class="card"><div style="font-size:3rem;margin-bottom:16px;">🔧</div><h2 style="color:var(--or-clair);margin-bottom:12px;">Site en maintenance</h2><p id="msg-offline" style="color:rgba(253,246,227,.7);"></p></div></div>';
+          document.getElementById('msg-offline').textContent = msg;
+        }
+      }
+    }).catch(()=>{});
   }
 });
 
@@ -5224,7 +5228,6 @@ async function _chargerTcClassementPerma() {
 </script>
 </body>
 </html>
-
 
 
 
