@@ -346,6 +346,7 @@
 
     /* Checkbox participe */
     .check-participe-v2 { display:flex; align-items:center; gap:.35rem; cursor:pointer; justify-content:center; }
+    .check-participe-locked { opacity:.5; cursor:not-allowed; }
     .check-participe-v2 input { width:15px; height:15px; accent-color:var(--green); cursor:pointer; }
     .check-participe-v2 span { font-size:.76rem; font-weight:500; }
     .check-sub-v2 { font-size:.65rem; font-weight:600; text-align:center; margin-top:.1rem; }
@@ -404,8 +405,8 @@
     .course-choix-head-name { font-size:.82rem; font-weight:600; color:rgba(255,255,255,.9); }
     .course-choix-head-time { font-size:.7rem; color:rgba(255,255,255,.5); }
     .course-choix-body { padding:.65rem .9rem; }
-    .partants-v2-grid { display:grid; grid-template-columns:1fr 1fr; gap:.3rem; }
-    .partant-v2-btn { font-size:.74rem; padding:.32rem .5rem; border-radius:5px; border:1.5px solid var(--cream2); background:var(--cream); color:var(--text); cursor:pointer; text-align:left; font-family:'Outfit',sans-serif; transition:.15s; display:flex; align-items:center; gap:.28rem; overflow:hidden; white-space:nowrap; }
+    .partants-v2-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:.35rem; margin-bottom:.5rem; }
+    .partant-v2-btn { font-size:.74rem; padding:.32rem .5rem; border-radius:5px; border:1.5px solid var(--cream2); background:var(--cream); color:var(--text); cursor:pointer; text-align:left; font-family:'Outfit',sans-serif; transition:.15s; display:flex; flex-direction:column; align-items:flex-start; gap:.05rem; overflow:hidden; }
     .partant-v2-btn:hover { border-color:var(--turf); background:#ece8e0; }
     .partant-v2-btn.pv2-s1 { border-color:#2563ab; background:rgba(37,99,235,.07); color:#1d4ed8; font-weight:600; }
     .partant-v2-btn.pv2-s2 { border-color:#16a34a; background:rgba(22,163,74,.07); color:#14532d; font-weight:600; }
@@ -436,12 +437,13 @@
 </head>
 <body>
 <header>
-  <h1 onclick="navHome()" style="cursor:pointer;">TH <em>· Tournoi Hippique</em></h1>
+  <h1 onclick="navHome()" style="cursor:pointer;font-size:1rem;">TH – Les joutes hippiques <em style="font-size:.72rem;font-weight:300;color:rgba(255,255,255,.35);">Vivez les courses autrement et intensément !</em></h1>
   <div id="header-right" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
     <div id="header-nav" style="display:none;gap:4px;">
       <button type="button" class="btn btn-sm btn-nav" id="nav-arene" onclick="navArene()">⚔️ Arène</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-matchs" onclick="navMatchs()" style="position:relative;">🤝 Amicaux<span id="badge-matchs" style="display:none;position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:50%;width:17px;height:17px;font-size:.65rem;font-weight:bold;line-height:17px;text-align:center;pointer-events:none;"></span></button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
+      <button type="button" class="btn btn-sm btn-nav" id="nav-top-choix" onclick="navTopChoix()">⭐ Top Choix</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-profil" onclick="navProfil()">👤 Profil</button>
     </div>
     <span id="header-user" style="font-size:.82rem;color:var(--or);font-style:italic;"></span>
@@ -780,10 +782,22 @@
       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
         <div>
           <label>Date de la réunion (JJ/MM/AAAA)</label>
-          <input type="text" id="arene-gen-date" placeholder="ex: 09/03/2026" style="width:160px;margin-bottom:0;" />
+          <div style="display:flex;gap:6px;margin-bottom:4px;">
+            <button class="btn btn-gris btn-sm" onclick="adminSetDateOffset(0)">Auj.</button>
+            <button class="btn btn-gris btn-sm" onclick="adminSetDateOffset(1)">Dem.</button>
+            <button class="btn btn-gris btn-sm" onclick="adminSetDateOffset(2)">J+2</button>
+          </div>
+          <input type="text" id="arene-gen-date" placeholder="ex: 09/03/2026" style="width:180px;margin-bottom:0;" oninput="adminPreviewReunions()" />
         </div>
-        <button class="btn btn-or" id="arene-gen-btn" onclick="genererArene()">⚔️ Générer</button>
+        <div>
+          <label>Options</label>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-gris btn-sm" id="arene-preview-btn" onclick="adminPreviewReunions()">🔍 Voir réunions</button>
+            <button class="btn btn-or" id="arene-gen-btn" onclick="genererArene()">⚔️ Générer le tirage</button>
+          </div>
+        </div>
       </div>
+      <div id="arene-gen-preview" style="margin-bottom:6px;"></div>
       <p id="arene-gen-log" class="text-sm" style="opacity:.7;margin-top:4px;"></p>
       <hr class="separator" style="margin-top:12px;"/>
       <h3 style="color:var(--turf);margin:8px 0;">Gestion mensuelle</h3>
@@ -867,6 +881,14 @@
   </div>
   <div class="page-inner">
 
+    <!-- Bandeau version test -->
+    <div style="background:linear-gradient(90deg,rgba(179,58,42,.15),rgba(179,58,42,.08));border:1px solid rgba(179,58,42,.35);border-radius:8px;padding:.6rem 1rem;margin-bottom:.75rem;display:flex;align-items:flex-start;gap:.5rem;" id="bandeau-version-test">
+      <span style="font-size:1.1rem;flex-shrink:0;">⚠️</span>
+      <div style="font-size:.78rem;color:#7a1a0a;line-height:1.5;">
+        <strong>Version test</strong> — Les résultats des matchs, classements Arène et ELO seront remis à zéro lorsque la version sera stabilisée. Un message sera alors affiché en lieu et place de celui-ci.
+      </div>
+    </div>
+
     <!-- Alertes urgentes -->
     <div id="arene-alertes"></div>
 
@@ -880,8 +902,8 @@
         <div style="display:flex;flex-direction:column;gap:.45rem;">
           <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">1️⃣</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">Inscrivez-vous sur les réunions PMU qui vous intéressent (onglets ci-dessous). Vous pouvez vous inscrire <strong style="color:var(--gold2);">à l'avance sur les réunions des prochains jours</strong> et saisir vos choix dès maintenant — plus vous anticipez, moins vous serez pressé !</span></div>
           <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">2️⃣</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">Faites vos <strong style="color:var(--gold2);">4 choix par course</strong> dans votre ordre de préférence avant la limite de saisie (20 min avant le départ de la 1ère course).</span></div>
-          <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">3️⃣</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">L'admin génère les matchs <strong style="color:var(--gold2);">à partir de 2h avant</strong> la 1ère course. Le tirage désigne qui a <strong style="color:var(--gold2);">la main</strong> — ce joueur joue ses 2 premiers choix, l'adversaire garde ses 4 choix en réserve (filtrés automatiquement). Modifiables jusqu'à <strong style="color:var(--gold2);">10 min</strong> avant départ (5 min si vous avez la main).</span></div>
-          <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">🏆</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">Chaque manche gagnée = 1 point Arène. Le <strong style="color:var(--gold2);">classement ELO évolue uniquement sur les matchs Arène</strong>.</span></div>
+          <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">3️⃣</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">L'admin génère les matchs <strong style="color:var(--gold2);">à partir de 2h avant</strong> la 1ère course. Le tirage désigne qui a <strong style="color:var(--gold2);">la main</strong> — ce joueur joue ses 2 premiers choix. L'adversaire garde ses 4 choix en réserve : ils sont pris <strong style="color:var(--gold2);">par ordre de priorité parmi ceux qui n'ont pas été pris par le joueur ayant la main</strong>. Modifiables jusqu'à <strong style="color:var(--gold2);">10 min</strong> avant départ (5 min si vous avez la main).</span></div>
+          <div style="display:flex;gap:.55rem;align-items:flex-start;"><span style="font-size:.95rem;flex-shrink:0;">🏆</span><span style="font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.5;">Chaque manche gagnée = 1 point Arène. En cas d'égalité de manches et de points, chacun marque <strong style="color:var(--gold2);">1 point</strong> au classement. Le <strong style="color:var(--gold2);">classement ELO évolue uniquement sur les matchs Arène</strong>.</span></div>
         </div>
       </div>
     </details>
@@ -902,10 +924,27 @@
         </div>
 
         <div class="card">
-          <div class="card-head">
-            <h3 id="arene-matchs-titre">⚔️ Mes matchs Arène</h3>
+          <div class="card-head" style="padding-bottom:.45rem;">
+            <h3>⚔️ Matchs Arène</h3>
           </div>
-          <div class="card-body" id="arene-matchs-liste"><p class="text-sm">Aucun tirage généré pour aujourd'hui.</p></div>
+          <div style="padding:.35rem .9rem 0;border-bottom:1px solid var(--cream2);">
+            <div class="arene-section-tabs" id="arene-matchs-tabs" style="border-bottom:none;margin-bottom:0;">
+              <div class="arene-stab active" onclick="switchAreneMatchsTab('mes',this)">Mes matchs</div>
+              <div class="arene-stab" onclick="switchAreneMatchsTab('tous',this)">Tous les matchs</div>
+            </div>
+          </div>
+          <div class="card-body" style="padding:.65rem .9rem;">
+            <div id="arene-matchs-liste"></div>
+            <div id="arene-matchs-tous" style="display:none;"></div>
+            <!-- Sélecteur de date pour les archives -->
+            <div id="arene-matchs-date-picker" style="display:none;margin-top:.6rem;border-top:1px solid var(--cream2);padding-top:.6rem;">
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                <label style="font-size:.74rem;color:var(--muted);margin:0;">📅 Autre date :</label>
+                <input type="date" id="arene-cal-date" style="width:auto;margin-bottom:0;font-size:.78rem;padding:.25rem .5rem;" onchange="chargerMatchsAreneDate(this.value)"/>
+              </div>
+              <div id="arene-cal-results" style="margin-top:.5rem;"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1084,6 +1123,74 @@
   </div>
 </div>
 
+
+<!-- PAGE TOP CHOIX -->
+<div id="page-top-choix" class="page">
+  <div class="hero-band">
+    <div class="hero-inner">
+      <h1 class="hero-title">⭐ <span>Top Choix</span></h1>
+      <div class="hero-sub">Classement de vos 2 premiers choix · Sans adversaire</div>
+    </div>
+  </div>
+  <div class="page-inner">
+    <!-- Bandeau explication -->
+    <div class="arene-alert arene-alert-info" style="margin-bottom:.85rem;">
+      ⭐ Le <strong>Top Choix</strong> calcule vos points en ne tenant compte que de vos <strong>2 premiers choix</strong> par course, indépendamment de tout match. Tous les inscrits (y compris exemptés) participent.
+    </div>
+    <!-- Sélecteur de réunion -->
+    <div class="card">
+      <div class="card-head"><h3>📅 Choisir une réunion</h3></div>
+      <div class="card-body" style="padding:.65rem .9rem;">
+        <div class="day-tabs" id="tc-day-tabs"></div>
+        <div id="tc-day-panels"></div>
+      </div>
+    </div>
+
+    <!-- Résultats -->
+    <div id="tc-results" style="display:none;">
+      <div class="card">
+        <div class="card-head" style="padding-bottom:.4rem;">
+          <h3 id="tc-reunion-titre">📊 Classement</h3>
+          <span class="text-sm" id="tc-reunion-meta"></span>
+        </div>
+        <div style="padding:.35rem .9rem 0;border-bottom:1px solid var(--cream2);">
+          <div class="arene-section-tabs" id="tc-view-tabs" style="border-bottom:none;margin-bottom:0;">
+            <div class="arene-stab active" onclick="switchTcView('total',this)">🏆 Classement total</div>
+            <div class="arene-stab" onclick="switchTcView('courses',this)">📋 Par course</div>
+          </div>
+        </div>
+        <div class="card-body" style="padding:.5rem .9rem;">
+          <div id="tc-classement-total"></div>
+          <div id="tc-classement-courses" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- Classements permanents Top Choix -->
+      <div class="card">
+        <div class="card-head" style="padding-bottom:.4rem;">
+          <h3>🏅 Classement Top Choix cumulé</h3>
+          <span class="text-sm" style="color:var(--muted);">1er = N-1 pts, 2e = N-2 pts…</span>
+        </div>
+        <div style="padding:.35rem .9rem 0;border-bottom:1px solid var(--cream2);">
+          <div class="arene-section-tabs" id="tc-perma-tabs" style="border-bottom:none;margin-bottom:0;">
+            <div class="arene-stab active" onclick="switchTcPeriode('semaine',this)">Cette semaine</div>
+            <div class="arene-stab" onclick="switchTcPeriode('mois',this)">Ce mois</div>
+            <div class="arene-stab" onclick="switchTcPeriode('annee',this)">Cette année</div>
+          </div>
+        </div>
+        <div class="card-body" style="padding:.5rem .9rem;">
+          <div class="arene-section-tabs" id="tc-disc-tabs" style="margin-bottom:.6rem;">
+            <div class="arene-stab active" onclick="switchTcDisc('general',this)">Général</div>
+            <div class="arene-stab" onclick="switchTcDisc('trot',this)">🔵 Trot</div>
+            <div class="arene-stab" onclick="switchTcDisc('galop',this)">🟡 Galop</div>
+          </div>
+          <div id="tc-classement-perma"><p class="text-sm">Chargement…</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1135,11 +1242,15 @@ async function pmuGet(path) {
 // ── UTILITAIRES ────────────────────────────────────
 function dateToStr(d) { const [j,m,a]=d.split('/'); return j+m+a; }
 function genCode() { return Math.random().toString(36).substring(2,6).toUpperCase(); }
+// Pages qui ne doivent pas être restaurées depuis l'historique
+const _NO_RESTORE_PAGES = new Set(['auth','lobby','match','fin','choix-arene','classement-detail','top-choix']);
 function showPage(id, pushState=true) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  if(pushState) history.pushState({page:id}, '', '#'+id);
-  if(id!=='auth') {
+  const el = document.getElementById('page-'+id);
+  if (!el) { console.warn('showPage: page not found:', id); return; }
+  el.classList.add('active');
+  if(pushState && !_NO_RESTORE_PAGES.has(id)) history.pushState({page:id}, '', '#'+id);
+  if(id!=='auth' && !_NO_RESTORE_PAGES.has(id)) {
     localStorage.setItem('lastPage', id);
     if(etat.matchId) localStorage.setItem('lastMatchId', etat.matchId);
   }
@@ -1160,14 +1271,19 @@ function setDateRapide(j) {
 // ── HISTORIQUE NAVIGATEUR ──────────────────────────
 window.addEventListener('popstate', e => {
   const page = e.state?.page;
-  if(!page || page==='auth') { if(utilisateur) navAccueil(); return; }
-  if(page==='accueil') navHome();
-  else if(page==='matchs-list') navMatchs();
-  else if(page==='arene') navArene();
-  else if(page==='annuaire') navAnnuaire();
-  else if(page==='admin') navAdmin();
-  else if(page==='lobby'||page==='match') { /* rester sur la page actuelle */ showPage(page, false); }
-  else navAccueil();
+  if(!utilisateur) return; // pas encore connecté
+  if(!page || page==='auth') return; // ignorer, rester sur la page actuelle
+  // Ne pas recharger si on est déjà sur la bonne page
+  const currentActive = document.querySelector('.page.active')?.id?.replace('page-','');
+  if(currentActive === page) return;
+  if(page==='arene') { showPage('arene',false); setNavActive('arene'); }
+  else if(page==='matchs-list') { showPage('matchs-list',false); setNavActive('matchs'); }
+  else if(page==='annuaire') { showPage('annuaire',false); setNavActive('annuaire'); }
+  else if(page==='profil') { showPage('profil',false); setNavActive('profil'); }
+  else if(page==='choix-arene') { /* laisser la page choix telle quelle */ }
+  else if(page==='classement-detail') { showPage('classement-detail',false); setNavActive('arene'); }
+  else if(page==='lobby'||page==='match') { /* ne pas naviguer depuis l'historique */ }
+  // Pour les autres pages (admin, reglement, etc) : ignorer
 });
 
 // ── NAVIGATION ─────────────────────────────────────
@@ -1293,7 +1409,9 @@ async function _chargerProgrammeMultiJours() {
     } catch(e) {}
 
     const count = reunions.length;
-    tabsHtml += `<div class="day-tab${i===0?' active':''}" id="daytab-${i}" onclick="switchAreneDay(${i})">${label} <span class="day-count-badge">${count}</span></div>`;
+    const nbInscrits = Object.keys(inscs).length;
+    const inscritBadge = nbInscrits > 0 ? ` <span class="day-count-badge" style="background:var(--green);color:#fff;">${nbInscrits}✓</span>` : '';
+    tabsHtml += `<div class="day-tab${i===0?' active':''}" id="daytab-${i}" onclick="switchAreneDay(${i})">${label} <span class="day-count-badge">${count}</span>${inscritBadge}</div>`;
 
     // Construire panel
     let panelContent = '';
@@ -1311,16 +1429,18 @@ async function _chargerProgrammeMultiJours() {
         const nbCourses = courses.length;
         // Heure 1ère course
         const h1 = courses[0]?.heureDepart ? formatHeure(courses[0].heureDepart) : '--:--';
-        // Limite : 20min avant 1ère
-        const limiteTs = courses[0]?.heureDepart ? courses[0].heureDepart - 20*60*1000 : null;
-        const limiteStr = limiteTs ? formatHeure(limiteTs) : '--:--';
-        // Tirage : 2h avant 1ère
-        const tirageTs = courses[0]?.heureDepart ? courses[0].heureDepart - 2*60*60*1000 : null;
-        const tirageStr = tirageTs ? formatHeure(tirageTs) : '--:--';
+        // Fin des inscriptions : 2h avant 1ère course (= même heure que le tirage)
+        const finInscripTs = courses[0]?.heureDepart ? courses[0].heureDepart - 2*60*60*1000 : null;
+        const limiteStr = finInscripTs ? formatHeure(finInscripTs) : '--:--';
+        // Tirage à partir de : même heure
+        const tirageTs = finInscripTs;
+        const tirageStr = limiteStr;
+        // Tirage déjà effectué ?
+        const tirageEffectue = finInscripTs ? Date.now() >= finInscripTs : false;
         // Inscription ?
         const inscrit = !!inscs[numR];
         // Choix
-        let choixBtnHtml = `<button class="btn-choix-v2 btn-choix-new" onclick="ouvrirChoix('${pmuDate}','${numR}','${hippo}','${disc}')">📋 Faire mes choix</button>`;
+        let choixBtnHtml = `<button class="btn-choix-v2 btn-choix-off" disabled title="Inscrivez-vous d'abord">📋 Faire mes choix</button>`;
         if (inscrit) {
           try {
             const choixSnap = await db.ref('arene_choix/'+pmuDate+'/'+numR+'/'+uid).once('value');
@@ -1331,7 +1451,9 @@ async function _chargerProgrammeMultiJours() {
             } else {
               choixBtnHtml = `<button class="btn-choix-v2 btn-choix-warn" onclick="ouvrirChoix('${pmuDate}','${numR}','${hippo}','${disc}')">📋 ${nbRemplis}/${nbCourses} ⚠️</button>`;
             }
-          } catch(e) {}
+          } catch(e) {
+            choixBtnHtml = `<button class="btn-choix-v2 btn-choix-new" onclick="ouvrirChoix('${pmuDate}','${numR}','${hippo}','${disc}')">📋 Faire mes choix</button>`;
+          }
         }
         const inscritCls = inscrit ? ' inscrit' : '';
         const inscritStatus = inscrit ? `<div class="check-sub-v2" style="color:var(--green);">✓ Inscrit</div>` : '';
@@ -1346,11 +1468,11 @@ async function _chargerProgrammeMultiJours() {
               <div class="reunion-tirage-v2"><div class="reunion-tirage-v2-label">Tirage à partir de</div><div class="reunion-tirage-v2-val">${tirageStr}</div></div>
             </div>
             <div class="reunion-v2-body">
-              <div class="reunion-v2-limite">Limite saisie<br><strong>${limiteStr}</strong></div>
+              <div class="reunion-v2-limite">Fin inscriptions<br><strong>${limiteStr}</strong></div>
               <div style="text-align:center;">
-                <label class="check-participe-v2" onclick="event.stopPropagation()">
-                  <input type="checkbox" ${inscrit?'checked':''} onchange="toggleInscription(this,'${pmuDate}','${numR}','${hippo}','${disc}',${nbCourses})"/>
-                  <span>Je participe</span>
+                <label class="check-participe-v2${tirageEffectue?' check-participe-locked':''}" onclick="event.stopPropagation()" title="${tirageEffectue?'Tirage effectué — inscriptions fermées':''}">
+                  <input type="checkbox" ${inscrit?'checked':''} ${tirageEffectue?'disabled':''} onchange="${tirageEffectue?'':"toggleInscription(this,'${pmuDate}','${numR}','${hippo}','${disc}',${nbCourses})"}"/>
+                  <span>${tirageEffectue?'⛔ Fermé':'Je participe'}</span>
                 </label>
                 ${inscritStatus}
               </div>
@@ -1456,8 +1578,15 @@ async function _rendreChoixCourses(courses, pmuDate, numR) {
     const partantsHtml = partants.map(p => {
       const idxSel = selectionnes.indexOf(p.numero);
       const selCls = idxSel >= 0 ? ' '+clsSMap[idxSel] : '';
-      const badge = idxSel >= 0 ? `<span class="choix-badge-v2 cb-v2-${idxSel+1}" style="padding:.02rem .22rem;font-size:.58rem;">${ordreMap[idxSel]}</span> ` : '';
-      return `<button class="partant-v2-btn${selCls}" onclick="toggleChoixPartant(${co.numOrdre},${p.numero},this)" data-num="${p.numero}">${badge}${p.numero}. ${p.nom}</button>`;
+      const badge = idxSel >= 0 ? `<span class="choix-badge-v2 cb-v2-${idxSel+1}" style="padding:.02rem .22rem;font-size:.58rem;">${ordreMap[idxSel]}</span>` : '';
+      const driver = p.driver||p.jockey||'';
+      const entr = p.entraineur||'';
+      const musique = (p.musique||'').substring(0,22);
+      return `<button class="partant-v2-btn${selCls}" onclick="toggleChoixPartant(${co.numOrdre},${p.numero},this)" data-num="${p.numero}" style="flex-direction:column;align-items:flex-start;height:auto;padding:.35rem .5rem;gap:.05rem;">
+        <div style="display:flex;align-items:center;gap:.28rem;">${badge}<span style="font-weight:700;color:var(--gold);font-size:.78rem;">${p.numero}.</span><span style="font-weight:600;font-size:.74rem;">${p.nom}</span></div>
+        ${(driver||entr)?`<div style="font-size:.62rem;color:var(--muted);">${driver}${driver&&entr?' · ':''}${entr}</div>`:''}
+        ${musique?`<div style="font-family:monospace;font-size:.58rem;color:rgba(107,107,107,.65);">${musique}</div>`:''}
+      </button>`;
     }).join('');
     html += `<div class="course-choix-card">
       <div class="course-choix-head ${etatCls}">
@@ -1545,85 +1674,158 @@ async function sauvegarderChoix() {
   if (!ctx) return;
   const uid = utilisateur.uid;
   const { pmuDate, numR } = ctx;
+  const btn = document.querySelector('.choix-save-bar .btn-vert');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Sauvegarde…'; }
   try {
     await db.ref('arene_choix/'+pmuDate+'/'+numR+'/'+uid).set({
       courses: ctx.choixActuels || {},
       savedAt: Date.now()
     });
-    toast('✅ Choix sauvegardés !');
+    // Confirmation visuelle dans la barre
+    if (btn) { btn.textContent = '✅ Sauvegardé !'; btn.style.background = 'var(--green)'; }
+    const el = document.getElementById('choix-progression');
+    if (el) el.innerHTML += ' <span style="color:var(--green);font-size:.78rem;">· Sauvegardé ✓</span>';
+    setTimeout(() => {
+      if (btn) { btn.disabled = false; btn.textContent = '💾 Sauvegarder'; btn.style.background = ''; }
+    }, 2500);
   } catch(e) {
     toast('❌ Erreur : '+e.message, true);
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Sauvegarder'; }
   }
 }
 
 // ── matchs arène du joueur ──
 async function _chargerAreneMatchsV2() {
+  _chargerMesMatchsArene();
+}
+
+function switchAreneMatchsTab(tab, tabEl) {
+  document.querySelectorAll('#arene-matchs-tabs .arene-stab').forEach(t => t.classList.remove('active'));
+  if (tabEl) tabEl.classList.add('active');
+  const mesEl = document.getElementById('arene-matchs-liste');
+  const tousEl = document.getElementById('arene-matchs-tous');
+  const pickerEl = document.getElementById('arene-matchs-date-picker');
+  if (tab === 'mes') {
+    mesEl.style.display = ''; tousEl.style.display = 'none'; pickerEl.style.display = 'none';
+    _chargerMesMatchsArene();
+  } else {
+    mesEl.style.display = 'none'; tousEl.style.display = ''; pickerEl.style.display = '';
+    _chargerTousMatchsArene();
+  }
+}
+
+async function _chargerMesMatchsArene() {
   const el = document.getElementById('arene-matchs-liste');
   if (!el) return;
   el.innerHTML = '<p class="text-sm">⏳ Chargement…</p>';
   const uid = utilisateur.uid;
   const today = _pmuDateFromOffset(0).iso;
   const yesterday = (() => { const d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
-
   try {
     const snap = await db.ref('arene').once('value');
     if (!snap.val()) { el.innerHTML = '<p class="text-sm">Aucun match Arène récent.</p>'; return; }
     let html = '';
-    const keys = Object.keys(snap.val()).sort().reverse();
+    const keys = Object.keys(snap.val()).sort().reverse().slice(0, 10);
     const recentKeys = keys.filter(k => k >= yesterday);
     if (!recentKeys.length) { el.innerHTML = '<p class="text-sm">Aucun match Arène récent.</p>'; return; }
     for (const key of recentKeys) {
       const data = snap.val()[key];
       const matchs = Object.values(data.matchs || {});
       const mesMatchs = matchs.filter(m => m.uidJ1===uid || m.uidJ2===uid);
-      for (const m of mesMatchs) {
-        const discIcon = m.discipline==='TROT'?'🔵 Trot':'🟡 Galop';
-        const isJ1 = m.uidJ1 === uid;
-        const adv = isJ1 ? m.j2 : m.j1;
-        const dateStr = key < today ? (key===yesterday?'Hier':'') : '';
-        const statut = m.statut;
-        let statutBadge = '';
-        let cardCls = 'arene-match-card mon-match';
-        if (statut === 'termine') {
-          const snap2 = await db.ref('matchs/'+m.matchId).once('value');
-          const mData = snap2.val();
-          if (mData) {
-            const vainqueur = mData.vainqueur;
-            const gagne = (vainqueur==='j1'&&isJ1)||(vainqueur==='j2'&&!isJ1);
-            const nul = vainqueur==='egal';
-            statutBadge = nul?'<span class="badge badge-gray">🤝 Nul</span>':gagne?'<span class="badge badge-green">✅ Victoire</span>':'<span class="badge badge-red">❌ Défaite</span>';
-            if (gagne) cardCls += ' victoire'; else if (nul) cardCls += ' nul'; else cardCls += ' defaite';
-            // ELO delta
-            const eloSnap = mData.eloSnapshot?.[uid];
-            if (eloSnap?.eloAfter?.general != null) {
-              const d = eloSnap.eloAfter.general - eloSnap.eloBefore.general;
-              const col = d>0?'var(--green)':d<0?'var(--red)':'var(--muted)';
-              statutBadge += ` <span style="font-size:.72rem;font-weight:700;color:${col};">${d>0?'+':''}${d} ELO</span>`;
-            }
-          }
-        } else if (statut === 'en_cours' || statut === 'pret') {
-          statutBadge = '<span class="badge badge-gold" style="animation:pulse 2s infinite;">⚔️ En cours</span>';
-          cardCls += ' en-cours';
-        } else {
-          statutBadge = '<span class="badge badge-gray">⏳ En attente</span>';
-        }
-        const click = m.matchId ? `onclick="ouvrirMatch('${m.matchId}')"` : '';
-        html += `<div class="${cardCls}" ${click}>
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-            <div>
-              <div class="match-vs">vs ${adv||'?'}</div>
-              <div class="match-meta">${discIcon} · ${m.hippodrome||'?'}${dateStr?' · '+dateStr:''}</div>
-            </div>
-            <div style="text-align:right;">${statutBadge}</div>
-          </div>
-        </div>`;
+      for (const m of mesMatchs) html += await _buildAreneMatchCard(m, uid, key, today, yesterday);
+    }
+    el.innerHTML = html || '<p class="text-sm">Pas de match Arène récent vous concernant.</p>';
+  } catch(e) { el.innerHTML = '<p class="text-sm">Erreur chargement.</p>'; }
+}
+
+async function _chargerTousMatchsArene(isoDate) {
+  const el = document.getElementById('arene-matchs-tous');
+  if (!el) return;
+  el.innerHTML = '<p class="text-sm">⏳ Chargement…</p>';
+  const uid = utilisateur.uid;
+  const today = _pmuDateFromOffset(0).iso;
+  const yesterday = (() => { const d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
+  try {
+    let snap;
+    if (isoDate) {
+      const daySnap = await db.ref('arene/'+isoDate).once('value');
+      snap = { val:() => daySnap.exists() ? {[isoDate]: daySnap.val()} : null };
+    } else {
+      snap = await db.ref('arene').once('value');
+    }
+    if (!snap.val()) { el.innerHTML = '<p class="text-sm">Aucun match Arène ce jour.</p>'; return; }
+    let html = '';
+    const keys = Object.keys(snap.val()).sort().reverse().slice(0, 10);
+    let total = 0;
+    for (const key of keys) {
+      const data = snap.val()[key];
+      const matchs = Object.values(data.matchs || {});
+      if (matchs.length) {
+        const dateLabel = key.split('-').reverse().join('/');
+        html += `<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gold);padding:.25rem 0 .15rem;margin-top:${total>0?'.4rem':'0'};">${dateLabel}</div>`;
+        for (const m of matchs) { html += await _buildAreneMatchCard(m, uid, key, today, yesterday, true); total++; }
       }
     }
-    el.innerHTML = html || '<p class="text-sm">Aucun match Arène récent.</p>';
-  } catch(e) {
-    el.innerHTML = '<p class="text-sm">Erreur chargement.</p>';
-  }
+    el.innerHTML = html || '<p class="text-sm">Aucun match Arène.</p>';
+  } catch(e) { el.innerHTML = '<p class="text-sm">Erreur chargement.</p>'; }
 }
+
+async function chargerMatchsAreneDate(isoDate) {
+  if (!isoDate) return;
+  const calEl = document.getElementById('arene-cal-results');
+  if (calEl) calEl.innerHTML = '<span class="spinner"></span>';
+  await _chargerTousMatchsArene(isoDate);
+  if (calEl) calEl.style.display = 'none';
+}
+
+async function _buildAreneMatchCard(m, uid, key, today, yesterday, showAll) {
+  const discIcon = m.discipline==='TROT'?'🔵 Trot':'🟡 Galop';
+  const isJ1 = m.uidJ1 === uid;
+  const isParticipant = m.uidJ1===uid || m.uidJ2===uid;
+  const nomJ1 = m.j1||'?'; const nomJ2 = m.j2||'?';
+  const dateStr = key < today ? (key===yesterday?'Hier':key.split('-').reverse().join('/')) : '';
+  let statutBadge = '';
+  let cardCls = 'arene-match-card';
+  if (isParticipant) cardCls += ' mon-match';
+  const statut = m.statut;
+  if (statut === 'termine') {
+    try {
+      const snap2 = await db.ref('matchs/'+m.matchId).once('value');
+      const mData = snap2.val();
+      if (mData && isParticipant) {
+        const vainqueur = mData.vainqueur;
+        const gagne = (vainqueur==='j1'&&isJ1)||(vainqueur==='j2'&&!isJ1);
+        const nul = vainqueur==='egal';
+        statutBadge = nul?'<span class="badge badge-gray">🤝 Nul</span>':gagne?'<span class="badge badge-green">✅ Victoire</span>':'<span class="badge badge-red">❌ Défaite</span>';
+        if (gagne) cardCls += ' victoire'; else if (nul) cardCls += ' nul'; else cardCls += ' defaite';
+        const eloSnap = mData.eloSnapshot?.[uid];
+        if (eloSnap?.eloAfter?.general != null) {
+          const d = eloSnap.eloAfter.general - eloSnap.eloBefore.general;
+          const col = d>0?'var(--green)':d<0?'var(--red)':'var(--muted)';
+          statutBadge += ` <span style="font-size:.72rem;font-weight:700;color:${col};">${d>0?'+':''}${d} ELO</span>`;
+        }
+      } else {
+        statutBadge = '<span class="badge badge-gray" style="font-size:.68rem;">Terminé</span>';
+      }
+    } catch(e) { statutBadge = '<span class="badge badge-gray">Terminé</span>'; }
+  } else if (statut === 'en_cours' || statut === 'pret') {
+    statutBadge = '<span class="badge badge-gold" style="animation:pulse 2s infinite;">⚔️ En cours</span>';
+    if (isParticipant) cardCls += ' en-cours';
+  } else {
+    statutBadge = '<span class="badge badge-gray">⏳ En attente</span>';
+  }
+  const click = (isParticipant && m.matchId) ? `onclick="ouvrirMatch('${m.matchId}')" style="cursor:pointer;"` : '';
+  return `<div class="${cardCls}" ${click}>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
+      <div>
+        <div class="match-vs" style="font-size:.9rem;">${nomJ1} <span style="color:var(--muted);font-size:.75rem;">vs</span> ${nomJ2}${isParticipant?' <span style="color:var(--gold);font-size:.68rem;">← Vous</span>':''}</div>
+        <div class="match-meta">${discIcon} · ${m.hippodrome||'?'}${dateStr?' · '+dateStr:''}</div>
+      </div>
+      <div style="text-align:right;">${statutBadge}</div>
+    </div>
+  </div>`;
+}
+
 
 // ── chat arène ──
 let _chatAreneListener = null;
@@ -1674,6 +1876,209 @@ function switchAreneMensuel(disc, tabEl) {
 
 function _updateArenePrefsUI() {} // stub V1 conservé pour compatibilité
 async function setArenePreference() {} // stub V1 désactivé
+
+// ── ADMIN : Preview réunions + Générer l'Arène ──────────────────────────────
+
+function adminSetDateOffset(offset) {
+  const d = new Date(); d.setDate(d.getDate() + offset);
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  document.getElementById('arene-gen-date').value = dd+'/'+mm+'/'+d.getFullYear();
+  adminPreviewReunions();
+}
+
+async function adminPreviewReunions() {
+  const dateStr = document.getElementById('arene-gen-date').value.trim();
+  const previewEl = document.getElementById('arene-gen-preview');
+  if (!previewEl) return;
+  if (!dateStr || dateStr.length < 8) { previewEl.innerHTML = ''; return; }
+  const p = dateStr.split('/');
+  if (p.length !== 3) return;
+  const pmuDate = p[0].padStart(2,'0') + p[1].padStart(2,'0') + p[2];
+  const isoDate = p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+  previewEl.innerHTML = '<span class="spinner"></span> Chargement…';
+  try {
+    // Réunions PMU
+    const prog = await pmuGet('programme/'+pmuDate);
+    const toutesReunions = (prog.programme?.reunions || prog.reunions || prog || [])
+      .filter(r => r.audience==='NATIONAL' && r.pays?.code==='FRA'
+        && !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||''));
+    const reunionsTrot = toutesReunions.filter(r => detecterDiscipline(r)==='TROT');
+    const reunionsGalop = toutesReunions.filter(r => detecterDiscipline(r)==='GALOP');
+    const _somme = r => filtrerCoursesPaires(r.courses||[]).reduce((s,co)=>s+(co.montantPrix||0),0);
+    const rTrot = reunionsTrot.reduce((best,r)=>(!best||_somme(r)>_somme(best)?r:best), null);
+    const rGalop = reunionsGalop.reduce((best,r)=>(!best||_somme(r)>_somme(best)?r:best), null);
+
+    // Joueurs inscrits
+    const insSnap = await db.ref('arene_inscriptions/'+pmuDate).once('value');
+    const insData = insSnap.val() || {};
+    const trotUids = new Set(), galopUids = new Set();
+    const rTrotNum = rTrot ? String(rTrot.numOfficiel||rTrot.numReunion) : null;
+    const rGalopNum = rGalop ? String(rGalop.numOfficiel||rGalop.numReunion) : null;
+    Object.entries(insData).forEach(([uid, reunions]) => {
+      Object.entries(reunions).forEach(([numR, data]) => {
+        if (rTrotNum && numR === rTrotNum) trotUids.add(uid);
+        if (rGalopNum && numR === rGalopNum) galopUids.add(uid);
+      });
+    });
+
+    // Noms des joueurs
+    const usersSnap = await db.ref('utilisateurs').once('value');
+    const prenoms = {};
+    usersSnap.forEach(c => { prenoms[c.key] = c.val()?.prenom || c.key; });
+
+    // Vérifier si tirage déjà effectué
+    const areneSnap = await db.ref('arene/'+isoDate).once('value');
+    const dejaTire = areneSnap.exists();
+
+    let html = `<div style="background:rgba(200,168,75,.07);border:1px solid rgba(200,168,75,.2);border-radius:8px;padding:.75rem 1rem;font-size:.82rem;">`;
+    if (dejaTire) html += `<div style="color:var(--red);font-weight:700;margin-bottom:.5rem;">⚠️ Tirage déjà effectué pour cette date — régénérer va écraser l'existant !</div>`;
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;flex-wrap:wrap;">`;
+    if (rTrot) {
+      const h = nH(rTrot.hippodrome?.libelleLong||rTrot.hippodrome?.libelleCourt||'?');
+      const cours = filtrerCoursesPaires(rTrot.courses||[]).length;
+      html += `<div><div style="font-weight:700;color:#2563a8;">🔵 Trot</div>
+        <div>${h} · R${rTrot.numOfficiel} · ${cours} courses</div>
+        <div style="color:var(--muted);font-size:.76rem;">${_somme(rTrot).toLocaleString('fr-FR')} € dotation</div>
+        <div style="margin-top:.3rem;">${[...trotUids].length} inscrits : ${[...trotUids].map(u=>prenoms[u]||u).join(', ')||'<em>aucun</em>'}</div></div>`;
+    } else html += `<div style="color:var(--muted);">🔵 Trot — aucune réunion</div>`;
+    if (rGalop) {
+      const h = nH(rGalop.hippodrome?.libelleLong||rGalop.hippodrome?.libelleCourt||'?');
+      const cours = filtrerCoursesPaires(rGalop.courses||[]).length;
+      html += `<div><div style="font-weight:700;color:#8a6a20;">🟡 Galop</div>
+        <div>${h} · R${rGalop.numOfficiel} · ${cours} courses</div>
+        <div style="color:var(--muted);font-size:.76rem;">${_somme(rGalop).toLocaleString('fr-FR')} € dotation</div>
+        <div style="margin-top:.3rem;">${[...galopUids].length} inscrits : ${[...galopUids].map(u=>prenoms[u]||u).join(', ')||'<em>aucun</em>'}</div></div>`;
+    } else html += `<div style="color:var(--muted);">🟡 Galop — aucune réunion</div>`;
+    html += `</div></div>`;
+    previewEl.innerHTML = html;
+  } catch(e) {
+    previewEl.innerHTML = `<span style="color:var(--red);font-size:.8rem;">❌ ${e.message}</span>`;
+  }
+}
+
+async function genererArene() {
+  const dateStr = document.getElementById('arene-gen-date').value.trim();
+  if(!dateStr) { toast('⚠️ Entrez une date', true); return; }
+  const p = dateStr.split('/');
+  if(p.length!==3) { toast('⚠️ Format JJ/MM/AAAA', true); return; }
+  const pmuDate = p[0].padStart(2,'0')+p[1].padStart(2,'0')+p[2];
+  const isoDate = p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+  const btn = document.getElementById('arene-gen-btn');
+  const log = document.getElementById('arene-gen-log');
+  btn.disabled = true; btn.textContent = '⏳ Chargement programme…'; log.textContent = '';
+  try {
+    // 1. Programme PMU
+    const prog = await pmuGet('programme/'+pmuDate);
+    const toutesReunions = (prog.programme?.reunions || prog.reunions || prog || [])
+      .filter(r => r.audience==='NATIONAL' && r.pays?.code==='FRA'
+        && !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||''));
+    const _somme = r => filtrerCoursesPaires(r.courses||[]).reduce((s,co)=>s+(co.montantPrix||0),0);
+    const _meilleureReunion = (reunions, disc) => {
+      const filtered = reunions.filter(r => detecterDiscipline(r)===disc);
+      if(!filtered.length) return null;
+      return filtered.reduce((best,r) => _somme(r) > _somme(best) ? r : best);
+    };
+    const reunionTrot = _meilleureReunion(toutesReunions, 'TROT');
+    const reunionGalop = _meilleureReunion(toutesReunions, 'GALOP');
+    if(!reunionTrot && !reunionGalop) {
+      toast('⚠️ Aucune réunion disponible ce jour', true);
+      btn.disabled=false; btn.textContent='⚔️ Générer le tirage'; return;
+    }
+    const rTrotNum = reunionTrot ? String(reunionTrot.numOfficiel||reunionTrot.numReunion) : null;
+    const rGalopNum = reunionGalop ? String(reunionGalop.numOfficiel||reunionGalop.numReunion) : null;
+    log.textContent = `Trot : ${reunionTrot ? nH(reunionTrot.hippodrome?.libelleLong||reunionTrot.hippodrome?.libelleCourt||'?') : 'aucune'} · Galop : ${reunionGalop ? nH(reunionGalop.hippodrome?.libelleLong||reunionGalop.hippodrome?.libelleCourt||'?') : 'aucune'}`;
+
+    // 2. Joueurs inscrits (depuis arene_inscriptions)
+    btn.textContent = '⏳ Chargement joueurs…';
+    const [usersSnap, insSnap] = await Promise.all([
+      db.ref('utilisateurs').once('value'),
+      db.ref('arene_inscriptions/'+pmuDate).once('value')
+    ]);
+    const usersData = {};
+    usersSnap.forEach(c => { usersData[c.key] = c.val(); });
+    const insData = insSnap.val() || {};
+
+    // Construire liste joueurs Trot / Galop
+    const joueursTrot = [], joueursGalop = [];
+    Object.entries(insData).forEach(([uid, reunions]) => {
+      const prenom = usersData[uid]?.prenom || uid;
+      if (rTrotNum && reunions[rTrotNum]) joueursTrot.push({uid, nom:prenom});
+      if (rGalopNum && reunions[rGalopNum]) joueursGalop.push({uid, nom:prenom});
+    });
+
+    const _shuffle = arr => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+    const matchsACreer = [], exempts = [];
+    const _apparier = (pool, reunion, disc) => {
+      const p = _shuffle([...pool]);
+      if(p.length%2!==0) {
+        const ei = Math.floor(Math.random()*p.length);
+        exempts.push({uid:p[ei].uid, nom:p[ei].nom, disc});
+        p.splice(ei,1);
+      }
+      for(let i=0;i<p.length;i+=2) matchsACreer.push({j1:p[i], j2:p[i+1], discipline:disc, reunion});
+    };
+    if(reunionTrot && joueursTrot.length >= 2) _apparier(joueursTrot, reunionTrot, 'TROT');
+    else if(reunionTrot && joueursTrot.length === 1) {
+      exempts.push({uid:joueursTrot[0].uid, nom:joueursTrot[0].nom, disc:'TROT'});
+      log.textContent += ' · 1 seul inscrit en Trot → exempté';
+    }
+    if(reunionGalop && joueursGalop.length >= 2) _apparier(joueursGalop, reunionGalop, 'GALOP');
+    else if(reunionGalop && joueursGalop.length === 1) {
+      exempts.push({uid:joueursGalop[0].uid, nom:joueursGalop[0].nom, disc:'GALOP'});
+      log.textContent += ' · 1 seul inscrit en Galop → exempté';
+    }
+    if(!matchsACreer.length && !exempts.length) {
+      toast('⚠️ Aucun joueur inscrit', true);
+      btn.disabled=false; btn.textContent='⚔️ Générer le tirage'; return;
+    }
+
+    // 3. Créer les matchs Firebase
+    btn.textContent = '⏳ Création des matchs…';
+    const matchsCreated = {};
+    for(const m of matchsACreer) {
+      const code = genCode();
+      const reunion = m.reunion;
+      const areneCoursesFiltered = filtrerCoursesPaires(reunion.courses||[]);
+      const serieCourses = [];
+      for(const co of areneCoursesFiltered) {
+        try {
+          const pData = await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${co.numOrdre}/participants`);
+          const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0,urlCasaque:p.urlCasaque||''}));
+          serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants,choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
+        } catch(e) {
+          serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants:[],choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
+        }
+      }
+      const matchData = {
+        code, statut:'attente', arene:true,
+        uidJ1:m.j1.uid, uidJ2:m.j2.uid,
+        j1:{nom:m.j1.nom, uid:m.j1.uid},
+        j2:{nom:m.j2.nom, uid:m.j2.uid},
+        createdAt:Date.now(),
+        reunion:{hippodrome:nH(reunion.hippodrome?.libelleLong||reunion.hippodrome?.libelleCourt), numReunion:reunion.numOfficiel, pmuDate, discipline:m.discipline},
+        courses:serieCourses,
+        premierMain:Math.random()<0.5?'j1':'j2'
+      };
+      await db.ref('matchs/'+code).set(matchData);
+      matchsCreated[code] = {matchId:code, uidJ1:m.j1.uid, uidJ2:m.j2.uid, j1:m.j1.nom, j2:m.j2.nom, discipline:m.discipline, hippodrome:matchData.reunion.hippodrome, statut:'attente'};
+    }
+
+    // 4. Sauvegarder le tirage
+    const exemptNoms = exempts.map(e=>e.nom+' ('+e.disc.toLowerCase()+')');
+    const exemptUids = exempts.map(e=>e.uid);
+    await db.ref('arene/'+isoDate).set({date:isoDate, matchs:matchsCreated, exempts:exemptNoms, exempts_uids:exemptUids, generatedAt:Date.now(), generatedBy:utilisateur.uid});
+    log.textContent = `✅ ${matchsACreer.length} match(s) créé(s)${exempts.length?' · Exempts : '+exemptNoms.join(', '):''} · Joueurs Trot: ${joueursTrot.length}, Galop: ${joueursGalop.length}`;
+    toast('✅ Arène générée : '+matchsACreer.length+' match(s)');
+    chargerAdmin();
+    adminPreviewReunions();
+  } catch(e) {
+    toast('❌ Erreur : '+e.message, true);
+    log.textContent = 'Erreur : '+e.message;
+  } finally {
+    btn.disabled=false; btn.textContent='⚔️ Générer le tirage';
+  }
+}
 
 // ── CLASSEMENT ARÈNE ──────────────────────────────
 let _areneEloDiscipline = 'general';
@@ -1979,14 +2384,7 @@ function afficherListeLobby(joueurs) {
   const container = document.getElementById('lobby-annuaire-results');
   if(!container) return;
   if(!joueurs.length) { container.innerHTML='<p class="text-sm" style="padding:6px 0;">Aucun joueur trouvé.</p>'; return; }
-  const legende = '<div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;padding:.5rem 1rem .35rem;border-bottom:1px solid var(--cream2);margin-bottom:.25rem;font-size:.74rem;color:var(--muted);">'+
-    '<span style="font-weight:600;color:var(--turf);">⚔️ Arène :</span>'+
-    '<span>🔵 Trot</span>'+
-    '<span>🟡 Galop</span>'+
-    '<span>🔵🟡 Les deux</span>'+
-    '<span>⛔ Absent</span>'+
-    '</div>';
-  container.innerHTML = legende + joueurs.map(j => {
+  container.innerHTML = joueurs.map(j => {
     const initiale = (j.prenom||'?').charAt(0).toUpperCase();
     const dispo = j.statut==='disponible';
     const statutHtml = dispo
@@ -2096,26 +2494,24 @@ auth.onAuthStateChanged(async user => {
     }
     afficherNav(true);
     chargerAnnuaire(); // charger en arrière-plan pour le lobby
-    const lastPage = localStorage.getItem('lastPage') || 'home';
+    // Restaurer la dernière page visitée (sauf sous-pages et pages éphémères)
+    const lastPage = localStorage.getItem('lastPage') || 'arene';
+    const _SAFE_RESTORE = new Set(['arene','matchs-list','annuaire','profil','top-choix']);
     if(lastPage === 'lobby' || lastPage === 'match' || lastPage === 'fin') {
       const lastMatchId = localStorage.getItem('lastMatchId');
       chargerTableauBord();
       if(lastMatchId) { await ouvrirMatch(lastMatchId); }
-      else { showPage('matchs-list'); setNavActive('matchs'); }
-    } else if(lastPage === 'home') {
-      showPage('arene'); setNavActive('arene'); chargerArene();
-    } else if(lastPage === 'matchs-list') {
-      showPage('matchs-list'); setNavActive('matchs'); chargerTableauBord();
-    } else if(lastPage === 'annuaire') {
-      showPage('annuaire'); setNavActive('annuaire'); chargerAnnuaire();
+      else { showPage('arene'); setNavActive('arene'); chargerArene(); }
+    } else if(_SAFE_RESTORE.has(lastPage)) {
+      if(lastPage==='arene') { showPage('arene'); setNavActive('arene'); chargerArene(); }
+      else if(lastPage==='matchs-list') { showPage('matchs-list'); setNavActive('matchs'); chargerTableauBord(); }
+      else if(lastPage==='annuaire') { showPage('annuaire'); setNavActive('annuaire'); chargerAnnuaire(); }
+      else if(lastPage==='profil') { navProfil(); }
+      else if(lastPage==='top-choix') { navTopChoix(); }
     } else if(lastPage === 'admin' && user.uid===ADMIN_UID) {
       showPage('admin'); setNavActive(''); chargerAdmin();
-    } else if(lastPage === 'reglement') {
-      showPage('reglement'); setNavActive('reglement');
-    } else if(lastPage === 'arene') {
-      showPage('arene'); setNavActive('arene'); chargerArene();
     } else {
-      showPage('accueil'); setNavActive('home'); chargerAccueil();
+      showPage('arene'); setNavActive('arene'); chargerArene();
     }
     // Mettre statut en ligne
     db.ref('utilisateurs/'+user.uid+'/statut').set('disponible');
@@ -2490,6 +2886,7 @@ function chargerTableauBord() {
     const enCours = [], termines = [];
     snap.forEach(child => {
       const d = child.val();
+      if(d.arene) return; // matchs arène exclus des amicaux
       if(d.uidJ1===uid || d.uidJ2===uid) {
         if(d.statut === 'termine') termines.push({id:child.key,...d});
         else if(d.statut !== 'annule') enCours.push({id:child.key,...d});
@@ -2513,7 +2910,10 @@ function chargerTableauBord() {
       ? enCoursEnrichis.map(m => {
           const discIcon = m.reunion?.discipline==='TROT'?'🔵':m.reunion?.discipline==='GALOP'?'🟡':'⚪';
           const areneTag = m.arene ? '<span class="badge badge-gold" style="margin-left:.3rem;">⚔️ Arène</span>' : '';
-          const advNom = m.j2?.nom || (m._nomInvite ? '⏳ '+m._nomInvite : 'En attente…');
+          const monRole2 = m.uidJ1===uid ? 'j1' : 'j2';
+          const advNom = monRole2==='j1' ? (m.j2?.nom || (m._nomInvite ? '⏳ '+m._nomInvite : 'En attente…')) : (m.j1?.nom||'?');
+          const j1NomDisplay = m.j1?.nom||'?';
+          const j2NomDisplay = m.j2?.nom || (m._nomInvite ? '⏳ '+m._nomInvite : 'En attente…');
           let scoreBloc = '';
           if(m.statut==='en_cours') {
             const cs=m.courses||[];
@@ -2529,7 +2929,7 @@ function chargerTableauBord() {
           return `<div class="match-card en-cours" onclick="ouvrirMatch('${m.id}')">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.3rem;">
               <div>
-                <div class="match-vs">vs ${advNom}${areneTag}</div>
+                <div class="match-vs">${j1NomDisplay} <span style="color:var(--muted);font-size:.8rem;">vs</span> ${j2NomDisplay}${areneTag}</div>
                 <div class="match-meta">${discIcon} ${m.reunion?.hippodrome||'Non configuré'} · ${fPmuDate(m.reunion?.pmuDate)}</div>
               </div>
               ${scoreBloc}
@@ -2546,6 +2946,7 @@ function chargerTableauBord() {
       ? termines.map(m => {
           const monRole = m.uidJ1===uid ? 'j1' : 'j2';
           const adv = monRole==='j1' ? m.j2?.nom||'?' : m.j1?.nom||'?';
+          const j1NomT = m.j1?.nom||'?'; const j2NomT = m.j2?.nom||'?';
           const mM = monRole==='j1' ? m.manchesJ1||0 : m.manchesJ2||0;
           const mA = monRole==='j1' ? m.manchesJ2||0 : m.manchesJ1||0;
           const res = m.vainqueur===monRole?'✅ Victoire':m.vainqueur==='egal'?'🤝 Nul':'❌ Défaite';
@@ -2941,13 +3342,16 @@ async function chargerReunionsCreation() {
 // (en cas d'ex aequo, la dernière dans l'ordre du programme est retirée)
 function filtrerCoursesPaires(courses) {
   if(!courses || courses.length%2===0) return courses||[];
-  // Trouver l'index de la course avec le montantPrix le plus faible (dernière en cas d'ex aequo)
-  let minPrix = Infinity, minIdx = courses.length-1;
-  for(let i=courses.length-1;i>=0;i--) {
-    const p = courses[i].montantPrix||0;
-    if(p <= minPrix) { minPrix=p; minIdx=i; }
+  // Trouver la course à supprimer : prix le plus faible ;
+  // si ex-aequo → supprimer celle qui intervient le plus TARD (garder la plus tôt = index le plus bas)
+  let minPrix = Infinity;
+  for(const co of courses) { const p = co.montantPrix||0; if(p < minPrix) minPrix = p; }
+  // Parmi celles au prix minimum, supprimer la dernière dans le programme (index le plus grand)
+  let removeIdx = -1;
+  for(let i=0; i<courses.length; i++) {
+    if((courses[i].montantPrix||0) === minPrix) removeIdx = i; // sera écrasé à chaque trouvaille → index le plus grand
   }
-  return courses.filter((_,i)=>i!==minIdx);
+  return courses.filter((_,i)=>i!==removeIdx);
 }
 async function creerMatchAvecReunion(reunion, pmuDate, disc) {
   if(!_creationAdv) { toast('⚠️ Aucun adversaire', true); return; }
@@ -3031,14 +3435,7 @@ function afficherAnnuaire(joueurs) {
   const container = document.getElementById('liste-annuaire');
   if (!container) return;
   if (!joueurs.length) { container.innerHTML='<p class="text-sm">Aucun joueur trouvé.</p>'; return; }
-  const legende = '<div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;padding:.5rem 1rem .35rem;border-bottom:1px solid var(--cream2);margin-bottom:.25rem;font-size:.74rem;color:var(--muted);">'+
-    '<span style="font-weight:600;color:var(--turf);">⚔️ Arène :</span>'+
-    '<span>🔵 Trot</span>'+
-    '<span>🟡 Galop</span>'+
-    '<span>🔵🟡 Les deux</span>'+
-    '<span>⛔ Absent</span>'+
-    '</div>';
-  container.innerHTML = legende + joueurs.map(j => {
+  container.innerHTML = joueurs.map(j => {
     const initiale = (j.prenom||'?').charAt(0).toUpperCase();
     const stats = j.stats || {matchsJoues:0, victoires:0};
     const elo = j.elo || {general:1200, trot:1200, galop:1200};
@@ -3047,12 +3444,6 @@ function afficherAnnuaire(joueurs) {
     const statutHtml = statut === 'disponible'
       ? '<span class="statut-dispo">● Disponible</span>'
       : '<span class="statut-absent">● Absent</span>';
-    const pref = j.arenePreference || 'none';
-    let areneBadge = '';
-    if(pref==='trot') areneBadge = '<span style="font-size:.85rem;">🔵</span>';
-    else if(pref==='galop') areneBadge = '<span style="font-size:.85rem;">🟡</span>';
-    else if(pref==='both') areneBadge = '<span style="font-size:.85rem;">🔵🟡</span>';
-    else areneBadge = '<span style="font-size:.75rem;color:var(--muted);">⛔</span>';
     return `<div class="joueur-ligne">
       <div class="joueur-avatar">${initiale}</div>
       <div style="flex:1;min-width:0;">
@@ -4051,9 +4442,10 @@ async function cloturerMatch(matchId) {
   const eloJ1 = eloJ1Raw || {general:1200, trot:1200, galop:1200};
   const eloJ2 = eloJ2Raw || {general:1200, trot:1200, galop:1200};
 
-  // ── Calcul ELO ──
+  // ── Calcul ELO (uniquement matchs Arène) ──
   const scoreJ1 = v==='j1'?1:v==='egal'?0.5:0;
   const scoreJ2 = 1 - scoreJ1;
+  const isAreneMatch = !!data.arene; // ELO uniquement pour les matchs arène
   let disc = data.reunion?.discipline || '';
   if(!disc && data.courses?.length) {
     const specs = (data.courses||[]).map(co => co.specialite||co.discipline||'').filter(Boolean);
@@ -4093,11 +4485,19 @@ async function cloturerMatch(matchId) {
   if(uidJ2) eloSnapshot[uidJ2] = {eloBefore: eloJ2Raw||{general:1200,trot:1200,galop:1200}, eloAfter: newEloJ2, statsBefore: statsJ2Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}};
 
   // ── Appliquer ──
-  const eloGain_j1 = uidJ1 ? deltaJ1gen : 0;
-  const eloGain_j2 = uidJ2 ? deltaJ2gen : 0;
+  const eloGain_j1 = (uidJ1 && isAreneMatch) ? deltaJ1gen : 0;
+  const eloGain_j2 = (uidJ2 && isAreneMatch) ? deltaJ2gen : 0;
   await db.ref('matchs/'+matchId).update({statut:'termine', vainqueur, manchesJ1:m1, manchesJ2:m2, eloSnapshot, eloGain_j1, eloGain_j2});
-  if(uidJ1 && newStatsJ1) { await db.ref('utilisateurs/'+uidJ1+'/stats').set(newStatsJ1); await db.ref('utilisateurs/'+uidJ1+'/elo').set(newEloJ1); await db.ref('utilisateurs/'+uidJ1+'/statut').set('disponible'); }
-  if(uidJ2 && newStatsJ2) { await db.ref('utilisateurs/'+uidJ2+'/stats').set(newStatsJ2); await db.ref('utilisateurs/'+uidJ2+'/elo').set(newEloJ2); await db.ref('utilisateurs/'+uidJ2+'/statut').set('disponible'); }
+  if(uidJ1 && newStatsJ1) {
+    await db.ref('utilisateurs/'+uidJ1+'/stats').set(newStatsJ1);
+    if(isAreneMatch) await db.ref('utilisateurs/'+uidJ1+'/elo').set(newEloJ1); // ELO seulement arène
+    await db.ref('utilisateurs/'+uidJ1+'/statut').set('disponible');
+  }
+  if(uidJ2 && newStatsJ2) {
+    await db.ref('utilisateurs/'+uidJ2+'/stats').set(newStatsJ2);
+    if(isAreneMatch) await db.ref('utilisateurs/'+uidJ2+'/elo').set(newEloJ2); // ELO seulement arène
+    await db.ref('utilisateurs/'+uidJ2+'/statut').set('disponible');
+  }
   await viderChatMatch(matchId);
   arreterChatMatch();
   toast('✅ Match clôturé !');
@@ -4533,9 +4933,285 @@ function rendreFin(data) {
     
 </div></div>`;
 }
+// ══════════════════════════════════════════════════
+// TOP CHOIX
+// ══════════════════════════════════════════════════
+
+let _tcPeriode = 'semaine';
+let _tcDisc = 'general';
+let _tcReunionCtx = null;
+let _tcView = 'total';
+
+function navTopChoix() {
+  showPage('top-choix'); setNavActive('top-choix');
+  _chargerTcProgramme();
+  _chargerTcClassementPerma();
+}
+
+async function _chargerTcProgramme() {
+  const tabsEl = document.getElementById('tc-day-tabs');
+  const panelsEl = document.getElementById('tc-day-panels');
+  if (!tabsEl || !panelsEl) return;
+  tabsEl.innerHTML = '<span class="text-sm">⏳</span>';
+  panelsEl.innerHTML = '';
+  let tabsHtml = '', panelsHtml = '';
+  for (let i = 0; i < 3; i++) {
+    const { pmuDate, label } = _pmuDateFromOffset(i);
+    let reunions = [];
+    try {
+      const data = await pmuGet('programme/'+pmuDate);
+      const all = data.programme?.reunions || data.reunions || data || [];
+      reunions = all.filter(r =>
+        r.audience === 'NATIONAL' && r.pays?.code === 'FRA' &&
+        !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'') &&
+        ['TROT','GALOP'].includes(detecterDiscipline(r))
+      );
+    } catch(e) {}
+    tabsHtml += `<div class="day-tab${i===0?' active':''}" id="tc-daytab-${i}" onclick="switchTcDay(${i})">${label} <span class="day-count-badge">${reunions.length}</span></div>`;
+    let panelContent = reunions.length ? '' : '<p class="text-sm">Aucune réunion PMU nationale.</p>';
+    for (const r of reunions) {
+      const numR = String(r.numOfficiel || r.numReunion || '?');
+      const hippo = nH(r.hippodrome?.libelleLong || r.hippodrome?.libelleCourt || '?');
+      const disc = detecterDiscipline(r);
+      const discIcon = disc==='TROT'?'🔵':'🟡';
+      const courses = filtrerCoursesPaires(r.courses || []);
+      const h1 = courses[0]?.heureDepart ? formatHeure(courses[0].heureDepart) : '--:--';
+      panelContent += `<div class="reunion-v2-card" style="cursor:pointer;" onclick="ouvrirTcReunion('${pmuDate}','${numR}','${hippo}','${disc}')">
+        <div class="reunion-v2-head">
+          <div style="display:flex;align-items:center;gap:.4rem;">
+            <span class="reunion-disc ${disc==='TROT'?'disc-trot':'disc-galop'}" style="font-size:.72rem;padding:.12rem .45rem;border-radius:100px;">${discIcon} ${disc==='TROT'?'Trot':'Galop'}</span>
+            <span class="reunion-hippo">${hippo}</span>
+            <span class="reunion-meta">${courses.length} courses · 1ère à ${h1}</span>
+          </div>
+          <span class="btn-choix-v2 btn-choix-new">Voir classement →</span>
+        </div>
+      </div>`;
+    }
+    panelsHtml += `<div class="day-panel${i===0?' active':''}" id="tc-daypanel-${i}">${panelContent}</div>`;
+  }
+  tabsEl.innerHTML = tabsHtml;
+  panelsEl.innerHTML = panelsHtml;
+}
+
+function switchTcDay(idx) {
+  document.querySelectorAll('[id^="tc-daytab-"]').forEach((t,i) => t.classList.toggle('active', i===idx));
+  document.querySelectorAll('[id^="tc-daypanel-"]').forEach((p,i) => p.classList.toggle('active', i===idx));
+}
+
+async function ouvrirTcReunion(pmuDate, numR, hippo, disc) {
+  _tcReunionCtx = { pmuDate, numR, hippo, disc };
+  document.getElementById('tc-reunion-titre').textContent = `${disc==='TROT'?'🔵':'🟡'} ${hippo}`;
+  document.getElementById('tc-reunion-meta').textContent = `R${numR} · ${pmuDate.slice(0,2)}/${pmuDate.slice(2,4)}/${pmuDate.slice(4)}`;
+  document.getElementById('tc-results').style.display = '';
+  document.getElementById('tc-classement-total').innerHTML = '<p class="text-sm">⏳ Calcul en cours…</p>';
+  document.getElementById('tc-classement-courses').innerHTML = '';
+  document.getElementById('tc-results').scrollIntoView({behavior:'smooth'});
+  await _calculerTcReunion();
+}
+
+async function _calculerTcReunion() {
+  const { pmuDate, numR, disc } = _tcReunionCtx;
+  // 1. Charger le programme pour obtenir les courses
+  let courses = [];
+  try {
+    const data = await pmuGet('programme/'+pmuDate);
+    const all = data.programme?.reunions || data.reunions || data || [];
+    const reunion = all.find(r => String(r.numOfficiel||r.numReunion) === String(numR));
+    if (reunion) courses = filtrerCoursesPaires(reunion.courses || []);
+  } catch(e) {}
+  if (!courses.length) { document.getElementById('tc-classement-total').innerHTML = '<p class="text-sm">Programme non disponible.</p>'; return; }
+
+  // 2. Charger les choix de tous les inscrits
+  const choixSnap = await db.ref('arene_choix/'+pmuDate+'/'+numR).once('value');
+  const choixData = choixSnap.val() || {};
+  // Ajouter exempts du tirage (ils peuvent aussi figurer)
+  const isoDate = pmuDate.slice(4)+'-'+pmuDate.slice(2,4)+'-'+pmuDate.slice(0,2);
+  const areneSnap = await db.ref('arene/'+isoDate).once('value');
+  const areneData = areneSnap.val();
+  // Charger rapports des courses terminées
+  const rapportsData = {};
+  if (areneData) {
+    const matchIds = Object.keys(areneData.matchs || {});
+    for (const mid of matchIds.slice(0, 3)) {
+      try {
+        const mSnap = await db.ref('matchs/'+mid+'/courses').once('value');
+        mSnap.forEach(cs => {
+          const co = cs.val();
+          const key = co.numOrdre;
+          if (co.rapports && Object.keys(co.rapports).length) rapportsData[key] = { rapports: co.rapports, arrivee: co.arrivee || [] };
+        });
+      } catch(e) {}
+    }
+  }
+
+  // Noms des joueurs
+  const usersSnap = await db.ref('utilisateurs').once('value');
+  const prenoms = {};
+  usersSnap.forEach(c => { prenoms[c.key] = c.val()?.prenom || c.key; });
+
+  // 3. Calculer les points de chaque joueur
+  const scores = {}; // uid → { total, parCourse: {} }
+  for (const [uid, choixJoueur] of Object.entries(choixData)) {
+    const coursesChoix = choixJoueur.courses || {};
+    let total = 0;
+    const parCourse = {};
+    for (const co of courses) {
+      const key = String(co.numOrdre);
+      const choix = (coursesChoix[key] || []).slice(0, 2); // 2 premiers choix
+      const raps = rapportsData[co.numOrdre];
+      let pts = 0;
+      if (raps && choix.length) {
+        for (const num of choix) {
+          const r = raps.rapports[String(num)];
+          if (r?.gagnant) pts += Math.round(r.gagnant / 10);
+          else if (r?.place) pts += Math.round(r.place / 10);
+        }
+      }
+      parCourse[key] = { choix, pts };
+      total += pts;
+    }
+    scores[uid] = { total, parCourse, prenom: prenoms[uid]||uid };
+  }
+
+  const scorelist = Object.entries(scores).map(([uid,s]) => ({uid,...s})).sort((a,b) => b.total - a.total);
+  const myUid = utilisateur?.uid;
+
+  // Afficher classement total
+  const hasFinalScores = Object.values(rapportsData).length > 0;
+  let html = hasFinalScores ? '' : '<div class="arene-alert" style="margin-bottom:.5rem;font-size:.74rem;">⏳ Résultats PMU pas encore disponibles — les points seront calculés une fois les courses terminées.</div>';
+  if (!scorelist.length) { html += '<p class="text-sm">Aucun joueur n'a saisi ses choix.</p>'; }
+  else {
+    html += scorelist.map((j, i) => {
+      const rang = i<3?['🥇','🥈','🥉'][i]:(i+1);
+      const isMe = j.uid === myUid;
+      return `<div class="arene-classement-ligne${isMe?' moi':''}">
+        <span style="width:1.6rem;text-align:center;font-size:.88rem;">${rang}</span>
+        <div class="joueur-avatar" style="width:24px;height:24px;font-size:.7rem;">${(j.prenom||'?').charAt(0)}</div>
+        <span style="flex:1;font-weight:${isMe?700:500};font-size:.82rem;">${isMe?'<strong>Vous</strong>':j.prenom}</span>
+        <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700;color:var(--gold);">${j.total} pts</span>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('tc-classement-total').innerHTML = html;
+  _tcReunionCtx._scorelist = scorelist;
+  _tcReunionCtx._courses = courses;
+  _tcReunionCtx._rapportsData = rapportsData;
+
+  // Afficher par course
+  let htmlCourses = '';
+  for (const co of courses) {
+    const key = String(co.numOrdre);
+    const raps = rapportsData[co.numOrdre];
+    const classCourse = scorelist.map(j => ({
+      prenom: j.prenom, uid: j.uid, pts: j.parCourse[key]?.pts || 0, choix: j.parCourse[key]?.choix || []
+    })).sort((a,b) => b.pts - a.pts);
+    htmlCourses += `<div style="margin-bottom:.9rem;"><div style="font-size:.78rem;font-weight:700;color:var(--turf);margin-bottom:.3rem;">C${co.numOrdre} — ${co.libelle||'Course '+co.numOrdre}${co.heureDepart?' · '+formatHeure(co.heureDepart):''}</div>`;
+    if (!classCourse.length) { htmlCourses += '<p class="text-sm">Aucun choix.</p></div>'; continue; }
+    classCourse.forEach((j, i) => {
+      const isMe = j.uid === myUid;
+      const rang = i<3?['🥇','🥈','🥉'][i]:(i+1);
+      htmlCourses += `<div class="arene-classement-ligne${isMe?' moi':''}" style="font-size:.76rem;">
+        <span style="width:1.4rem;text-align:center;">${rang}</span>
+        <span style="flex:1;font-weight:${isMe?700:500};">${isMe?'<strong>Vous</strong>':j.prenom}</span>
+        <span style="color:var(--muted);font-size:.7rem;">${j.choix.map(n=>'#'+n).join(' · ')||'—'}</span>
+        <span style="font-family:'Cormorant Garamond',serif;font-weight:700;color:var(--gold);width:2.5rem;text-align:right;">${j.pts} pts</span>
+      </div>`;
+    });
+    htmlCourses += '</div>';
+  }
+  document.getElementById('tc-classement-courses').innerHTML = htmlCourses;
+
+  // Attribuer les points cumulés (N-rang pour N joueurs)
+  const N = scorelist.length;
+  if (N > 0 && hasFinalScores) {
+    const moisKey = new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+    const semaineKey = (() => {
+      const d=new Date(); const day=d.getDay()||7;
+      d.setDate(d.getDate()-day+1);
+      return d.toISOString().slice(0,10).replace(/-/g,'');
+    })();
+    const anneeKey = String(new Date().getFullYear());
+    const { pmuDate: pd, numR: nr } = _tcReunionCtx;
+    const tcKey = pd+'_R'+nr; // clé unique par réunion
+    // Vérifier si déjà attribué
+    const existSnap = await db.ref('top_choix_attribues/'+tcKey).once('value');
+    if (!existSnap.exists()) {
+      const updates = {};
+      scorelist.forEach((j, i) => {
+        const pts = N - 1 - i; // premier : N-1, dernier : 0
+        if (pts <= 0) return;
+        const disc2 = (disc||'general').toLowerCase();
+        ['semaine/'+semaineKey, 'mois/'+moisKey, 'annee/'+anneeKey].forEach(periode => {
+          const base = 'top_choix_classement/'+periode+'/'+disc2+'/'+j.uid;
+          updates[base+'/prenom'] = j.prenom;
+          updates[base+'/pts'] = (existSnap.val()?.[j.uid]?.pts||0) + pts;
+        });
+      });
+      updates['top_choix_attribues/'+tcKey] = { at: Date.now(), n: N };
+      try { await db.ref().update(updates); } catch(e) { console.warn('tc update:', e); }
+    }
+  }
+}
+
+function switchTcView(view, tabEl) {
+  _tcView = view;
+  document.querySelectorAll('#tc-view-tabs .arene-stab').forEach(t => t.classList.remove('active'));
+  if (tabEl) tabEl.classList.add('active');
+  document.getElementById('tc-classement-total').style.display = view==='total' ? '' : 'none';
+  document.getElementById('tc-classement-courses').style.display = view==='courses' ? '' : 'none';
+}
+
+function switchTcPeriode(periode, tabEl) {
+  _tcPeriode = periode;
+  document.querySelectorAll('#tc-perma-tabs .arene-stab').forEach(t => t.classList.remove('active'));
+  if (tabEl) tabEl.classList.add('active');
+  _chargerTcClassementPerma();
+}
+
+function switchTcDisc(disc, tabEl) {
+  _tcDisc = disc;
+  document.querySelectorAll('#tc-disc-tabs .arene-stab').forEach(t => t.classList.remove('active'));
+  if (tabEl) tabEl.classList.add('active');
+  _chargerTcClassementPerma();
+}
+
+async function _chargerTcClassementPerma() {
+  const el = document.getElementById('tc-classement-perma');
+  if (!el) return;
+  el.innerHTML = '<span class="spinner"></span>';
+  const moisKey = new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+  const semaineKey = (() => {
+    const d=new Date(); const day=d.getDay()||7;
+    d.setDate(d.getDate()-day+1);
+    return d.toISOString().slice(0,10).replace(/-/g,'');
+  })();
+  const anneeKey = String(new Date().getFullYear());
+  const periodeKey = _tcPeriode==='semaine'?semaineKey:_tcPeriode==='mois'?moisKey:anneeKey;
+  const path = 'top_choix_classement/'+_tcPeriode+'/'+periodeKey+'/'+_tcDisc;
+  try {
+    const snap = await db.ref(path).once('value');
+    const data = snap.val() || {};
+    const myUid = utilisateur?.uid;
+    const joueurs = Object.entries(data).map(([uid, d]) => ({uid, prenom:d.prenom||uid, pts:d.pts||0})).sort((a,b) => b.pts-a.pts);
+    if (!joueurs.length) { el.innerHTML = '<p class="text-sm">Aucun classement pour cette période.</p>'; return; }
+    el.innerHTML = joueurs.map((j,i) => {
+      const rang = i<3?['🥇','🥈','🥉'][i]:(i+1);
+      const isMe = j.uid===myUid;
+      return `<div class="arene-classement-ligne${isMe?' moi':''}">
+        <span style="width:1.6rem;text-align:center;font-size:.88rem;">${rang}</span>
+        <div class="joueur-avatar" style="width:24px;height:24px;font-size:.7rem;">${(j.prenom||'?').charAt(0)}</div>
+        <span style="flex:1;font-weight:${isMe?700:500};font-size:.82rem;">${isMe?'<strong>Vous</strong>':j.prenom}</span>
+        <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700;color:var(--gold);">${j.pts} pts</span>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<p class="text-sm">Erreur chargement.</p>'; }
+}
+
+
 </script>
 </body>
 </html>
+
 
 
 
