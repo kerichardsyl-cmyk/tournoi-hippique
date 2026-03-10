@@ -2449,7 +2449,7 @@ function switchTab(tab) {
 }
 
 async function seConnecter() {
-  if (!auth) { toast('❌ Connexion Firebase non initialisée — vérifiez l'URL', true); return; }
+  if (!auth) { toast("❌ Connexion Firebase non initialisée — vérifiez l'URL", true); return; }
   const email=document.getElementById('login-email').value.trim();
   const mdp=document.getElementById('login-mdp').value;
   if(!email||!mdp) { toast('⚠️ Remplissez tous les champs',true); return; }
@@ -5096,7 +5096,7 @@ async function _calculerTcReunion() {
   // Afficher classement total
   const hasFinalScores = Object.values(rapportsData).length > 0;
   let html = hasFinalScores ? '' : '<div class="arene-alert" style="margin-bottom:.5rem;font-size:.74rem;">⏳ Résultats PMU pas encore disponibles — les points seront calculés une fois les courses terminées.</div>';
-  if (!scorelist.length) { html += '<p class="text-sm">Aucun joueur n'a saisi ses choix.</p>'; }
+  if (!scorelist.length) { html += '<p class="text-sm">Aucun joueur n\'a saisi ses choix.</p>'; }
   else {
     html += scorelist.map((j, i) => {
       const rang = i<3?['🥇','🥈','🥉'][i]:(i+1);
