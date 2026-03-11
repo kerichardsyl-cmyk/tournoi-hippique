@@ -1026,6 +1026,7 @@
     <div class="arene-alert arene-alert-info" style="margin-bottom:.65rem;">
       Choisissez <strong>4 chevaux par course</strong> dans votre ordre de préférence.
       Si vous avez la main, vos <strong>2 premiers choix</strong> seront joués directement.
+      <div style="margin-top:.35rem;font-size:.78rem;opacity:.8;">💡 La saisie complète n'est pas obligatoire maintenant — vous pouvez revenir à tout moment jusqu'à la fermeture des pronos (20 min avant le départ de la 1ère course).</div>
     </div>
     <div class="page-choix-legend">
       <span class="choix-badge-v2 cb-v2-1">① 1er choix</span>
@@ -1211,6 +1212,7 @@
 // ── FIREBASE INIT ──────────────────────────────────
 const ADMIN_UID = 'NyXlWdthrFVUhkGjriC66ATiBIy2';
 function nH(s) { return (s||'').replace(/HIPPODROME (DE |D'|DU |DE L'|DES )/gi,'').replace(/HIPPODROME /gi,'').trim(); }
+function nHJS(s) { return nH(s).replace(/'/g,"\\'"); } // version safe pour attributs onclick
 function fPmuDate(d) { if(!d||d.length<8) return ''; return d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4); }
 
 function toggleVueAdmin() {
@@ -1387,7 +1389,7 @@ async function _buidAreneAlerts() {
           const hippo = inscs[numR].hippodrome || 'Réunion';
           const disc = inscs[numR].discipline === 'TROT' ? '🔵' : '🟡';
           const label = offset === 0 ? "aujourd'hui" : offset === 1 ? 'demain' : 'après-demain';
-          alertHtml += `<div class="arene-alert">⚠️ <div><strong>${disc} ${hippo}</strong> (${label}) — vos choix sont incomplets (${nbRemplis}/${nbCourses} courses). <span style="cursor:pointer;text-decoration:underline;" onclick="ouvrirChoix('${pmuDate}','${numR}','${inscs[numR].hippodrome||''}','${inscs[numR].discipline||''}')">Compléter →</span></div></div>`;
+          alertHtml += `<div class="arene-alert">⚠️ <div><strong>${disc} ${hippo}</strong> (${label}) — vos choix sont incomplets (${nbRemplis}/${nbCourses} courses). <span style="cursor:pointer;text-decoration:underline;" onclick="ouvrirChoix('${pmuDate}','${numR}','${nHJS(inscs[numR].hippodrome||'')}','${inscs[numR].discipline||''}')">Compléter →</span></div></div>`;
         }
       }
     } catch(e) {}
@@ -1469,12 +1471,12 @@ async function _chargerProgrammeMultiJours() {
             const choixData = choixSnap.val() || {};
             const nbRemplis = Object.values(choixData.courses || {}).filter(cc => (cc||[]).length >= 4).length;
             if (nbRemplis >= nbCourses && nbCourses > 0) {
-              choixBtnHtml = `<button class="btn-choix-v2 btn-choix-ok" onclick="ouvrirChoix('${pmuDate}','${numR}','${hippo}','${disc}')">📋 ${nbRemplis}/${nbCourses} ✓</button>`;
+              choixBtnHtml = `<button class="btn-choix-v2 btn-choix-ok" onclick="ouvrirChoix('${pmuDate}','${numR}','${nHJS(hippo)}','${disc}')">📋 ${nbRemplis}/${nbCourses} ✓</button>`;
             } else {
-              choixBtnHtml = `<button class="btn-choix-v2 btn-choix-warn" onclick="ouvrirChoix('${pmuDate}','${numR}','${hippo}','${disc}')">📋 ${nbRemplis}/${nbCourses} ⚠️</button>`;
+              choixBtnHtml = `<button class="btn-choix-v2 btn-choix-warn" onclick="ouvrirChoix('${pmuDate}','${numR}','${nHJS(hippo)}','${disc}')">📋 ${nbRemplis}/${nbCourses} ⚠️</button>`;
             }
           } catch(e) {
-            choixBtnHtml = `<button class="btn-choix-v2 btn-choix-new" onclick="ouvrirChoix('${pmuDate}','${numR}','${hippo}','${disc}')">📋 Faire mes choix</button>`;
+            choixBtnHtml = `<button class="btn-choix-v2 btn-choix-new" onclick="ouvrirChoix('${pmuDate}','${numR}','${nHJS(hippo)}','${disc}')">📋 Faire mes choix</button>`;
           }
         }
         const inscritCls = inscrit ? ' inscrit' : '';
@@ -1526,16 +1528,21 @@ async function toggleInscription(checkbox, pmuDate, numR, hippo, disc, nbCourses
   try {
     if (checkbox.checked) {
       await db.ref(path).set({ hippodrome: hippo, discipline: disc, nbCourses, inscritAt: Date.now() });
-      toast('✅ Inscrit sur '+hippo);
+      toast('✅ Inscrit sur '+hippo+' — saisissez vos pronos !');
+      // Recharger puis ouvrir directement la saisie
+      const activeTab = document.querySelector('.day-tab.active');
+      const idx = activeTab ? [...document.querySelectorAll('.day-tab')].indexOf(activeTab) : 0;
+      await _chargerProgrammeMultiJours();
+      switchAreneDay(idx);
+      ouvrirChoix(pmuDate, numR, hippo, disc);
     } else {
       await db.ref(path).remove();
       toast('⛔ Désinscrit de '+hippo);
+      const activeTab = document.querySelector('.day-tab.active');
+      const idx = activeTab ? [...document.querySelectorAll('.day-tab')].indexOf(activeTab) : 0;
+      await _chargerProgrammeMultiJours();
+      switchAreneDay(idx);
     }
-    // Recharger le panneau courant
-    const activeTab = document.querySelector('.day-tab.active');
-    const idx = activeTab ? [...document.querySelectorAll('.day-tab')].indexOf(activeTab) : 0;
-    await _chargerProgrammeMultiJours();
-    switchAreneDay(idx);
   } catch(e) {
     toast('❌ Erreur : '+e.message, true);
     checkbox.checked = !checkbox.checked;
@@ -4947,24 +4954,9 @@ function fGains(g) { if(!g) return '—'; return (g/100000).toFixed(0)+'k€'; }
 function rendreSelecteurChevaux(c,idx,estMain,monRole,isArene) {
   const partants=c.partants||[],maxC=estMain?2:4,mc=c['choix'+monRole.toUpperCase()]||[],bl=estMain&&c.mainBloquee;
   if(!partants.length) return '<p class="text-sm" style="text-align:center;padding:12px;">Aucun partant disponible.</p>';
-  // Match arène + joueur principal : afficher les choix déjà injectés, lecture seule (choix faits en amont)
-  if (isArene && estMain) {
-    const choixNums = mc.slice(0, 2);
-    if (!choixNums.length) return '<p class="text-sm" style="padding:10px;text-align:center;">⚠️ Aucun choix trouvé pour cette course. Vérifiez vos saisies sur la page Arène.</p>';
-    const lignes = choixNums.map((n, i) => {
-      const p = partants.find(p => p.numero === n);
-      const nom = p ? p.nom : '#'+n;
-      const driver = p?.driver || '';
-      return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;margin-bottom:5px;background:rgba(200,168,75,.1);border-left:3px solid var(--gold);">' +
-        '<span class="ordre-num">'+(i+1)+'</span>' +
-        '<span class="num-cercle">'+n+'</span>' +
-        '<strong style="font-size:.88rem;">'+nom+'</strong>' +
-        (driver ? '<span style="font-size:.76rem;color:var(--muted);">'+driver+'</span>' : '') +
-        '</div>';
-    }).join('');
-    return '<p class="text-sm" style="margin-bottom:6px;color:var(--muted);">🔒 Vos 2 chevaux (saisis sur l\'Arène) :</p>' + lignes;
-  }
-  let html='<p class="text-sm" style="margin-bottom:6px;">Sélectionnez <strong>'+maxC+' cheval'+(maxC>1?'x':'')+'</strong>'+(estMain?'':' dans l\'ordre de préférence')+' :</p>';
+  // Match arène : choix pré-injectés depuis arene_choix, mais modifiables jusqu'au timer
+  // Le joueur principal a maxC=2, le joueur second a maxC=4 — tableau interactif dans les deux cas
+  let html='<p class="text-sm" style="margin-bottom:6px;">'+(mc.length>0?'✏️ Modifiez si besoin — ':'')+'Sélectionnez <strong>'+maxC+' cheval'+(maxC>1?'x':'')+'</strong>'+(estMain?'':' dans l\'ordre de préférence')+' :</p>';
   html+='<div style="overflow-x:auto;"><table class="chevaux-table" id="tbl-chevaux-'+idx+'">';
   html+='<thead><tr><th>N°</th><th>Cheval</th><th>Driver/Jockey</th><th>Entr.</th><th>Âge</th><th>Musique</th></tr></thead><tbody>';
   partants.forEach(p=>{
