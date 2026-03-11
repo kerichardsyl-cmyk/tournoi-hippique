@@ -48,11 +48,11 @@
     #form-connexion .btn-or { width:100%; margin-top:1rem; padding:.85rem; font-size:.95rem; }
 
     /* ── CONTAINER / HERO ── */
-    .container { max-width:1060px; margin:0 auto; padding:1.75rem 1.5rem; }
-    .page-inner { max-width:1060px; margin:0 auto; padding:1.75rem 1.5rem; }
+    .container { max-width:min(80vw,1600px); margin:0 auto; padding:1.75rem 1.5rem; }
+    .page-inner { max-width:min(80vw,1600px); margin:0 auto; padding:1.75rem 1.5rem; }
     .hero-band { background:linear-gradient(135deg,var(--ink) 0%,var(--turf) 50%,var(--turf2) 100%); padding:1.8rem 1.5rem; position:relative; overflow:hidden; }
     .hero-band::before { content:''; position:absolute; inset:0; background-image:repeating-linear-gradient(45deg,rgba(200,168,75,.025) 0,rgba(200,168,75,.025) 1px,transparent 1px,transparent 28px); }
-    .hero-inner { position:relative; max-width:1060px; margin:0 auto; }
+    .hero-inner { position:relative; max-width:min(80vw,1600px); margin:0 auto; }
     .hero-top { display:flex; justify-content:space-between; align-items:flex-start; gap:1.25rem; flex-wrap:wrap; }
     .hero-title { font-family:'Cormorant Garamond',serif; font-size:1.9rem; font-weight:700; color:white; line-height:1.1; }
     .hero-title span { color:var(--gold); }
@@ -439,7 +439,7 @@
 <header>
   <div onclick="navHome()" style="cursor:pointer;line-height:1.2;">
     <div style="font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:700;color:var(--gold);letter-spacing:.02em;">TH – Les joutes hippiques</div>
-    <div style="font-size:.65rem;font-weight:300;color:rgba(255,255,255,.45);font-style:italic;letter-spacing:.02em;">Vivez les courses autrement et intensément !</div>
+    <div style="font-size:.82rem;font-weight:400;color:rgba(255,255,255,.7);font-style:italic;letter-spacing:.01em;">Vivez les courses autrement et intensément !</div>
   </div>
   <div id="header-right" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
     <div id="header-nav" style="display:none;gap:4px;">
@@ -2043,16 +2043,25 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
       matchsCreated[code] = {j1:m.j1.nom, j2:m.j2.nom};
     }
 
-    // Exemptés
+    // Exemptés — points attribués immédiatement au tirage
     const isoMois = isoDate.slice(0,7);
     const exemptUids = {};
     for (const ex of exempts) {
       exemptUids[ex.uid] = true;
-      await db.ref('utilisateurs/'+ex.uid+'/stats/matchsJoues').transaction(v=>(v||0)+1);
+      // Stats globales
+      await db.ref('utilisateurs/'+ex.uid+'/stats').transaction(s => {
+        const cur = s || {matchsJoues:0,victoires:0,defaites:0,egalites:0};
+        cur.matchsJoues = (cur.matchsJoues||0)+1;
+        return cur;
+      });
+      // Classement Arène par discipline
       await db.ref('arene_classements/'+isoMois+'/'+disc.toLowerCase()+'/'+ex.uid).transaction(d => {
         const cur = d || {pts:0,victoires:0,nuls:0,defaites:0,prenom:usersData[ex.uid]?.prenom||ex.nom};
-        cur.pts = (cur.pts||0)+1; return cur;
+        cur.pts = (cur.pts||0)+1;
+        cur.prenom = usersData[ex.uid]?.prenom || ex.nom;
+        return cur;
       });
+      // ELO inchangé pour les exemptés (pas de match joué)
     }
 
     await db.ref('arene/'+isoDate+'/'+numR).set({
