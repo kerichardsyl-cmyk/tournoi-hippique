@@ -1026,7 +1026,8 @@
     <div class="arene-alert arene-alert-info" style="margin-bottom:.65rem;">
       Choisissez <strong>4 chevaux par course</strong> dans votre ordre de préférence.
       Si vous avez la main, vos <strong>2 premiers choix</strong> seront joués directement.
-      <div style="margin-top:.35rem;font-size:.78rem;opacity:.8;">💡 La saisie complète n'est pas obligatoire maintenant — vous pouvez revenir à tout moment jusqu'à la fermeture des pronos (20 min avant le départ de la 1ère course).</div>
+      <div style="margin-top:.35rem;font-size:.78rem;opacity:.8;">💡 La saisie complète n'est pas obligatoire maintenant — vous pouvez revenir à tout moment jusqu'à la fermeture des pronos.</div>
+      <div style="margin-top:.25rem;font-size:.78rem;opacity:.8;">🔄 Une fois le tirage effectué et les matchs accessibles, <strong>vos choix restent modifiables directement depuis le match</strong>, course par course, jusqu'au départ de chaque course.</div>
     </div>
     <div class="page-choix-legend">
       <span class="choix-badge-v2 cb-v2-1">① 1er choix</span>
@@ -1081,38 +1082,190 @@
 
 <!-- PAGE RÈGLEMENT -->
 <div id="page-reglement" class="page">
-  <div class="hero-band"><div class="hero-inner"><h1 class="hero-title">📋 <span>Règlement</span></h1><div class="hero-sub">Comment jouer · Système de points</div></div></div>
+  <div class="hero-band"><div class="hero-inner"><h1 class="hero-title">📋 <span>Règlement</span></h1><div class="hero-sub">Tout savoir sur le Tournoi Hippique</div></div></div>
   <div class="page-inner">
-  <div class="card">
-    <h2>📋 Règlement du Tournoi Hippique</h2>
-    <div style="line-height:1.7;font-size:.92rem;">
 
-      <h3 style="margin:1.2rem 0 .45rem;">🎯 Principe du jeu</h3>
-      <p>Deux joueurs s'affrontent sur une réunion PMU. Pour chaque course, chacun choisit des chevaux et marque des points selon les rapports officiels PMU. Le joueur avec le plus de points à la fin remporte la manche. Celui qui remporte le plus de manches gagne le match.</p>
+  <!-- NAVIGATION INTERNE -->
+  <div class="card" style="padding:.5rem .9rem;">
+    <div style="display:flex;flex-wrap:wrap;gap:.4rem;">
+      <a href="#regl-presentation" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">🏇 Présentation</a>
+      <a href="#regl-arene" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">⚔️ L'Arène</a>
+      <a href="#regl-match" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">🎯 Déroulement d'un match</a>
+      <a href="#regl-points" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">💰 Points PMU</a>
+      <a href="#regl-amical" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">🤝 Matchs amicaux</a>
+      <a href="#regl-tcchoix" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">⭐ Top Choix</a>
+      <a href="#regl-classements" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">📊 Classements</a>
+      <a href="#regl-elo" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">📈 ELO</a>
+    </div>
+  </div>
 
-      <h3 style="margin:1.2rem 0 .45rem;">⭐ Le joueur principal (la main)</h3>
-      <p>Pour chaque course, un joueur a <strong>la main</strong> (alternance à chaque course). Il choisit <strong>2 chevaux</strong> et ses choix se ferment <strong>10 minutes avant le départ</strong>.</p>
-
-      <h3 style="margin:1.2rem 0 .45rem;">🎯 Le joueur secondaire</h3>
-      <p>Il choisit <strong>4 chevaux dans l'ordre de préférence</strong>, ses choix se ferment <strong>5 minutes avant le départ</strong>. Ses 4 chevaux sont ensuite filtrés : ceux déjà choisis par le joueur principal sont retirés, et il ne garde que les <strong>2 premiers restants</strong>.</p>
-
-      <h3 style="margin:1.2rem 0 .45rem;">💰 Calcul des points</h3>
-      <p>Pour chaque cheval sélectionné, les points sont calculés ainsi :</p>
-      <ul style="padding-left:20px;margin-top:6px;">
-        <li style="margin-bottom:4px;"><strong>Gagnant :</strong> rapport officiel PMU × 10 (ex: cote 4.50€ → 45 pts)</li>
-        <li style="margin-bottom:4px;"><strong>Placé :</strong> rapport officiel PMU × 10 (ex: cote 1.90€ → 19 pts)</li>
-        <li>Si le cheval ne rapporte rien, il marque <strong>0 point</strong></li>
+  <!-- PRÉSENTATION GÉNÉRALE -->
+  <div class="card" id="regl-presentation">
+    <div class="card-head"><h3>🏇 Présentation du Tournoi Hippique</h3></div>
+    <div class="card-body" style="font-size:.9rem;line-height:1.75;">
+      <p>Le <strong>Tournoi Hippique</strong> est une application de pronostics hippiques multijoueur en temps réel, basée sur les réunions officielles PMU. Le principe : deux joueurs s'affrontent en sélectionnant des chevaux sur les mêmes courses, et les rapports officiels PMU déterminent le gagnant de chaque manche.</p>
+      <p style="margin-top:.6rem;">L'application propose trois modes de jeu :</p>
+      <ul style="padding-left:1.2rem;margin-top:.4rem;">
+        <li style="margin-bottom:.4rem;"><strong>⚔️ L'Arène</strong> — tournoi collectif organisé chaque jour, avec tirage au sort des adversaires</li>
+        <li style="margin-bottom:.4rem;"><strong>🤝 Matchs Amicaux</strong> — défis directs entre deux joueurs, sur invitation</li>
+        <li><strong>⭐ Top Choix</strong> — classement individuel basé sur vos 2 meilleurs choix par course, sans adversaire</li>
       </ul>
-      <p style="margin-top:8px;">Le score total d'un joueur pour une course est la <strong>somme des points</strong> de ses 2 chevaux.</p>
+      <p style="margin-top:.6rem;">Seules les réunions <strong>nationales françaises</strong> sont disponibles (hors Martinique). Les disciplines jouées sont le <strong>Trot 🔵</strong> et le <strong>Galop 🟡</strong>.</p>
+    </div>
+  </div>
 
-      <h3 style="margin:1.2rem 0 .45rem;">🏆 Victoire</h3>
-      <p>Le joueur qui remporte le plus de <strong>manches</strong> (courses) gagne le match. En cas d'égalité de manches, c'est le total de points sur l'ensemble des courses qui départage. Si toujours égalité : match nul.</p>
+  <!-- L'ARÈNE -->
+  <div class="card" id="regl-arene">
+    <div class="card-head"><h3>⚔️ L'Arène — Tournoi quotidien</h3></div>
+    <div class="card-body" style="font-size:.9rem;line-height:1.75;">
+      <h3 style="margin:.8rem 0 .35rem;">📝 Inscription</h3>
+      <p>Chaque jour, des réunions PMU sont ouvertes à l'inscription dans l'onglet <em>Arène</em>. Cochez <strong>"Je participe"</strong> pour vous inscrire sur une réunion. Vous pouvez vous inscrire à plusieurs réunions le même jour.</p>
 
-      <h3 style="margin:1.2rem 0 .45rem;">🎲 Tirage au sort</h3>
-      <p>Au lancement du match, un tirage au sort détermine quel joueur a <strong>la main en premier</strong> (course 1). La main alterne ensuite à chaque course.</p>
+      <h3 style="margin:.8rem 0 .35rem;">🎯 Saisie des choix initiaux</h3>
+      <p>Après inscription, vous saisissez vos <strong>4 chevaux préférés par course</strong>, dans l'ordre de préférence. Cette saisie n'est <strong>pas obligatoire avant le tirage</strong> — vous pouvez la compléter ou la modifier à tout moment jusqu'à la fermeture des pronos. <strong>Une fois le tirage effectué et les matchs accessibles, vos choix restent modifiables directement depuis le match</strong>, course par course, jusqu'au départ de chaque course.</p>
 
-      <h3 style="margin:1.2rem 0 .45rem;">⚙️ Organisation</h3>
-      <p>Le créateur du match est l'<strong>arbitre</strong> : il choisit la réunion PMU et lance le match une fois l'adversaire connecté. Les résultats sont récupérés automatiquement après chaque course.</p>
+      <h3 style="margin:.8rem 0 .35rem;">🎲 Tirage au sort</h3>
+      <p>L'administrateur lance le tirage qui forme les paires de joueurs aléatoirement. Chaque joueur reçoit son match. Les joueurs en nombre impair reçoivent un <strong>point exempté</strong> automatiquement.</p>
+
+      <h3 style="margin:.8rem 0 .35rem;">⭐ La Main — qui choisit quoi</h3>
+      <p>Pour chaque course, un joueur a <strong>la main</strong> (désigné aléatoirement, alternance à chaque course). Le joueur avec la main choisit <strong>2 chevaux</strong> (ses 2 premiers choix préférés). Ses choix se bloquent <strong>10 minutes avant le départ</strong>.</p>
+      <p style="margin-top:.4rem;">Le joueur sans la main choisit <strong>4 chevaux dans l'ordre de préférence</strong>, bloqués <strong>5 minutes avant le départ</strong>. Ses 4 chevaux sont ensuite filtrés : ceux déjà choisis par le joueur avec la main sont retirés, et il conserve ses <strong>2 premiers restants</strong>.</p>
+
+      <div style="background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.25);border-radius:8px;padding:.65rem .9rem;margin:.8rem 0;font-size:.84rem;">
+        <strong>Exemple :</strong> La main choisit N°3 et N°7. Le second a choisi N°3, N°5, N°7, N°2 dans l'ordre. Après filtrage : N°3 et N°7 étant pris, il joue <strong>N°5 et N°2</strong>.
+      </div>
+
+      <h3 style="margin:.8rem 0 .35rem;">🏆 Victoire dans l'Arène</h3>
+      <p>Le joueur qui remporte le plus de <strong>manches</strong> (courses gagnées) gagne le match → <strong>2 points Arène</strong>. En cas de match nul : <strong>1 point chacun</strong>. Un exempté reçoit <strong>1 point</strong>. Le classement mensuel Arène se base sur ces points, départagé par manches gagnées puis total de points PMU.</p>
+    </div>
+  </div>
+
+  <!-- DÉROULEMENT D'UN MATCH -->
+  <div class="card" id="regl-match">
+    <div class="card-head"><h3>🎯 Déroulement d'un match</h3></div>
+    <div class="card-body" style="font-size:.9rem;line-height:1.75;">
+      <ol style="padding-left:1.2rem;">
+        <li style="margin-bottom:.5rem;"><strong>Ouverture</strong> — les courses sont listées avec leur statut : <span style="background:rgba(45,138,85,.2);color:#6fffa0;padding:1px 6px;border-radius:10px;font-size:.8rem;">Ouverte</span> = pronostics acceptés</li>
+        <li style="margin-bottom:.5rem;"><strong>Saisie</strong> — cliquez sur une course ouverte, puis sélectionnez vos chevaux dans le tableau. L'ordre de sélection définit votre ordre de préférence.</li>
+        <li style="margin-bottom:.5rem;"><strong>Fermeture</strong> — à l'approche du départ, les choix se bloquent automatiquement. Statut : <span style="background:rgba(179,58,42,.2);color:#ff9090;padding:1px 6px;border-radius:10px;font-size:.8rem;">Bloquée</span></li>
+        <li style="margin-bottom:.5rem;"><strong>Résultats</strong> — après la course, l'arrivée et les rapports PMU sont importés automatiquement. Statut : <span style="background:rgba(100,100,100,.2);color:rgba(255,255,255,.5);padding:1px 6px;border-radius:10px;font-size:.8rem;">Terminée</span></li>
+        <li><strong>Clôture</strong> — une fois toutes les courses terminées, le match est clôturé. Les points ELO et le classement Arène sont mis à jour.</li>
+      </ol>
+      <p style="margin-top:.7rem;font-size:.84rem;color:var(--muted);">Les résultats sont récupérés automatiquement depuis l'API officielle PMU. En cas de résultat manquant, l'administrateur peut les importer manuellement.</p>
+    </div>
+  </div>
+
+  <!-- CALCUL DES POINTS PMU -->
+  <div class="card" id="regl-points">
+    <div class="card-head"><h3>💰 Calcul des points PMU</h3></div>
+    <div class="card-body" style="font-size:.9rem;line-height:1.75;">
+      <p>Pour chaque cheval sélectionné par un joueur, les points sont calculés à partir des <strong>rapports officiels PMU</strong> :</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.7rem 0;">
+        <div style="background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.25);border-radius:8px;padding:.6rem .8rem;text-align:center;">
+          <div style="font-size:1.1rem;">🥇</div>
+          <div style="font-weight:700;font-size:.88rem;margin:.2rem 0;">Rapport Gagnant</div>
+          <div style="font-size:.82rem;color:var(--muted);">rapport PMU ÷ 10</div>
+          <div style="font-size:.78rem;margin-top:.2rem;">ex : 4,50€ → <strong>45 pts</strong></div>
+        </div>
+        <div style="background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.25);border-radius:8px;padding:.6rem .8rem;text-align:center;">
+          <div style="font-size:1.1rem;">🎯</div>
+          <div style="font-weight:700;font-size:.88rem;margin:.2rem 0;">Rapport Placé</div>
+          <div style="font-size:.82rem;color:var(--muted);">rapport PMU ÷ 10</div>
+          <div style="font-size:.78rem;margin-top:.2rem;">ex : 1,90€ → <strong>19 pts</strong></div>
+        </div>
+      </div>
+      <p>Un cheval peut rapporter un <strong>Gagnant + un Placé</strong> (s'il termine 1ᵉʳ et se place), uniquement un Placé (s'il termine 2ᵉ ou 3ᵉ), ou <strong>0 point</strong> s'il ne se place pas.</p>
+      <p style="margin-top:.5rem;">Le score d'un joueur pour une course = <strong>somme des points de ses 2 chevaux</strong>. Le joueur avec le score le plus élevé remporte la <strong>manche</strong>. En cas d'égalité : la manche est partagée (aucun point Arène pour cette course).</p>
+
+      <h3 style="margin:.8rem 0 .35rem;">🔢 Les points entre parenthèses</h3>
+      <p>Dans le match, vous voyez les scores sous la forme <strong>manches (points PMU)</strong>. Les points entre parenthèses sont le cumul des points PMU sur toutes les courses. Ils servent de départage si les manches sont à égalité en fin de match.</p>
+    </div>
+  </div>
+
+  <!-- MATCHS AMICAUX -->
+  <div class="card" id="regl-amical">
+    <div class="card-head"><h3>🤝 Matchs Amicaux</h3></div>
+    <div class="card-body" style="font-size:.9rem;line-height:1.75;">
+      <p>Depuis l'onglet <em>Amicaux</em>, vous pouvez défier directement n'importe quel joueur inscrit sur la plateforme.</p>
+      <ol style="padding-left:1.2rem;margin-top:.5rem;">
+        <li style="margin-bottom:.4rem;"><strong>Création</strong> — choisissez une réunion PMU, sélectionnez votre adversaire dans l'annuaire, envoyez l'invitation.</li>
+        <li style="margin-bottom:.4rem;"><strong>Acceptation</strong> — votre adversaire reçoit la notification et rejoint le match depuis son tableau de bord.</li>
+        <li style="margin-bottom:.4rem;"><strong>Lancement</strong> — une fois les deux joueurs connectés, le créateur lance le match.</li>
+        <li><strong>Jeu</strong> — le déroulement est identique à l'Arène (la main, choix, résultats PMU).</li>
+      </ol>
+      <p style="margin-top:.6rem;font-size:.84rem;color:var(--muted);">⚠️ Les matchs amicaux <strong>ne comptent pas</strong> pour le classement Arène mensuel, mais <strong>comptent pour l'ELO</strong>.</p>
+      <p style="margin-top:.4rem;font-size:.84rem;color:var(--muted);">Si l'adversaire n'accepte pas l'invitation avant 15 minutes du départ de la 1ère course, le match est annulé automatiquement.</p>
+    </div>
+  </div>
+
+  <!-- TOP CHOIX -->
+  <div class="card" id="regl-tcchoix">
+    <div class="card-head"><h3>⭐ Top Choix</h3></div>
+    <div class="card-body" style="font-size:.9rem;line-height:1.75;">
+      <p>Le <strong>Top Choix</strong> est un classement individuel indépendant des matchs. Il mesure la qualité de vos pronostics personnels, sans adversaire.</p>
+
+      <h3 style="margin:.8rem 0 .35rem;">📊 Comment ça marche</h3>
+      <p>Pour chaque réunion Arène, tous les inscrits (y compris les exemptés) participent au Top Choix. Pour chaque course, seuls vos <strong>2 premiers choix</strong> (dans l'ordre de préférence saisi) sont pris en compte. Les points sont calculés exactement comme dans un match (rapport Gagnant + rapport Placé divisés par 10).</p>
+
+      <h3 style="margin:.8rem 0 .35rem;">🏅 Classement cumulé</h3>
+      <p>Le classement Top Choix cumule vos points PMU obtenus sur <strong>tous les matchs Arène terminés</strong> de la période sélectionnée (semaine, mois, année). Plus vous accumulez de points PMU, plus vous montez dans le classement.</p>
+      <p style="margin-top:.4rem;">Un filtre par discipline (Général / 🔵 Trot / 🟡 Galop) est disponible pour affiner le classement.</p>
+
+      <h3 style="margin:.8rem 0 .35rem;">📅 Classement par réunion</h3>
+      <p>Depuis l'onglet Top Choix, sélectionnez une réunion pour voir le classement détaillé : points par course, choix de chaque joueur, et score total sur cette réunion.</p>
+    </div>
+  </div>
+
+  <!-- CLASSEMENTS -->
+  <div class="card" id="regl-classements">
+    <div class="card-head"><h3>📊 Les classements</h3></div>
+    <div class="card-body" style="font-size:.9rem;line-height:1.75;">
+      <h3 style="margin:.3rem 0 .35rem;">🏆 Classement Arène mensuel</h3>
+      <p>Réinitialisé chaque mois. Basé sur les <strong>points Arène</strong> :</p>
+      <ul style="padding-left:1.2rem;margin-top:.3rem;">
+        <li>Victoire → <strong>2 points</strong></li>
+        <li>Match nul → <strong>1 point chacun</strong></li>
+        <li>Exempté → <strong>1 point</strong></li>
+      </ul>
+      <p style="margin-top:.4rem;">Départage : manches gagnées → points PMU totaux. Filtrable par discipline (Général / Trot / Galop).</p>
+
+      <h3 style="margin:.8rem 0 .35rem;">📈 Classement ELO</h3>
+      <p>Classement de niveau permanent (non réinitialisé). Voir la section ELO ci-dessous.</p>
+
+      <h3 style="margin:.8rem 0 .35rem;">📋 Classement complet</h3>
+      <p>Accessible via le bouton <em>"Classement complet →"</em> depuis l'Arène. Affiche tous les joueurs avec leurs stats V/N/D et leur ELO, pour chaque discipline.</p>
+
+      <h3 style="margin:.8rem 0 .35rem;">🎖️ Palmarès</h3>
+      <p>Le palmarès conserve les lauréats des classements passés (mensuels). Les 3 premiers de chaque mois y sont affichés.</p>
+    </div>
+  </div>
+
+  <!-- ELO -->
+  <div class="card" id="regl-elo">
+    <div class="card-head"><h3>📈 Le classement ELO</h3></div>
+    <div class="card-body" style="font-size:.9rem;line-height:1.75;">
+      <p>Le classement ELO mesure le <strong>niveau relatif</strong> de chaque joueur. Contrairement au classement mensuel, il ne se réinitialise pas.</p>
+
+      <h3 style="margin:.8rem 0 .35rem;">⚙️ Fonctionnement</h3>
+      <ul style="padding-left:1.2rem;">
+        <li style="margin-bottom:.4rem;">Tous les joueurs démarrent à <strong>1200 points ELO</strong></li>
+        <li style="margin-bottom:.4rem;">Gagner contre un adversaire <strong>fort</strong> rapporte beaucoup de points ; perdre contre un adversaire <strong>faible</strong> en fait perdre beaucoup</li>
+        <li style="margin-bottom:.4rem;">Coefficient K = <strong>32</strong> (variation maximale par match)</li>
+        <li>Les calculs ELO sont séparés : <strong>Général / Trot / Galop</strong></li>
+      </ul>
+
+      <h3 style="margin:.8rem 0 .35rem;">📐 Formule</h3>
+      <div style="background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.2);border-radius:8px;padding:.65rem .9rem;font-size:.84rem;font-family:monospace;">
+        Δ ELO = K × (résultat − probabilité attendue)<br>
+        Probabilité attendue = 1 ÷ (1 + 10^((ELO_adversaire − ELO_joueur) ÷ 400))
+      </div>
+
+      <h3 style="margin:.8rem 0 .35rem;">🔵🟡 ELO par discipline</h3>
+      <p>L'ELO Trot et l'ELO Galop sont calculés et affichés séparément, permettant de mesurer votre niveau dans chaque type de course indépendamment. Seuls les matchs Arène (pas les amicaux) entrent dans le calcul ELO.</p>
+
+      <div style="background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.2);border-radius:8px;padding:.65rem .9rem;margin-top:.8rem;font-size:.84rem;">
+        <strong>💡 Bon à savoir :</strong> Si vous êtes re-clôturé après une correction, l'ancien calcul ELO est annulé et recalculé sur les nouvelles valeurs, évitant toute double comptabilisation.
+      </div>
     </div>
   </div>
 
@@ -2237,8 +2390,7 @@ function switchAreneElo(discipline) {
 function _afficherAreneElo() {
   const key=_areneEloDiscipline, uid=utilisateur?.uid;
   const joueurs=_joueursCache.filter(j=>{
-    if(key==='general') return (j.stats?.matchsJoues||0)>0;
-    const sd = key==='trot' ? j.statsTrot : j.statsGalop;
+    const sd = key==='trot' ? j.statsTrot : key==='galop' ? j.statsGalop : j.statsGeneral;
     return (j.elo?.[key]||1200)!==1200 || (sd?.matchsJoues||0)>0;
   }).sort((a,b)=>(b.elo?.[key]||1200)-(a.elo?.[key]||1200));
   const top10=joueurs.slice(0,10), reste=joueurs.slice(10);
@@ -2255,27 +2407,46 @@ function _afficherAreneElo() {
 }
 
 function chargerAreneElo() {
-  const moisKey = new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
   Promise.all([
     db.ref('utilisateurs').once('value'),
-    db.ref('arene_classements/'+moisKey+'/trot').once('value'),
-    db.ref('arene_classements/'+moisKey+'/galop').once('value')
-  ]).then(([usersSnap, trotSnap, galopSnap]) => {
-    const trotData  = trotSnap.val()  || {};
-    const galopData = galopSnap.val() || {};
+    _buildStatsDisc('trot'),
+    _buildStatsDisc('galop'),
+    _buildStatsDisc('general')
+  ]).then(([usersSnap, trotStats, galopStats, genStats]) => {
     _joueursCache = [];
     usersSnap.forEach(child => {
       const u = child.val();
-      const td = trotData[child.key]  || {};
-      const gd = galopData[child.key] || {};
+      const td = trotStats[child.key]  || {v:0,n:0,d:0,m:0};
+      const gd = galopStats[child.key] || {v:0,n:0,d:0,m:0};
+      const gs = genStats[child.key]   || {v:0,n:0,d:0,m:0};
       _joueursCache.push({
         uid: child.key, ...u,
-        statsTrot:  {victoires:td.victoires||0, nuls:td.nuls||0, defaites:td.defaites||0, matchsJoues:(td.victoires||0)+(td.nuls||0)+(td.defaites||0)},
-        statsGalop: {victoires:gd.victoires||0, nuls:gd.nuls||0, defaites:gd.defaites||0, matchsJoues:(gd.victoires||0)+(gd.nuls||0)+(gd.defaites||0)}
+        statsGeneral: {victoires:gs.v, nuls:gs.n, defaites:gs.d, matchsJoues:gs.m},
+        statsTrot:    {victoires:td.v, nuls:td.n, defaites:td.d, matchsJoues:td.m},
+        statsGalop:   {victoires:gd.v, nuls:gd.n, defaites:gd.d, matchsJoues:gd.m}
       });
     });
     _afficherAreneElo();
   });
+}
+
+// Calcule V/N/D depuis tous les matchs arène terminés, filtrés par discipline
+async function _buildStatsDisc(disc) {
+  const snap = await db.ref('matchs').once('value');
+  const stats = {}; // uid → {v,n,d,m}
+  const _g = uid => stats[uid] || (stats[uid] = {v:0, n:0, d:0, m:0});
+  snap.forEach(child => {
+    const m = child.val();
+    if (!m.arene || m.statut !== 'termine') return;
+    const mDisc = (m.reunion?.discipline || m.discipline || '').toUpperCase();
+    if (disc === 'trot'  && mDisc !== 'TROT')  return;
+    if (disc === 'galop' && mDisc !== 'GALOP') return;
+    _g(m.uidJ1).m++; _g(m.uidJ2).m++;
+    if (m.vainqueur === 'j1')   { _g(m.uidJ1).v++; _g(m.uidJ2).d++; }
+    else if (m.vainqueur === 'j2') { _g(m.uidJ2).v++; _g(m.uidJ1).d++; }
+    else if (m.vainqueur === 'egal') { _g(m.uidJ1).n++; _g(m.uidJ2).n++; }
+  });
+  return stats;
 }
 
 function toggleAreneEloComplet() {
@@ -2453,29 +2624,22 @@ async function chargerClassementDetail(type) {
     joueurs.sort((a,b) => b.pts-a.pts || b.victoires-a.victoires);
   } else {
     const disc = type === 'elo-gen' ? 'general' : type === 'elo-trot' ? 'trot' : 'galop';
-    // Lire les stats V/N/D par discipline depuis arene_classements (source fiable)
-    const classSnap = await db.ref('arene_classements/'+moisKey+'/'+disc).once('value');
-    const classData = {};
-    classSnap.forEach(c => { classData[c.key] = c.val(); });
+    // Calculer V/N/D depuis les matchs (source fiable, pas arene_classements)
+    const statsDisc = await _buildStatsDisc(disc);
     Object.entries(users).forEach(([key,u]) => {
       const elo = u.elo?.[disc] || 1200;
-      // Pour ELO général : stats globales ; pour trot/galop : stats de la discipline
-      const d = (disc === 'general') ? null : classData[key];
-      const s = u.stats || {};
+      const st = statsDisc[key] || {v:0, n:0, d:0, m:0};
       joueurs.push({
         uid:key, prenom:u.prenom||'?',
         pts:elo,
-        victoires: d ? (d.victoires||0) : (s.victoires||0),
-        nuls:      d ? (d.nuls||0)      : (s.egalites||0),
-        defaites:  d ? (d.defaites||0)  : (s.defaites||0),
+        victoires:st.v, nuls:st.n, defaites:st.d,
         elo, trot:!!(u.elo?.trot&&u.elo.trot!==1200), galop:!!(u.elo?.galop&&u.elo.galop!==1200)
       });
     });
-    // Filtrer : pour trot/galop, ne montrer que ceux qui ont un ELO ou des matchs dans la discipline
     if (disc !== 'general') {
-      joueurs = joueurs.filter(j => j.elo !== 1200 || j.victoires > 0 || j.nuls > 0 || j.defaites > 0);
+      joueurs = joueurs.filter(j => j.elo !== 1200 || (j.victoires+j.nuls+j.defaites) > 0);
     } else {
-      joueurs = joueurs.filter(j => (j.victoires + j.nuls + j.defaites) > 0 || j.elo !== 1200);
+      joueurs = joueurs.filter(j => (j.victoires+j.nuls+j.defaites) > 0 || j.elo !== 1200);
     }
     joueurs.sort((a,b) => b.pts-a.pts);
   }
@@ -2795,7 +2959,7 @@ function ligneClassement(j, i, uid, key) {
   const medal = medals[i];
   const eloVal = j.elo?.[key] || 1200;
   const isMe = j.uid === uid;
-  const _sd = key==='trot' ? (j.statsTrot||j.stats) : key==='galop' ? (j.statsGalop||j.stats) : j.stats;
+  const _sd = key==='trot' ? (j.statsTrot||j.stats) : key==='galop' ? (j.statsGalop||j.stats) : (j.statsGeneral||j.stats);
   const _sv = _sd?.victoires||0, _sm = _sd?.matchsJoues||0;
   if(medal) {
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:${medal.bg};border:1px solid ${medal.border};${isMe?'outline:2px solid var(--or);':''}">
