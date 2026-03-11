@@ -1471,12 +1471,12 @@ async function _chargerProgrammeMultiJours() {
             const choixData = choixSnap.val() || {};
             const nbRemplis = Object.values(choixData.courses || {}).filter(cc => (cc||[]).length >= 4).length;
             if (nbRemplis >= nbCourses && nbCourses > 0) {
-              choixBtnHtml = `<button class="btn-choix-v2 btn-choix-ok" onclick="ouvrirChoix('${pmuDate}','${numR}','${nHJS(hippo)}','${disc}')">📋 ${nbRemplis}/${nbCourses} ✓</button>`;
+              choixBtnHtml = `<button class="btn-choix-v2 btn-choix-ok" data-ouvrir-choix data-pmu="${pmuDate}" data-numr="${numR}" data-hippo="${encodeURIComponent(hippo)}" data-disc="${disc}">📋 ${nbRemplis}/${nbCourses} ✓</button>`;
             } else {
-              choixBtnHtml = `<button class="btn-choix-v2 btn-choix-warn" onclick="ouvrirChoix('${pmuDate}','${numR}','${nHJS(hippo)}','${disc}')">📋 ${nbRemplis}/${nbCourses} ⚠️</button>`;
+              choixBtnHtml = `<button class="btn-choix-v2 btn-choix-warn" data-ouvrir-choix data-pmu="${pmuDate}" data-numr="${numR}" data-hippo="${encodeURIComponent(hippo)}" data-disc="${disc}">📋 ${nbRemplis}/${nbCourses} ⚠️</button>`;
             }
           } catch(e) {
-            choixBtnHtml = `<button class="btn-choix-v2 btn-choix-new" onclick="ouvrirChoix('${pmuDate}','${numR}','${nHJS(hippo)}','${disc}')">📋 Faire mes choix</button>`;
+            choixBtnHtml = `<button class="btn-choix-v2 btn-choix-new" data-ouvrir-choix data-pmu="${pmuDate}" data-numr="${numR}" data-hippo="${encodeURIComponent(hippo)}" data-disc="${disc}">📋 Faire mes choix</button>`;
           }
         }
         const inscritCls = inscrit ? ' inscrit' : '';
@@ -1510,6 +1510,16 @@ async function _chargerProgrammeMultiJours() {
 
   tabsEl.innerHTML = tabsHtml;
   panelsEl.innerHTML = panelsHtml;
+  // Attacher les clics sur boutons choix via data-attributes (évite les problèmes d'onclick inline)
+  panelsEl.querySelectorAll('[data-ouvrir-choix]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pmu = btn.dataset.pmu;
+      const numr = btn.dataset.numr;
+      const hippo = decodeURIComponent(btn.dataset.hippo);
+      const disc = btn.dataset.disc;
+      ouvrirChoix(pmu, numr, hippo, disc);
+    });
+  });
 }
 
 function switchAreneDay(idx) {
@@ -5179,6 +5189,16 @@ async function _chargerTcProgramme() {
   }
   tabsEl.innerHTML = tabsHtml;
   panelsEl.innerHTML = panelsHtml;
+  // Attacher les clics sur boutons choix via data-attributes (évite les problèmes d'onclick inline)
+  panelsEl.querySelectorAll('[data-ouvrir-choix]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pmu = btn.dataset.pmu;
+      const numr = btn.dataset.numr;
+      const hippo = decodeURIComponent(btn.dataset.hippo);
+      const disc = btn.dataset.disc;
+      ouvrirChoix(pmu, numr, hippo, disc);
+    });
+  });
 }
 
 function switchTcDay(idx) {
