@@ -437,15 +437,15 @@
 </head>
 <body>
 <header>
-  <div onclick="navHome()" style="cursor:pointer;line-height:1.25;">
+  <div onclick="navHome()" style="cursor:pointer;line-height:1.2;">
     <div style="font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:700;color:var(--gold);letter-spacing:.02em;">TH – Les joutes hippiques</div>
-    <div style="font-size:.78rem;font-weight:400;color:rgba(255,255,255,.65);font-style:italic;letter-spacing:.01em;">Vivez les courses autrement et intensément !</div>
+    <div style="font-size:.65rem;font-weight:300;color:rgba(255,255,255,.45);font-style:italic;letter-spacing:.02em;">Vivez les courses autrement et intensément !</div>
   </div>
   <div id="header-right" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
     <div id="header-nav" style="display:none;gap:4px;">
       <button type="button" class="btn btn-sm btn-nav" id="nav-arene" onclick="navArene()">⚔️ Arène</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-matchs" onclick="navMatchs()" style="position:relative;">🤝 Amicaux<span id="badge-matchs" style="display:none;position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:50%;width:17px;height:17px;font-size:.65rem;font-weight:bold;line-height:17px;text-align:center;pointer-events:none;"></span></button>
-
+      <button type="button" class="btn btn-sm btn-nav" id="nav-annuaire" onclick="navAnnuaire()">👥 Annuaire</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-top-choix" onclick="navTopChoix()">⭐ Top Choix</button>
       <button type="button" class="btn btn-sm btn-nav" id="nav-profil" onclick="navProfil()">👤 Profil</button>
     </div>
@@ -616,6 +616,17 @@
 </div></div>
 
 <!-- PAGE ANNUAIRE -->
+<div id="page-annuaire" class="page">
+  <div class="hero-band"><div class="hero-inner"><h1 class="hero-title">👥 <span>Annuaire</span></h1><div class="hero-sub">Tous les joueurs · Classements ELO</div></div></div>
+  <div class="page-inner">
+  <div class="card" style="max-width:700px;margin:0 auto;">
+    <h2>👥 Annuaire des joueurs</h2>
+    <input type="text" id="recherche-joueur" placeholder="🔍 Rechercher un joueur…" oninput="filtrerJoueurs()" style="margin-bottom:10px;" />
+    <div id="liste-annuaire"><p class="text-sm">Chargement…</p></div>
+  </div>
+
+</div></div>
+
 <!-- PAGE LOBBY -->
 <div id="page-lobby" class="page">
   <div class="hero-band"><div class="hero-inner"><h1 class="hero-title">🏟️ <span>Lobby</span></h1><div class="hero-sub">En attente du 2e joueur</div></div></div>
@@ -1024,7 +1035,6 @@
     </div>
     <div id="choix-courses-container"></div>
     <div class="choix-save-bar">
-      <span class="text-sm" id="choix-progression"></span>
       <button type="button" class="btn btn-vert" onclick="sauvegarderChoix()">💾 Sauvegarder</button>
     </div>
   </div>
@@ -1118,6 +1128,7 @@
     <div id="fin-contenu" class="mt16"></div>
     <div id="fin-actions" style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;"></div>
   </div>
+</div>
 </div>
 
 
@@ -1261,7 +1272,10 @@ function showPage(id, pushState=true) {
   if (!el) { console.warn('showPage: page not found:', id); return; }
   el.classList.add('active');
   if(pushState && !_NO_RESTORE_PAGES.has(id)) history.pushState({page:id}, '', '#'+id);
-  if(id!=='auth' && etat.matchId) localStorage.setItem('lastMatchId', etat.matchId);
+  if(id!=='auth' && !_NO_RESTORE_PAGES.has(id)) {
+    localStorage.setItem('lastPage', id);
+    if(etat.matchId) localStorage.setItem('lastMatchId', etat.matchId);
+  }
 }
 function toast(msg,err=false,dur=3500) { const el=document.getElementById('toast'); el.textContent=msg; el.className=err?'erreur':''; el.style.display='block'; setTimeout(()=>el.style.display='none',dur); }
 function setHeaderStatus(t) { document.getElementById('header-user').textContent=t; }
@@ -1286,7 +1300,7 @@ window.addEventListener('popstate', e => {
   if(currentActive === page) return;
   if(page==='arene') { showPage('arene',false); setNavActive('arene'); }
   else if(page==='matchs-list') { showPage('matchs-list',false); setNavActive('matchs'); }
-
+  else if(page==='annuaire') { showPage('annuaire',false); setNavActive('annuaire'); }
   else if(page==='profil') { showPage('profil',false); setNavActive('profil'); }
   else if(page==='choix-arene') { /* laisser la page choix telle quelle */ }
   else if(page==='classement-detail') { showPage('classement-detail',false); setNavActive('arene'); }
@@ -1479,7 +1493,7 @@ async function _chargerProgrammeMultiJours() {
               <div class="reunion-v2-limite">Fin inscriptions<br><strong>${limiteStr}</strong></div>
               <div style="text-align:center;">
                 <label class="check-participe-v2${tirageEffectue?' check-participe-locked':''}" onclick="event.stopPropagation()" title="${tirageEffectue?'Tirage effectué — inscriptions fermées':''}">
-                  <input type="checkbox" ${inscrit?'checked':''} ${tirageEffectue?'disabled':''} onchange="${tirageEffectue?'':('toggleInscription(this,\''+pmuDate+'\',\''+numR+'\',\''+hippo+'\',\''+disc+'\','+nbCourses+')')}"/>
+                  <input type="checkbox" ${inscrit?'checked':''} ${tirageEffectue?'disabled':''} onchange="${tirageEffectue?'':"toggleInscription(this,'${pmuDate}','${numR}','${hippo}','${disc}',${nbCourses})"}"/>
                   <span>${tirageEffectue?'⛔ Fermé':'Je participe'}</span>
                 </label>
                 ${inscritStatus}
@@ -1663,18 +1677,7 @@ function toggleChoixPartant(numCourse, numCheval, btnEl) {
 }
 
 function _majProgressionChoix() {
-  const ctx = window._choixCtx;
-  if (!ctx || !ctx.courses) return;
-  const nb = ctx.courses.length;
-  const remplis = ctx.courses.filter(co => (ctx.choixActuels?.[String(co.numOrdre)]||[]).length >= 4).length;
-  const el = document.getElementById('choix-progression');
-  if (el) {
-    if (remplis >= nb && nb > 0) {
-      el.innerHTML = `<span style="color:var(--green);font-weight:600;">✓ ${remplis}/${nb} courses complètes</span>`;
-    } else {
-      el.innerHTML = `<span style="color:var(--muted);">${remplis}/${nb} courses complètes</span>`;
-    }
-  }
+  // progression gérée par les compteurs par course (choix-counter-v2)
 }
 
 async function sauvegarderChoix() {
@@ -1913,24 +1916,21 @@ async function adminPreviewReunions() {
         && ['TROT','GALOP'].includes(detecterDiscipline(r)));
     const _somme = r => filtrerCoursesPaires(r.courses||[]).reduce((s,co)=>s+(co.montantPrix||0),0);
 
-    // Joueurs inscrits par réunion
     const insSnap = await db.ref('arene_inscriptions/'+pmuDate).once('value');
     const insData = insSnap.val() || {};
     const usersSnap = await db.ref('utilisateurs').once('value');
     const prenoms = {};
     usersSnap.forEach(ch => { prenoms[ch.key] = ch.val()?.prenom || ch.key; });
 
-    // Vérifier tirages déjà effectués
     const areneSnap = await db.ref('arene/'+isoDate).once('value');
     const areneData = areneSnap.val() || {};
-    const tiragesExistants = new Set(Object.keys(areneData));
 
     if (!toutesReunions.length) {
       previewEl.innerHTML = '<p class="text-sm" style="color:var(--muted);">Aucune réunion PMU nationale ce jour.</p>';
       return;
     }
 
-    let html = `<div style="display:flex;flex-direction:column;gap:.5rem;">`;
+    let html = '<div style="display:flex;flex-direction:column;gap:.5rem;">';
     for (const r of toutesReunions) {
       const numR = String(r.numOfficiel||r.numReunion);
       const disc = detecterDiscipline(r);
@@ -1940,17 +1940,17 @@ async function adminPreviewReunions() {
       const courses = filtrerCoursesPaires(r.courses||[]);
       const nbCourses = courses.length;
       const dotation = _somme(r).toLocaleString('fr-FR');
-      // Joueurs inscrits sur cette réunion
+      const h1 = courses[0]?.heureDepart ? formatHeure(courses[0].heureDepart) : '--:--';
       const joueursInscrits = [];
       Object.entries(insData).forEach(([uid, reunions]) => {
         if (reunions[numR]) joueursInscrits.push(prenoms[uid]||uid);
       });
-      const dejaTire = tiragesExistants.has(numR);
+      const dejaTire = areneData[numR] != null;
       html += `<div style="background:rgba(200,168,75,.06);border:1px solid rgba(200,168,75,.15);border-radius:8px;padding:.6rem .85rem;font-size:.8rem;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;flex-wrap:wrap;">
           <div>
             <div style="font-weight:700;color:${discColor};">${discIcon} ${disc==='TROT'?'Trot':'Galop'} · R${numR} · ${hippo}</div>
-            <div style="color:var(--muted);font-size:.74rem;margin-top:.1rem;">${nbCourses} courses · ${dotation} € dotation</div>
+            <div style="color:var(--muted);font-size:.74rem;margin-top:.1rem;">${nbCourses} courses · 1ère à ${h1} · ${dotation} €</div>
             <div style="margin-top:.25rem;font-size:.76rem;">
               <strong>${joueursInscrits.length} inscrit${joueursInscrits.length!==1?'s':''} :</strong>
               ${joueursInscrits.length ? joueursInscrits.join(', ') : '<em style="color:var(--muted);">aucun</em>'}
@@ -1963,16 +1963,16 @@ async function adminPreviewReunions() {
         </div>
       </div>`;
     }
-    html += `</div>`;
+    html += '</div>';
     previewEl.innerHTML = html;
   } catch(e) {
     previewEl.innerHTML = `<span style="color:var(--red);font-size:.8rem;">❌ ${e.message}</span>`;
   }
 }
 
+
 async function genererArene() {
-  // Obsolète – remplacé par genererAreneReunion() depuis le preview
-  toast('⚠️ Utilisez le bouton "Générer" sur chaque réunion dans le preview ci-dessus', true);
+  toast('⚠️ Utilisez le bouton "Générer" sur chaque réunion dans le preview', true);
 }
 
 async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
@@ -1980,15 +1980,13 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
   const origText = btn.textContent;
   btn.disabled = true; btn.textContent = '⏳…'; if(log) log.textContent = '';
   try {
-    // 1. Programme PMU – récupérer la réunion sélectionnée
     const prog = await pmuGet('programme/'+pmuDate);
     const toutesReunions = (prog.programme?.reunions || prog.reunions || prog || [])
       .filter(r => r.audience==='NATIONAL' && r.pays?.code==='FRA'
         && !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||''));
     const reunion = toutesReunions.find(r => String(r.numOfficiel||r.numReunion) === numR);
-    if (!reunion) { toast('⚠️ Réunion R'+numR+' introuvable dans le programme PMU', true); btn.disabled=false; btn.textContent=origText; return; }
+    if (!reunion) { toast('⚠️ Réunion R'+numR+' introuvable', true); btn.disabled=false; btn.textContent=origText; return; }
 
-    // 2. Joueurs inscrits sur cette réunion
     const [usersSnap, insSnap] = await Promise.all([
       db.ref('utilisateurs').once('value'),
       db.ref('arene_inscriptions/'+pmuDate).once('value')
@@ -2000,10 +1998,8 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     Object.entries(insData).forEach(([uid, reunions]) => {
       if (reunions[numR]) joueursInscrits.push({uid, nom: usersData[uid]?.prenom || uid});
     });
-
     if (!joueursInscrits.length) { toast('⚠️ Aucun joueur inscrit sur R'+numR, true); btn.disabled=false; btn.textContent=origText; return; }
 
-    // 3. Appariement
     const _shuffle = arr => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
     const matchsACreer = [], exempts = [];
     const pool = _shuffle([...joueursInscrits]);
@@ -2014,21 +2010,19 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     }
     for (let i=0; i<pool.length; i+=2) matchsACreer.push({j1:pool[i], j2:pool[i+1]});
 
-    // 4. Construire les courses
     btn.textContent = '⏳ Courses…';
     const areneCoursesFiltered = filtrerCoursesPaires(reunion.courses||[]);
     const serieCourses = [];
     for (const co of areneCoursesFiltered) {
       try {
         const pData = await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${co.numOrdre}/participants`);
-        const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0,urlCasaque:p.urlCasaque||''}));
+        const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',musique:p.musique||'',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0}));
         serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants,choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
       } catch(e) {
         serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants:[],choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
       }
     }
 
-    // 5. Créer les matchs Firebase
     btn.textContent = '⏳ Matchs…';
     const matchsCreated = {};
     for (const m of matchsACreer) {
@@ -2040,51 +2034,41 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
         j2:{nom:m.j2.nom, uid:m.j2.uid},
         reunion:{
           hippodrome: nH(reunion.hippodrome?.libelleLong||reunion.hippodrome?.libelleCourt||'?'),
-          discipline: disc,
-          numReunion: reunion.numOfficiel,
-          pmuDate, isoDate,
-          nbCourses: areneCoursesFiltered.length
+          discipline: disc, numReunion: reunion.numOfficiel,
+          pmuDate, isoDate, nbCourses: areneCoursesFiltered.length
         },
-        discipline: disc,
-        courses: serieCourses,
-        mainJ1: true,
-        createdAt: Date.now()
+        discipline: disc, courses: serieCourses, mainJ1: true, createdAt: Date.now()
       };
       await db.ref('matchs/'+code).set(matchData);
       matchsCreated[code] = {j1:m.j1.nom, j2:m.j2.nom};
     }
 
-    // 6. Exemptés
+    // Exemptés
+    const isoMois = isoDate.slice(0,7);
     const exemptUids = {};
     for (const ex of exempts) {
       exemptUids[ex.uid] = true;
       await db.ref('utilisateurs/'+ex.uid+'/stats/matchsJoues').transaction(v=>(v||0)+1);
-      await db.ref('arene_classements/'+new Date().toISOString().slice(0,7)+'/'+disc.toLowerCase()+'/'+ex.uid).transaction(d => {
+      await db.ref('arene_classements/'+isoMois+'/'+disc.toLowerCase()+'/'+ex.uid).transaction(d => {
         const cur = d || {pts:0,victoires:0,nuls:0,defaites:0,prenom:usersData[ex.uid]?.prenom||ex.nom};
-        cur.pts = (cur.pts||0)+1;
-        return cur;
+        cur.pts = (cur.pts||0)+1; return cur;
       });
     }
 
-    // 7. Sauvegarder le tirage (sous la réunion concernée)
-    const tirageEntry = {
+    await db.ref('arene/'+isoDate+'/'+numR).set({
       matchs: matchsCreated,
       exempts: exempts.map(e=>e.nom),
       exempts_uids: exemptUids,
       generatedAt: Date.now(),
       generatedBy: utilisateur.uid,
-      discipline: disc,
-      numReunion: numR
-    };
-    await db.ref('arene/'+isoDate+'/'+numR).set(tirageEntry);
+      discipline: disc, numReunion: numR
+    });
 
-    // Résumé
     const summary = `R${numR} ${disc} : ${matchsACreer.length} match${matchsACreer.length>1?'s':''} créé${matchsACreer.length>1?'s':''}${exempts.length?' · '+exempts.length+' exempté(s)':''}`;
     if(log) log.textContent = '✅ ' + summary;
-    toast('✅ Tirage R'+numR+' effectué — '+summary);
+    toast('✅ ' + summary);
     btn.textContent = '✅ Généré';
-    // Rafraîchir le preview
-    setTimeout(() => adminPreviewReunions(), 500);
+    setTimeout(() => adminPreviewReunions(), 600);
   } catch(e) {
     toast('❌ Erreur : '+e.message, true);
     if(log) log.textContent = '❌ '+e.message;
@@ -2092,6 +2076,11 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
   }
 }
 
+
+
+// ── CLASSEMENT ARÈNE ──────────────────────────────
+let _areneEloDiscipline = 'general';
+let _areneEloComplet = false;
 
 async function chargerAreneClassements() {
   chargerAreneClassementMensuel();
@@ -2182,7 +2171,7 @@ function _afficherAreneElo() {
 }
 
 function chargerAreneElo() {
-  if(_joueursCache.length){_afficherAreneElo();return;}
+  // Toujours recharger pour avoir les données fraîches
   db.ref('utilisateurs').once('value').then(snap=>{
     _joueursCache=[];
     snap.forEach(child=>{_joueursCache.push({uid:child.key,...child.val()});});
@@ -2400,25 +2389,13 @@ function afficherListeLobby(joueurs) {
       ? '<span class="statut-dispo">● En ligne</span>'
       : '<span class="statut-absent">● Hors ligne</span>';
     const stats = j.stats||{};
-    const elo = j.elo||{};
-    const eloGen = elo.general||1200;
-    const eloTrot = elo.trot && elo.trot!==1200 ? `<span style="font-size:.68rem;color:#2563a8;">🔵${elo.trot}</span>` : '';
-    const eloGalop = elo.galop && elo.galop!==1200 ? `<span style="font-size:.68rem;color:#8a6a20;">🟡${elo.galop}</span>` : '';
-    const winRate = stats.matchsJoues > 0 ? Math.round((stats.victoires||0)/stats.matchsJoues*100) : 0;
     return `<div class="joueur-ligne" style="padding:7px 8px;">
       <div class="joueur-avatar" style="width:30px;height:30px;font-size:.82rem;">${initiale}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;">
-          <span style="font-weight:bold;font-size:.87rem;">${j.prenom||'Joueur'}</span>
-          ${statutHtml}
-        </div>
-        <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-top:.1rem;">
-          <span style="font-size:.7rem;color:rgba(253,246,227,.5);">${stats.matchsJoues||0} matchs · ${winRate}%</span>
-          <span style="font-size:.72rem;color:var(--gold);font-weight:700;">ELO ${eloGen}</span>
-          ${eloTrot}${eloGalop}
-        </div>
+      <div style="flex:1;">
+        <div style="font-weight:bold;font-size:.87rem;">${j.prenom||'Joueur'}</div>
+        <div style="font-size:.72rem;color:rgba(253,246,227,.5);">${stats.matchsJoues||0} matchs · ${stats.victoires||0} victoires · ${statutHtml}</div>
       </div>
-      <button type="button" class="btn btn-vert btn-sm" style="font-size:.78rem;flex-shrink:0;" onclick="inviterDepuisLobby('${j.uid}','${j.prenom}','${j.email||''}')">Inviter</button>
+      <button type="button" class="btn btn-vert btn-sm" style="font-size:.78rem;" onclick="inviterDepuisLobby('${j.uid}','${j.prenom}','${j.email||''}')">Inviter</button>
     </div>`;
   }).join('');
 }
@@ -2519,8 +2496,25 @@ auth.onAuthStateChanged(async user => {
     }
     afficherNav(true);
     chargerAnnuaire(); // charger en arrière-plan pour le lobby
-    // Toujours démarrer sur l'Arène (page principale) — pas de restauration lastPage
-    showPage('arene'); setNavActive('arene'); chargerArene();
+    // Restaurer la dernière page visitée (sauf sous-pages et pages éphémères)
+    const lastPage = localStorage.getItem('lastPage') || 'arene';
+    const _SAFE_RESTORE = new Set(['arene','matchs-list','annuaire','profil','top-choix']);
+    if(lastPage === 'lobby' || lastPage === 'match' || lastPage === 'fin') {
+      const lastMatchId = localStorage.getItem('lastMatchId');
+      chargerTableauBord();
+      if(lastMatchId) { await ouvrirMatch(lastMatchId); }
+      else { showPage('arene'); setNavActive('arene'); chargerArene(); }
+    } else if(_SAFE_RESTORE.has(lastPage)) {
+      if(lastPage==='arene') { showPage('arene'); setNavActive('arene'); chargerArene(); }
+      else if(lastPage==='matchs-list') { showPage('matchs-list'); setNavActive('matchs'); chargerTableauBord(); }
+      else if(lastPage==='annuaire') { showPage('annuaire'); setNavActive('annuaire'); chargerAnnuaire(); }
+      else if(lastPage==='profil') { navProfil(); }
+      else if(lastPage==='top-choix') { navTopChoix(); }
+    } else if(lastPage === 'admin' && user.uid===ADMIN_UID) {
+      showPage('admin'); setNavActive(''); chargerAdmin();
+    } else {
+      showPage('arene'); setNavActive('arene'); chargerArene();
+    }
     // Mettre statut en ligne
     db.ref('utilisateurs/'+user.uid+'/statut').set('disponible');
     window.addEventListener('beforeunload', ()=>db.ref('utilisateurs/'+user.uid+'/statut').set('absent'));
@@ -5225,7 +5219,6 @@ async function _chargerTcClassementPerma() {
 </script>
 </body>
 </html>
-
 
 
 
