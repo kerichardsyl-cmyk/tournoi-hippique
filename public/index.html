@@ -2338,15 +2338,30 @@ async function chargerClassementDetail(type) {
     joueurs.sort((a,b) => b.pts-a.pts || b.victoires-a.victoires);
   } else {
     const disc = type === 'elo-gen' ? 'general' : type === 'elo-trot' ? 'trot' : 'galop';
+    // Lire les stats V/N/D par discipline depuis arene_classements (source fiable)
+    const classSnap = await db.ref('arene_classements/'+moisKey+'/'+disc).once('value');
+    const classData = {};
+    classSnap.forEach(c => { classData[c.key] = c.val(); });
     Object.entries(users).forEach(([key,u]) => {
       const elo = u.elo?.[disc] || 1200;
+      // Pour ELO général : stats globales ; pour trot/galop : stats de la discipline
+      const d = (disc === 'general') ? null : classData[key];
       const s = u.stats || {};
       joueurs.push({
         uid:key, prenom:u.prenom||'?',
-        pts:elo, victoires:s.victoires||0, nuls:s.egalites||0, defaites:s.defaites||0,
+        pts:elo,
+        victoires: d ? (d.victoires||0) : (s.victoires||0),
+        nuls:      d ? (d.nuls||0)      : (s.egalites||0),
+        defaites:  d ? (d.defaites||0)  : (s.defaites||0),
         elo, trot:!!(u.elo?.trot&&u.elo.trot!==1200), galop:!!(u.elo?.galop&&u.elo.galop!==1200)
       });
     });
+    // Filtrer : pour trot/galop, ne montrer que ceux qui ont un ELO ou des matchs dans la discipline
+    if (disc !== 'general') {
+      joueurs = joueurs.filter(j => j.elo !== 1200 || j.victoires > 0 || j.nuls > 0 || j.defaites > 0);
+    } else {
+      joueurs = joueurs.filter(j => (j.victoires + j.nuls + j.defaites) > 0 || j.elo !== 1200);
+    }
     joueurs.sort((a,b) => b.pts-a.pts);
   }
 
@@ -5219,6 +5234,3 @@ async function _chargerTcClassementPerma() {
 </script>
 </body>
 </html>
-
-
-
