@@ -1752,13 +1752,15 @@ async function _chargerMesMatchsArene() {
           }
         });
       }
-      // Filtrer ceux qui concernent l'utilisateur (stub contient uidJ1/uidJ2)
-      const mesCodes = allMatchEntries.filter(({stub}) => stub && (stub.uidJ1===uid || stub.uidJ2===uid));
-      // Charger les vrais matchs depuis matchs/{code}
-      for (const {code} of mesCodes) {
+      // Charger les vrais matchs depuis matchs/{code} et filtrer
+      for (const {code} of allMatchEntries) {
         try {
           const mSnap = await db.ref('matchs/'+code).once('value');
-          if (mSnap.exists()) html += await _buildAreneMatchCard(mSnap.val(), uid, key, today, yesterday);
+          if (!mSnap.exists()) continue;
+          const mData = mSnap.val();
+          const uj1 = mData.uidJ1 || (mData.j1?.uid);
+          const uj2 = mData.uidJ2 || (mData.j2?.uid);
+          if (uj1===uid || uj2===uid) html += await _buildAreneMatchCard(mData, uid, key, today, yesterday);
         } catch(e) {}
       }
     }
@@ -1823,9 +1825,12 @@ async function chargerMatchsAreneDate(isoDate) {
 
 async function _buildAreneMatchCard(m, uid, key, today, yesterday, showAll) {
   const discIcon = m.discipline==='TROT'?'🔵 Trot':'🟡 Galop';
-  const isJ1 = m.uidJ1 === uid;
-  const isParticipant = m.uidJ1===uid || m.uidJ2===uid;
-  const nomJ1 = m.j1||'?'; const nomJ2 = m.j2||'?';
+  const _uidJ1 = m.uidJ1 || (m.j1 && typeof m.j1==='object' ? m.j1.uid : null);
+  const _uidJ2 = m.uidJ2 || (m.j2 && typeof m.j2==='object' ? m.j2.uid : null);
+  const isJ1 = _uidJ1 === uid;
+  const isParticipant = _uidJ1===uid || _uidJ2===uid;
+  const nomJ1 = (m.j1 && typeof m.j1==='object') ? (m.j1.nom||'?') : (m.j1||'?');
+  const nomJ2 = (m.j2 && typeof m.j2==='object') ? (m.j2.nom||'?') : (m.j2||'?');
   const dateStr = key < today ? (key===yesterday?'Hier':key.split('-').reverse().join('/')) : '';
   let statutBadge = '';
   let cardCls = 'arene-match-card';
