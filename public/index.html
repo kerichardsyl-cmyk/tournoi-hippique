@@ -3177,11 +3177,96 @@ async function ouvrirMatch(matchId) {
     etat._adminView = true;
     etat.joueurId = 'j1';
   }
+  // Match arène : injecter les choix depuis arene_choix puis démarrer directement
+  if (data.arene && (data.statut==='attente'||data.statut==='en_cours')) {
+    await _injecterChoixArene(matchId, data, uid);
+    ecouterMatch();
+    showPage('match');
+    return;
+  }
   ecouterMatch();
   if (data.statut==='attente'||data.statut==='pret') showPage('lobby');
   else if (data.statut==='en_cours') { showPage('match'); }
   else if (data.statut==='pret_cloture') { showPage('fin'); rendreFin(data); }
   else if (data.statut==='termine') { showPage('fin'); rendreFin(data); }
+}
+
+async function _injecterChoixArene(matchId, data, uid) {
+  // Récupérer pmuDate et numR depuis la réunion du match
+  const pmuDate = data.reunion?.pmuDate;
+  const numR = String(data.reunion?.numReunion || data.reunion?.numR || '');
+  if (!pmuDate || !numR) return;
+
+  const monRole = data.uidJ1 === uid ? 'j1' : 'j2';
+  const advRole = monRole === 'j1' ? 'j2' : 'j1';
+  const advUid  = monRole === 'j1' ? data.uidJ2 : data.uidJ1;
+
+  // Lire mes choix + choix adversaire
+  const [mesChoixSnap, advChoixSnap] = await Promise.all([
+    db.ref('arene_choix/'+pmuDate+'/'+numR+'/'+uid).once('value'),
+    advUid ? db.ref('arene_choix/'+pmuDate+'/'+numR+'/'+advUid).once('value') : Promise.resolve(null)
+  ]);
+
+  const mesChoix   = mesChoixSnap.val()?.courses || {};
+  const advChoix   = advChoixSnap?.val()?.courses || {};
+  const mainRole   = data.mainJ1 ? 'j1' : 'j2';
+
+  const updates = {};
+  const courses = data.courses || [];
+  let changed = false;
+
+  courses.forEach((co, i) => {
+    const key = String(co.numOrdre);
+    const mesNums  = mesChoix[key]  || [];
+    const advNums  = advChoix[key]  || [];
+
+    // Injecter choixJ1 / choixJ2 (les 4 choix bruts)
+    const choixMonRole  = monRole  === 'j1' ? mesNums  : advNums;
+    const choixAdvRole  = advRole  === 'j1' ? mesNums  : advNums;
+
+    // Mettre à jour seulement si différent de ce qui est déjà en base
+    const curMon = co['choix'+monRole.toUpperCase()] || [];
+    const curAdv = co['choix'+advRole.toUpperCase()] || [];
+
+    if (mesNums.length && JSON.stringify(curMon) !== JSON.stringify(mesNums)) {
+      updates['matchs/'+matchId+'/courses/'+i+'/choix'+monRole.toUpperCase()] = mesNums;
+      changed = true;
+    }
+    if (advNums.length && JSON.stringify(curAdv) !== JSON.stringify(advNums)) {
+      updates['matchs/'+matchId+'/courses/'+i+'/choix'+advRole.toUpperCase()] = advNums;
+      changed = true;
+    }
+
+    // Calculer choixFinal : joueur principal garde ses 2 premiers, second filtre les doublons
+    if (mesNums.length >= 2 || advNums.length >= 2) {
+      const j1nums = monRole==='j1' ? mesNums : advNums;
+      const j2nums = monRole==='j2' ? mesNums : advNums;
+      const isJ1Main = mainRole === 'j1';
+
+      if (isJ1Main) {
+        const cfJ1 = j1nums.slice(0, 2);
+        const cfJ2 = j2nums.filter(n => !cfJ1.includes(n)).slice(0, 2);
+        updates['matchs/'+matchId+'/courses/'+i+'/choixFinalJ1'] = cfJ1;
+        updates['matchs/'+matchId+'/courses/'+i+'/choixFinalJ2'] = cfJ2;
+      } else {
+        const cfJ2 = j2nums.slice(0, 2);
+        const cfJ1 = j1nums.filter(n => !cfJ2.includes(n)).slice(0, 2);
+        updates['matchs/'+matchId+'/courses/'+i+'/choixFinalJ1'] = cfJ1;
+        updates['matchs/'+matchId+'/courses/'+i+'/choixFinalJ2'] = cfJ2;
+      }
+      changed = true;
+    }
+  });
+
+  // Passer le match en_cours si pas encore fait
+  if (data.statut === 'attente') {
+    updates['matchs/'+matchId+'/statut'] = 'en_cours';
+    changed = true;
+  }
+
+  if (changed && Object.keys(updates).length) {
+    await db.ref().update(updates);
+  }
 }
 
 function toggleVueAdminMatch() {
