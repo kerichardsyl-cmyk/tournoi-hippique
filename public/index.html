@@ -1741,22 +1741,26 @@ async function _chargerMesMatchsArene() {
     if (!recentKeys.length) { el.innerHTML = '<p class="text-sm">Aucun match Arène récent.</p>'; return; }
     for (const key of recentKeys) {
       const dayData = snap.val()[key];
-      // Nouvelle structure : arene/{date}/{numR}/matchs
-      // Ancienne structure : arene/{date}/matchs (rétrocompatibilité)
-      const allMatchs = [];
+      // Collecter tous les codes de match (nouvelle structure par réunion ou ancienne plate)
+      const allMatchEntries = []; // [{code, stub}]
       if (dayData.matchs) {
-        // ancienne structure plate
-        allMatchs.push(...Object.values(dayData.matchs));
+        Object.entries(dayData.matchs).forEach(([code, stub]) => allMatchEntries.push({code, stub}));
       } else {
-        // nouvelle structure par réunion
         Object.values(dayData).forEach(reunionData => {
           if (reunionData && typeof reunionData === 'object' && reunionData.matchs) {
-            allMatchs.push(...Object.values(reunionData.matchs));
+            Object.entries(reunionData.matchs).forEach(([code, stub]) => allMatchEntries.push({code, stub}));
           }
         });
       }
-      const mesMatchs = allMatchs.filter(m => m && (m.uidJ1===uid || m.uidJ2===uid));
-      for (const m of mesMatchs) html += await _buildAreneMatchCard(m, uid, key, today, yesterday);
+      // Filtrer ceux qui concernent l'utilisateur (stub contient uidJ1/uidJ2)
+      const mesCodes = allMatchEntries.filter(({stub}) => stub && (stub.uidJ1===uid || stub.uidJ2===uid));
+      // Charger les vrais matchs depuis matchs/{code}
+      for (const {code} of mesCodes) {
+        try {
+          const mSnap = await db.ref('matchs/'+code).once('value');
+          if (mSnap.exists()) html += await _buildAreneMatchCard(mSnap.val(), uid, key, today, yesterday);
+        } catch(e) {}
+      }
     }
     el.innerHTML = html || '<p class="text-sm">Pas de match Arène récent vous concernant.</p>';
   } catch(e) { el.innerHTML = '<p class="text-sm">Erreur chargement.</p>'; console.error(e); }
@@ -1784,20 +1788,25 @@ async function _chargerTousMatchsArene(isoDate) {
     for (const key of keys) {
       const dayData = snap.val()[key];
       // Nouvelle structure : arene/{date}/{numR}/matchs — ancienne : arene/{date}/matchs
-      const allMatchs = [];
+      const allMatchEntries = [];
       if (dayData.matchs) {
-        allMatchs.push(...Object.values(dayData.matchs));
+        Object.entries(dayData.matchs).forEach(([code, stub]) => allMatchEntries.push({code, stub}));
       } else {
         Object.values(dayData).forEach(reunionData => {
           if (reunionData && typeof reunionData === 'object' && reunionData.matchs) {
-            allMatchs.push(...Object.values(reunionData.matchs));
+            Object.entries(reunionData.matchs).forEach(([code, stub]) => allMatchEntries.push({code, stub}));
           }
         });
       }
-      if (allMatchs.length) {
+      if (allMatchEntries.length) {
         const dateLabel = key.split('-').reverse().join('/');
         html += `<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gold);padding:.25rem 0 .15rem;margin-top:${total>0?'.4rem':'0'};">${dateLabel}</div>`;
-        for (const m of allMatchs) { if(m) { html += await _buildAreneMatchCard(m, uid, key, today, yesterday, true); total++; } }
+        for (const {code} of allMatchEntries) {
+          try {
+            const mSnap = await db.ref('matchs/'+code).once('value');
+            if (mSnap.exists()) { html += await _buildAreneMatchCard(mSnap.val(), uid, key, today, yesterday, true); total++; }
+          } catch(e) {}
+        }
       }
     }
     el.innerHTML = html || '<p class="text-sm">Aucun match Arène.</p>';
@@ -2063,7 +2072,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
         discipline: disc, courses: serieCourses, mainJ1: true, createdAt: Date.now()
       };
       await db.ref('matchs/'+code).set(matchData);
-      matchsCreated[code] = {j1:m.j1.nom, j2:m.j2.nom};
+      matchsCreated[code] = {j1:m.j1.nom, j2:m.j2.nom, uidJ1:m.j1.uid, uidJ2:m.j2.uid};
     }
 
     // Exemptés — points attribués immédiatement au tirage
