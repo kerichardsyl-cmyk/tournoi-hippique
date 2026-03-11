@@ -1495,7 +1495,7 @@ async function _chargerProgrammeMultiJours() {
               <div class="reunion-v2-limite">Fin inscriptions<br><strong>${limiteStr}</strong></div>
               <div style="text-align:center;">
                 <label class="check-participe-v2${tirageEffectue?' check-participe-locked':''}" onclick="event.stopPropagation()" title="${tirageEffectue?'Tirage effectué — inscriptions fermées':''}">
-                  <input type="checkbox" ${inscrit?'checked':''} ${tirageEffectue?'disabled':''} onchange="${tirageEffectue?'':'toggleInscription(this,\''+pmuDate+'\',\''+numR+'\',\''+hippo+'\',\''+disc+'\','+nbCourses+')'}"/>
+                  <input type="checkbox" ${inscrit?'checked':''} ${tirageEffectue?'disabled':''} onchange="${tirageEffectue?'':'toggleInscription(this,\''+pmuDate+'\',\''+numR+'\',\''+nHJS(hippo)+'\',\''+disc+'\','+nbCourses+')'}"/>
                   <span>${tirageEffectue?'⛔ Fermé':'Je participe'}</span>
                 </label>
                 ${inscritStatus}
@@ -4857,8 +4857,9 @@ function rendreProgramme(data) {
     const statutLabel = manqueData
       ? '<span class="course-statut" style="background:rgba(255,80,80,.2);color:#ff9090;">⚠️ Incomplet</span>'
       : {ouverte:'<span class="course-statut statut-ouverte">Ouverte</span>',bloquee:'<span class="course-statut statut-bloquee">Bloquée</span>',terminee:'<span class="course-statut statut-terminee">Terminée</span>'}[c.statut]||'';
-    const mr=etat.joueurId,mc=c['choix'+mr.toUpperCase()]||[],mx=getMainPourCourse(i)===mr?2:4;
-    const ck=c.statut==='ouverte'?(mc.length===mx?'<span style="color:#6fffa0;">✅</span>':mc.length>0?`<span style="color:var(--or);font-size:.75rem;">(${mc.length}/${mx})</span>`:''):'';
+    const mr=etat.joueurId,mc=c['choix'+mr.toUpperCase()]||[];
+    const _isAreneM=!!(data.arene),mx=_isAreneM?4:(getMainPourCourse(i)===mr?2:4);
+    const ck=c.statut==='ouverte'?(mc.length>=mx?'<span style="color:#6fffa0;">✅</span>':mc.length>0?`<span style="color:var(--or);font-size:.75rem;">(${mc.length}/${mx})</span>`:''):'';
     html+=`<div class="course-item ${c.statut==='terminee'&&!manqueData?'terminee':''}" onclick="afficherCourse(${i})">
       <div class="course-num">${c.numOrdre}</div>
       <div class="course-info"><strong>${c.libelle} ${ck}${alerteIcone}</strong><span>${formatHeure(c.heureDepart)}</span></div>
@@ -4952,7 +4953,9 @@ function avisIcon(a) {
 }
 function fGains(g) { if(!g) return '—'; return (g/100000).toFixed(0)+'k€'; }
 function rendreSelecteurChevaux(c,idx,estMain,monRole,isArene) {
-  const partants=c.partants||[],maxC=estMain?2:4,mc=c['choix'+monRole.toUpperCase()]||[],bl=estMain&&c.mainBloquee;
+  const _mcRaw=c['choix'+monRole.toUpperCase()]||[],maxC=estMain?2:4;
+  const mc=(isArene&&estMain)?_mcRaw.slice(0,2):_mcRaw;
+  const bl=estMain&&c.mainBloquee;
   if(!partants.length) return '<p class="text-sm" style="text-align:center;padding:12px;">Aucun partant disponible.</p>';
   // Match arène : choix pré-injectés depuis arene_choix, mais modifiables jusqu'au timer
   // Le joueur principal a maxC=2, le joueur second a maxC=4 — tableau interactif dans les deux cas
