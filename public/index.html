@@ -1213,6 +1213,7 @@
 // ── FIREBASE INIT ──────────────────────────────────
 const ADMIN_UID = 'NyXlWdthrFVUhkGjriC66ATiBIy2';
 function nH(s) { return (s||'').replace(/HIPPODROME (DE |D'|DU |DE L'|DES )/gi,'').replace(/HIPPODROME /gi,'').trim(); }
+function normCourses(courses) { if(!courses) return []; if(Array.isArray(courses)) return courses; return Object.values(courses); }
 function nHJS(s) { return nH(s).replace(/'/g,"\\'"); } // version safe pour attributs onclick
 function fPmuDate(d) { if(!d||d.length<8) return ''; return d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4); }
 
@@ -3232,7 +3233,7 @@ async function _injecterChoixArene(matchId, data, uid) {
   const mainRole   = data.mainJ1 ? 'j1' : 'j2';
 
   const updates = {};
-  const courses = data.courses || [];
+  const courses = normCourses(data.courses);
   let changed = false;
 
   courses.forEach((co, i) => {
@@ -4063,7 +4064,7 @@ function ecouterMatch() {
   db.ref('matchs/'+etat.matchId).on('value',snap=>{
     const data=snap.val(); if(!data) return;
     etat.matchData=data;
-    if((data.statut==='attente'||data.statut==='pret') && (data.courses||[]).length > 0 && etat.joueurId==='j1') {
+    if((data.statut==='attente'||data.statut==='pret') && normCourses(data.courses).length > 0 && etat.joueurId==='j1') {
       programmerAnnulationAuto(data);
     } else if(data.statut!=='attente' && data.statut!=='pret') {
       if(_annulationTimer) { clearTimeout(_annulationTimer); _annulationTimer = null; }
@@ -4074,7 +4075,7 @@ function ecouterMatch() {
 
 function programmerAnnulationAuto(data) {
   if(_annulationTimer) return;
-  const courses = data.courses || [];
+  const courses = normCourses(data.courses);
   const premiereHeure = courses.reduce((min,c) => c.heureDepart && c.heureDepart < min ? c.heureDepart : min, Infinity);
   if(premiereHeure === Infinity) return;
   const delai = premiereHeure - Date.now() - 15 * 60 * 1000;
@@ -4103,7 +4104,7 @@ function rendreEtat(data) {
   document.getElementById('header-user').textContent = `👤 ${utilisateur?.displayName||''} vs ${nomAdv} — ${etat.matchId}`;
   if(data.statut==='attente'||data.statut==='pret') {
     // Créateur (j1) avec courses déjà chargées → page match directement
-    if(etat.joueurId==='j1' && (data.courses||[]).length > 0) {
+    if(etat.joueurId==='j1' && normCourses(data.courses).length > 0) {
       showPage('match'); rendreMatch(data); return;
     }
     rendrelobby(data); return;
@@ -4112,7 +4113,7 @@ function rendreEtat(data) {
     if(!etat.timersInitialises) { etat.timersInitialises=true; reprendreTimers(data); }
     else {
       // Vérifier quand même les nouvelles courses bloquées (ex: démarrage via acceptation)
-      (data.courses||[]).forEach((c,i) => {
+      normCourses(data.courses).forEach((c,i) => {
         if(c.statut==='bloquee' && !_pollsActifs[i]) demarrerPollingResultats(i);
       });
     }
@@ -4157,10 +4158,10 @@ async function lancerMatch() {
 // ── TIMERS ──────────────────────────────────────────
 function reprendreTimers(data) {
   // Lancer immédiatement le polling pour les courses déjà bloquées
-  (data.courses||[]).forEach((c,i) => {
+  normCourses(data.courses).forEach((c,i) => {
     if(c.statut==='bloquee') demarrerPollingResultats(i);
   });
-  (data.courses||[]).forEach((c,i)=>{
+  normCourses(data.courses).forEach((c,i)=>{
     if(c.statut==='ouverte') programmerBlocageCourse(i,c);
     else if(c.statut==='bloquee') demarrerPollingResultats(i);
   });
@@ -4186,7 +4187,7 @@ function getMainPourCourse(idx) {
 
 async function bloquerChoixMain(idx) {
   const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
-  const co = data.courses[idx];
+  const co = normCourses(data.courses)[idx];
   if(co.statut!=='ouverte') return;
   // Vérifier que le départ est réellement dans moins de 15 min
   if(co.heureDepart && co.heureDepart - Date.now() > 15*60*1000) return;
@@ -4195,7 +4196,7 @@ async function bloquerChoixMain(idx) {
 
 async function bloquerEtValider(idx) {
   const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
-  const c=data.courses[idx];
+  const c=normCourses(data.courses)[idx];
   if(c.statut==='bloquee'||c.statut==='terminee') return;
   // Vérifier que le départ est réellement dans moins de 10 min
   if(c.heureDepart && c.heureDepart - Date.now() > 10*60*1000) return;
@@ -4215,7 +4216,7 @@ async function bloquerEtValider(idx) {
 
 async function reimporterTousRapports() {
   const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
-  const courses = data.courses||[];
+  const courses=normCourses(data.courses);
   const aTraiter = courses.filter(c=>c.statut==='terminee'&&(!c.rapports||!Object.keys(c.rapports).length));
   if(!aTraiter.length) { toast('Aucune course avec rapports manquants'); return; }
   toast(`⏳ Réimport de ${aTraiter.length} course(s)…`);
@@ -4231,7 +4232,7 @@ async function reimporterTousRapports() {
 
 async function reimporterRapports(idx) {
   const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
-  const course = data.courses[idx];
+  const course = normCourses(data.courses)[idx];
   if(!course) { toast('Course introuvable', true); return; }
   toast('⏳ Récupération PMU en cours…');
   try {
@@ -4268,7 +4269,7 @@ async function reimporterRapports(idx) {
 
 async function forceTraiterCourse(idx) {
   const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
-  const course = data.courses[idx];
+  const course = normCourses(data.courses)[idx];
   if(!course) return;
   if(!confirm('Forcer le traitement de cette course bloquée ?')) return;
   // Repasser en bloquee si besoin puis lancer récupération
@@ -4451,7 +4452,7 @@ function extraireRapports(rapsData) {
 
 async function traiterResultats(idx, pmuData) {
   const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
-  const c=data.courses[idx];
+  const c=normCourses(data.courses)[idx];
   const arrivee=(pmuData.ordreArrivee||[]).flat();
   const rapports = extraireRapports(pmuData._rapportsDefinitifs||[]);
   const score=choix=>choix.reduce((s,n)=>{
@@ -4470,7 +4471,7 @@ async function traiterResultats(idx, pmuData) {
 
 async function mettreAJourScores() {
   const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
-  const courses=data.courses||[];
+  const courses=normCourses(data.courses);
   let m1=0,m2=0;
   courses.forEach(c=>{if(c.mancheGagnant==='j1')m1++;else if(c.mancheGagnant==='j2')m2++;});
   const update={manchesJ1:m1,manchesJ2:m2};
@@ -4595,7 +4596,7 @@ async function cloturerMatch(matchId) {
   if(!matchId) return;
   const data = (await db.ref('matchs/'+matchId).once('value')).val();
   if(!data) return;
-  const courses = data.courses||[];
+  const courses=normCourses(data.courses);
   const toutes = courses.every(c=>c.statut==='terminee');
   if(!toutes) {
     const nbBloquees = courses.filter(c=>c.statut==='bloquee'||c.statut==='ouverte').length;
@@ -4643,8 +4644,8 @@ async function cloturerMatch(matchId) {
   const scoreJ2 = 1 - scoreJ1;
   const isAreneMatch = !!data.arene; // ELO uniquement pour les matchs arène
   let disc = data.reunion?.discipline || '';
-  if(!disc && data.courses?.length) {
-    const specs = (data.courses||[]).map(co => co.specialite||co.discipline||'').filter(Boolean);
+  if(!disc && normCourses(data.courses).length) {
+    const specs = normCourses(data.courses).map(co => co.specialite||co.discipline||'').filter(Boolean);
     const hasTrot = specs.some(s=>s.includes('TROT'));
     const hasGalop = specs.some(s=>s.includes('PLAT')||s.includes('OBSTACLE')||s.includes('HAIES')||s.includes('STEEPLE'));
     if(hasTrot && !hasGalop) disc = 'TROT';
@@ -4745,6 +4746,7 @@ function afficherBoutonsFin(data) {
 }
 
 function calculerVainqueur(courses,m1,m2) {
+  courses=normCourses(courses);
   if(m1!==m2) return m1>m2?'j1':'j2';
   const t1=courses.reduce((s,c)=>s+(c.pointsJ1||0),0),t2=courses.reduce((s,c)=>s+(c.pointsJ2||0),0);
   if(t1!==t2) return t1>t2?'j1':'j2';
@@ -4758,7 +4760,7 @@ function rendreMatch(data) {
   const bandeauAttenteEl = document.getElementById('bandeau-attente-adv');
   if(bandeauAttenteEl) {
     if((data.statut==='attente'||data.statut==='pret') && etat.joueurId==='j1') {
-      const courses = data.courses||[];
+      const courses=normCourses(data.courses);
       const premiereHeure = courses.reduce((min,c)=>c.heureDepart&&c.heureDepart<min?c.heureDepart:min, Infinity);
       const heureStr = premiereHeure!==Infinity ? new Date(premiereHeure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '?';
       const resteAnnul = premiereHeure!==Infinity ? Math.max(0, Math.floor((premiereHeure - Date.now() - 15*60*1000)/60000)) : null;
@@ -4773,8 +4775,8 @@ function rendreMatch(data) {
   const adminBanner = document.getElementById('admin-match-banner');
   if(adminBanner) {
     if(etat._adminView) {
-      const nbBloquees = (data.courses||[]).filter(c=>c.statut==='bloquee').length;
-      const nbSansRap  = (data.courses||[]).filter(c=>c.statut==='terminee'&&(!c.rapports||!Object.keys(c.rapports).length)).length;
+      const nbBloquees = normCourses(data.courses).filter(c=>c.statut==='bloquee').length;
+      const nbSansRap  = normCourses(data.courses).filter(c=>c.statut==='terminee'&&(!c.rapports||!Object.keys(c.rapports).length)).length;
       adminBanner.style.display = 'block';
       adminBanner.innerHTML = `
         <strong style="color:var(--or);">👁 Vue admin</strong>
@@ -4791,7 +4793,7 @@ function rendreMatch(data) {
       adminBanner.innerHTML = '';
     }
   }
-  const courses=data.courses||[];
+  const courses=normCourses(data.courses);
   let idx=etat.courseAffichee!==null?etat.courseAffichee:-1;
   // Restaurer depuis localStorage si pas en mémoire (actualisation page)
   if(idx===-1 && etat.matchId) {
@@ -4807,7 +4809,7 @@ function rendreMatch(data) {
 function rendreScores(data) {
   const j1=data.j1?.nom||'J1', j2=data.j2?.nom||'J2';
   const m1=data.manchesJ1||0, m2=data.manchesJ2||0;
-  const courses=data.courses||[];
+  const courses=normCourses(data.courses);
   const p1=courses.reduce((s,c)=>s+(c.pointsJ1||0),0);
   const p2=courses.reduce((s,c)=>s+(c.pointsJ2||0),0);
   const estJ1 = etat.joueurId==='j1';
@@ -4857,10 +4859,10 @@ function rendreScores(data) {
 }
 
 function rendreProgramme(data) {
-  const courses=data.courses||[];
+  const courses=normCourses(data.courses);
   const hippo=data.reunion?.hippodrome||'';
   const titreEl=document.getElementById('titre-programme');
-  const pmuDateReu = data.reunion?.pmuDate || (data.courses?.[0]?.pmuDate) || '';
+  const pmuDateReu = data.reunion?.pmuDate || (normCourses(data.courses)[0]?.pmuDate) || '';
   const dateLabel = fPmuDate(pmuDateReu);
   if(titreEl) titreEl.textContent='🏁 Programme'+(hippo?' : '+hippo:'')+(dateLabel?' · '+dateLabel:'');
   let html='<p class="text-sm" style="margin-bottom:8px;">Cliquez pour pronostiquer :</p>';
@@ -4884,7 +4886,8 @@ function rendreProgramme(data) {
 function afficherCourse(idx) { etat.courseAffichee=idx; if(etat.matchId) localStorage.setItem('courseAffichee_'+etat.matchId, idx); if(etat.matchData) rendreZoneJeu(etat.matchData,idx); }
 
 function rendreZoneJeu(data,idx) {
-  const c=data.courses[idx]; if(!c) return;
+  const courses=normCourses(data.courses);
+  const c=courses[idx]; if(!c) return;
   const mr=getMainPourCourse(idx),estMain=etat.joueurId===mr;
   const isAdmin = etat._adminView;
   // Bandeau : version admin ou version joueur
@@ -4936,7 +4939,23 @@ function rendreZoneJeu(data,idx) {
   else if(c.statut==='ouverte') {
     // Toujours afficher le sélecteur pour pouvoir jouer
     if (!c.partants || !c.partants.length) {
-      html += '<p class="text-sm" style="text-align:center;padding:18px;opacity:.65;">⏳ Les partants pour cette course ne sont pas encore disponibles. Revenez un peu avant le départ pour saisir vos choix.</p>';
+      html += `<p class="text-sm" style="text-align:center;padding:18px;opacity:.65;" id="partants-loading-${idx}">⏳ Chargement des partants…</p>`;
+      // Charger depuis PMU en arrière-plan
+      const _pmuD = c.pmuDate || data.reunion?.pmuDate || '';
+      const _reuN = c.numReunion || data.reunion?.numReunion || '';
+      if (_pmuD && _reuN) {
+        pmuGet('programme/'+_pmuD+'/R'+_reuN+'/C'+c.numOrdre+'/participants').then(pData => {
+          const pts = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE'}));
+          if (pts.length && etat.matchData?.courses?.[idx]) {
+            etat.matchData.courses[idx].partants = pts;
+            if (etat.matchId) db.ref('matchs/'+etat.matchId+'/courses/'+idx+'/partants').set(pts).catch(()=>{});
+            if (etat.courseAffichee === idx) rendreZoneJeu(etat.matchData, idx);
+          } else {
+            const el = document.getElementById('partants-loading-'+idx);
+            if (el) el.textContent = '⏳ Partants pas encore disponibles — revenez avant le départ.';
+          }
+        }).catch(()=>{ const el=document.getElementById('partants-loading-'+idx); if(el) el.textContent='⚠️ Impossible de charger les partants.'; });
+      }
     } else {
       html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId,!!data.arene);
     }
@@ -4952,6 +4971,16 @@ function rendreZoneJeu(data,idx) {
   }
   html+='</div>';
   document.getElementById('zone-jeu').innerHTML=html;
+  // Attacher events tableau chevaux immédiatement après injection DOM
+  const _tblEvt = document.getElementById('tbl-chevaux-'+idx);
+  if (_tblEvt) {
+    _tblEvt.querySelectorAll('tr[data-num]').forEach(tr => {
+      if (tr.dataset.disabled) return;
+      tr.addEventListener('click', () => {
+        toggleCheval(parseInt(tr.dataset.idx), parseInt(tr.dataset.num), parseInt(tr.dataset.maxc), tr.dataset.role);
+      });
+    });
+  }
   if(etat.timerInterval) clearInterval(etat.timerInterval);
   if(c.heureDepart&&c.statut==='ouverte') {
     etat.timerInterval=setInterval(()=>{
@@ -4996,23 +5025,12 @@ function rendreSelecteurChevaux(c,idx,estMain,monRole,isArene) {
   });
   html+='</tbody></table></div>';
   if(mc.length>0) html+='<p class="text-sm mt8" style="text-align:center;">✅ '+mc.length+'/'+maxC+' sélectionné'+(mc.length>1?'s':'')+'</p>';
-  // Attacher les événements après rendu
-  setTimeout(()=>{
-    const tbl=document.getElementById('tbl-chevaux-'+idx);
-    if(!tbl) return;
-    tbl.querySelectorAll('tr[data-num]').forEach(tr=>{
-      if(tr.dataset.disabled) return;
-      tr.addEventListener('click',()=>{
-        toggleCheval(parseInt(tr.dataset.idx),parseInt(tr.dataset.num),parseInt(tr.dataset.maxc),tr.dataset.role);
-      });
-    });
-  },50);
   return html;
 }
 
 
 async function toggleCheval(courseIdx,numero,maxC,monRole) {
-  const c=etat.matchData.courses[courseIdx];
+  const c=normCourses(etat.matchData.courses)[courseIdx];
   if(c.statut!=='ouverte') return;
   if(c.mainBloquee&&getMainPourCourse(courseIdx)===monRole) return;
   let mc=[...(c['choix'+monRole.toUpperCase()]||[])];
