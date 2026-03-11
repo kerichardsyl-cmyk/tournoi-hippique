@@ -1156,7 +1156,36 @@
       </div>
     </div>
 
-    <!-- Résultats -->
+    <!-- Classements permanents Top Choix — toujours visibles -->
+    <div class="card">
+      <div class="card-head" style="padding-bottom:.4rem;">
+        <h3>🏅 Classement Top Choix cumulé</h3>
+        <span class="text-sm" style="color:var(--muted);">Cumul des points PMU obtenus sur toutes les réunions</span>
+      </div>
+      <div style="padding:.35rem .9rem 0;border-bottom:1px solid var(--cream2);">
+        <div class="arene-section-tabs" id="tc-perma-tabs" style="border-bottom:none;margin-bottom:0;">
+          <div class="arene-stab active" onclick="switchTcPeriode('semaine',this)">Cette semaine</div>
+          <div class="arene-stab" onclick="switchTcPeriode('mois',this)">Ce mois</div>
+          <div class="arene-stab" onclick="switchTcPeriode('annee',this)">Cette année</div>
+        </div>
+      </div>
+      <div class="card-body" style="padding:.5rem .9rem;">
+        <div class="arene-section-tabs" id="tc-disc-tabs" style="margin-bottom:.6rem;">
+          <div class="arene-stab active" onclick="switchTcDisc('general',this)">Général</div>
+          <div class="arene-stab" onclick="switchTcDisc('trot',this)">🔵 Trot</div>
+          <div class="arene-stab" onclick="switchTcDisc('galop',this)">🟡 Galop</div>
+        </div>
+        <div id="tc-classement-perma">
+          <div style="background:rgba(200,168,75,.06);border:1px solid rgba(200,168,75,.15);border-radius:8px;padding:.75rem 1rem;font-size:.8rem;color:var(--muted);text-align:center;">
+            <div style="font-size:1.4rem;margin-bottom:.4rem;">⭐</div>
+            <div style="color:var(--text);font-weight:600;margin-bottom:.3rem;">Classement en cours de constitution</div>
+            <div style="font-size:.74rem;line-height:1.5;">Les points Top Choix sont attribués au fur et à mesure des réunions. Revenez après la première réunion pour voir le classement !</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Résultats réunion sélectionnée -->
     <div id="tc-results" style="display:none;">
       <div class="card">
         <div class="card-head" style="padding-bottom:.4rem;">
@@ -1172,35 +1201,6 @@
         <div class="card-body" style="padding:.5rem .9rem;">
           <div id="tc-classement-total"></div>
           <div id="tc-classement-courses" style="display:none;"></div>
-        </div>
-      </div>
-
-      <!-- Classements permanents Top Choix -->
-      <div class="card">
-        <div class="card-head" style="padding-bottom:.4rem;">
-          <h3>🏅 Classement Top Choix cumulé</h3>
-          <span class="text-sm" style="color:var(--muted);">1er = N-1 pts, 2e = N-2 pts…</span>
-        </div>
-        <div style="padding:.35rem .9rem 0;border-bottom:1px solid var(--cream2);">
-          <div class="arene-section-tabs" id="tc-perma-tabs" style="border-bottom:none;margin-bottom:0;">
-            <div class="arene-stab active" onclick="switchTcPeriode('semaine',this)">Cette semaine</div>
-            <div class="arene-stab" onclick="switchTcPeriode('mois',this)">Ce mois</div>
-            <div class="arene-stab" onclick="switchTcPeriode('annee',this)">Cette année</div>
-          </div>
-        </div>
-        <div class="card-body" style="padding:.5rem .9rem;">
-          <div class="arene-section-tabs" id="tc-disc-tabs" style="margin-bottom:.6rem;">
-            <div class="arene-stab active" onclick="switchTcDisc('general',this)">Général</div>
-            <div class="arene-stab" onclick="switchTcDisc('trot',this)">🔵 Trot</div>
-            <div class="arene-stab" onclick="switchTcDisc('galop',this)">🟡 Galop</div>
-          </div>
-          <div id="tc-classement-perma">
-    <div style="background:rgba(200,168,75,.06);border:1px solid rgba(200,168,75,.15);border-radius:8px;padding:.75rem 1rem;font-size:.8rem;color:var(--muted);text-align:center;">
-      <div style="font-size:1.4rem;margin-bottom:.4rem;">⭐</div>
-      <div style="color:var(--text);font-weight:600;margin-bottom:.3rem;">Classement en cours de constitution</div>
-      <div style="font-size:.74rem;line-height:1.5;">Les points Top Choix sont attribués au fur et à mesure des réunions. Revenez après la première réunion pour voir le classement !</div>
-    </div>
-  </div>
         </div>
       </div>
     </div>
@@ -4970,6 +4970,7 @@ function avisIcon(a) {
 }
 function fGains(g) { if(!g) return '—'; return (g/100000).toFixed(0)+'k€'; }
 function rendreSelecteurChevaux(c,idx,estMain,monRole,isArene) {
+  const partants=c.partants||[];
   const _mcRaw=c['choix'+monRole.toUpperCase()]||[],maxC=estMain?2:4;
   const mc=(isArene&&estMain)?_mcRaw.slice(0,2):_mcRaw;
   const bl=estMain&&c.mainBloquee;
@@ -5233,10 +5234,9 @@ async function _calculerTcReunion() {
   const isoDate = pmuDate.slice(4)+'-'+pmuDate.slice(2,4)+'-'+pmuDate.slice(0,2);
   const areneSnap = await db.ref('arene/'+isoDate).once('value');
   const areneData = areneSnap.val();
-  // Charger rapports des courses terminées
+  // Charger rapports : d'abord depuis les matchs Firebase, puis compléter depuis PMU API
   const rapportsData = {};
   if (areneData) {
-    // Collecter tous les matchIds (nouvelle structure par réunion ou ancienne plate)
     const matchIds = [];
     if (areneData.matchs) {
       matchIds.push(...Object.keys(areneData.matchs));
@@ -5253,6 +5253,20 @@ async function _calculerTcReunion() {
           const key = co.numOrdre;
           if (co.rapports && Object.keys(co.rapports).length) rapportsData[key] = { rapports: co.rapports, arrivee: co.arrivee || [] };
         });
+      } catch(e) {}
+    }
+  }
+  // Compléter depuis PMU API pour les courses sans rapports dans Firebase
+  for (const co of courses) {
+    if (!rapportsData[co.numOrdre]) {
+      try {
+        const rapsData = await pmuGet('programme/'+pmuDate+'/R'+numR+'/C'+co.numOrdre+'/rapports-definitifs');
+        const raps = extraireRapports(rapsData);
+        if (Object.keys(raps).length) {
+          const arriveeData = await pmuGet('programme/'+pmuDate+'/R'+numR+'/C'+co.numOrdre);
+          const arrivee = (arriveeData.ordreArrivee||[]).flat();
+          rapportsData[co.numOrdre] = { rapports: raps, arrivee };
+        }
       } catch(e) {}
     }
   }
