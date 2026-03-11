@@ -1838,7 +1838,7 @@ async function _buildAreneMatchCard(m, uid, key, today, yesterday, showAll) {
   const statut = m.statut;
   if (statut === 'termine') {
     try {
-      const snap2 = await db.ref('matchs/'+m.matchId).once('value');
+      const snap2 = await db.ref('matchs/'+(m.matchId||m.code)).once('value');
       const mData = snap2.val();
       if (mData && isParticipant) {
         const vainqueur = mData.vainqueur;
@@ -1862,12 +1862,14 @@ async function _buildAreneMatchCard(m, uid, key, today, yesterday, showAll) {
   } else {
     statutBadge = '<span class="badge badge-gray">⏳ En attente</span>';
   }
-  const click = (isParticipant && m.matchId) ? `onclick="ouvrirMatch('${m.matchId}')" style="cursor:pointer;"` : '';
+  const matchId = m.matchId || m.code;
+  const hippodrome = m.hippodrome || m.reunion?.hippodrome || m.reunion?.disc || '?';
+  const click = (isParticipant && matchId) ? `onclick="ouvrirMatch('${matchId}')" style="cursor:pointer;"` : '';
   return `<div class="${cardCls}" ${click}>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
       <div>
         <div class="match-vs" style="font-size:.9rem;">${nomJ1} <span style="color:var(--muted);font-size:.75rem;">vs</span> ${nomJ2}${isParticipant?' <span style="color:var(--gold);font-size:.68rem;">← Vous</span>':''}</div>
-        <div class="match-meta">${discIcon} · ${m.hippodrome||'?'}${dateStr?' · '+dateStr:''}</div>
+        <div class="match-meta">${discIcon} · ${hippodrome}${dateStr?' · '+dateStr:''}</div>
       </div>
       <div style="text-align:right;">${statutBadge}</div>
     </div>
