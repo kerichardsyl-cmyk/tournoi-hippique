@@ -1740,13 +1740,26 @@ async function _chargerMesMatchsArene() {
     const recentKeys = keys.filter(k => k >= yesterday);
     if (!recentKeys.length) { el.innerHTML = '<p class="text-sm">Aucun match Arène récent.</p>'; return; }
     for (const key of recentKeys) {
-      const data = snap.val()[key];
-      const matchs = Object.values(data.matchs || {});
-      const mesMatchs = matchs.filter(m => m.uidJ1===uid || m.uidJ2===uid);
+      const dayData = snap.val()[key];
+      // Nouvelle structure : arene/{date}/{numR}/matchs
+      // Ancienne structure : arene/{date}/matchs (rétrocompatibilité)
+      const allMatchs = [];
+      if (dayData.matchs) {
+        // ancienne structure plate
+        allMatchs.push(...Object.values(dayData.matchs));
+      } else {
+        // nouvelle structure par réunion
+        Object.values(dayData).forEach(reunionData => {
+          if (reunionData && typeof reunionData === 'object' && reunionData.matchs) {
+            allMatchs.push(...Object.values(reunionData.matchs));
+          }
+        });
+      }
+      const mesMatchs = allMatchs.filter(m => m && (m.uidJ1===uid || m.uidJ2===uid));
       for (const m of mesMatchs) html += await _buildAreneMatchCard(m, uid, key, today, yesterday);
     }
     el.innerHTML = html || '<p class="text-sm">Pas de match Arène récent vous concernant.</p>';
-  } catch(e) { el.innerHTML = '<p class="text-sm">Erreur chargement.</p>'; }
+  } catch(e) { el.innerHTML = '<p class="text-sm">Erreur chargement.</p>'; console.error(e); }
 }
 
 async function _chargerTousMatchsArene(isoDate) {
@@ -1769,12 +1782,22 @@ async function _chargerTousMatchsArene(isoDate) {
     const keys = Object.keys(snap.val()).sort().reverse().slice(0, 10);
     let total = 0;
     for (const key of keys) {
-      const data = snap.val()[key];
-      const matchs = Object.values(data.matchs || {});
-      if (matchs.length) {
+      const dayData = snap.val()[key];
+      // Nouvelle structure : arene/{date}/{numR}/matchs — ancienne : arene/{date}/matchs
+      const allMatchs = [];
+      if (dayData.matchs) {
+        allMatchs.push(...Object.values(dayData.matchs));
+      } else {
+        Object.values(dayData).forEach(reunionData => {
+          if (reunionData && typeof reunionData === 'object' && reunionData.matchs) {
+            allMatchs.push(...Object.values(reunionData.matchs));
+          }
+        });
+      }
+      if (allMatchs.length) {
         const dateLabel = key.split('-').reverse().join('/');
         html += `<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gold);padding:.25rem 0 .15rem;margin-top:${total>0?'.4rem':'0'};">${dateLabel}</div>`;
-        for (const m of matchs) { html += await _buildAreneMatchCard(m, uid, key, today, yesterday, true); total++; }
+        for (const m of allMatchs) { if(m) { html += await _buildAreneMatchCard(m, uid, key, today, yesterday, true); total++; } }
       }
     }
     el.innerHTML = html || '<p class="text-sm">Aucun match Arène.</p>';
@@ -2115,7 +2138,17 @@ async function chargerAreneClassementMensuel(disc) {
   if(areneSnap.val()) {
     Object.entries(areneSnap.val()).forEach(([dayKey, dayData]) => {
       if(!dayKey.startsWith(isoMois)) return;
-      (dayData.exempts_uids||[]).forEach(uid => { _get(uid).pts += 1; });
+      // Nouvelle structure : exempts_uids par réunion
+      if (dayData.exempts_uids) {
+        // ancienne structure plate
+        (dayData.exempts_uids||[]).forEach(uid => { _get(uid).pts += 1; });
+      } else {
+        Object.values(dayData).forEach(rd => {
+          if (rd && typeof rd === 'object' && rd.exempts_uids) {
+            Object.keys(rd.exempts_uids).forEach(uid => { _get(uid).pts += 1; });
+          }
+        });
+      }
     });
   }
   // Points matchs
@@ -2280,7 +2313,11 @@ async function archiverMoisArene() {
   const scores={};
   const _get=uid=>scores[uid]||(scores[uid]={pts:0,victoires:0,manchesGagnees:0,ptsTotal:0});
   const areneSnap=await db.ref('arene').once('value');
-  if(areneSnap.val()) Object.entries(areneSnap.val()).forEach(([k,d])=>{if(k.startsWith(isoMois))(d.exempts_uids||[]).forEach(uid=>{_get(uid).pts+=1;});});
+  if(areneSnap.val()) Object.entries(areneSnap.val()).forEach(([k,dayData])=>{
+  if(!k.startsWith(isoMois)) return;
+  if(dayData.exempts_uids) { (dayData.exempts_uids||[]).forEach(uid=>{_get(uid).pts+=1;}); }
+  else { Object.values(dayData).forEach(rd=>{ if(rd&&typeof rd==='object'&&rd.exempts_uids) Object.keys(rd.exempts_uids).forEach(uid=>{_get(uid).pts+=1;}); }); }
+});
   const debut=mp.getTime(), fin=new Date(mp.getFullYear(),mp.getMonth()+1,0,23,59,59).getTime();
   const matchsSnap=await db.ref('matchs').once('value');
   matchsSnap.forEach(child=>{
@@ -3754,8 +3791,17 @@ async function _nettoyerAreneMatch(matchId) {
     if(!areneSnap.val()) return;
     const updates = {};
     areneSnap.forEach(dayChild => {
-      const matchs = dayChild.val().matchs || {};
-      if(matchs[matchId]) updates['arene/'+dayChild.key+'/matchs/'+matchId] = null;
+      const dayVal = dayChild.val() || {};
+      // Ancienne structure plate
+      if (dayVal.matchs && dayVal.matchs[matchId]) {
+        updates['arene/'+dayChild.key+'/matchs/'+matchId] = null;
+      }
+      // Nouvelle structure par réunion
+      Object.entries(dayVal).forEach(([numR, reunionData]) => {
+        if (reunionData && typeof reunionData === 'object' && reunionData.matchs && reunionData.matchs[matchId]) {
+          updates['arene/'+dayChild.key+'/'+numR+'/matchs/'+matchId] = null;
+        }
+      });
     });
     if(Object.keys(updates).length) await db.ref().update(updates);
   } catch(e) { console.warn('_nettoyerAreneMatch:', e); }
@@ -5060,7 +5106,15 @@ async function _calculerTcReunion() {
   // Charger rapports des courses terminées
   const rapportsData = {};
   if (areneData) {
-    const matchIds = Object.keys(areneData.matchs || {});
+    // Collecter tous les matchIds (nouvelle structure par réunion ou ancienne plate)
+    const matchIds = [];
+    if (areneData.matchs) {
+      matchIds.push(...Object.keys(areneData.matchs));
+    } else {
+      Object.values(areneData).forEach(rd => {
+        if (rd && typeof rd === 'object' && rd.matchs) matchIds.push(...Object.keys(rd.matchs));
+      });
+    }
     for (const mid of matchIds.slice(0, 3)) {
       try {
         const mSnap = await db.ref('matchs/'+mid+'/courses').once('value');
