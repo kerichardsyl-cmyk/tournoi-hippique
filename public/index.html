@@ -2055,7 +2055,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     for (const co of areneCoursesFiltered) {
       try {
         const pData = await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${co.numOrdre}/participants`);
-        const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',musique:p.musique||'',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0}));
+        const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0}));
         serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants,choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
       } catch(e) {
         serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants:[],choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
@@ -4914,7 +4914,7 @@ function rendreZoneJeu(data,idx) {
   }
   else if(c.statut==='ouverte') {
     // Toujours afficher le sélecteur pour pouvoir jouer
-    html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId);
+    html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId,!!data.arene);
     // En vue admin : afficher aussi les choix en cours de l'adversaire
     if(isAdmin) {
       const choixJ1 = c.choixJ1||[], choixJ2 = c.choixJ2||[];
@@ -4944,9 +4944,26 @@ function avisIcon(a) {
   return '<span style="color:rgba(253,246,227,.3);">—</span>';
 }
 function fGains(g) { if(!g) return '—'; return (g/100000).toFixed(0)+'k€'; }
-function rendreSelecteurChevaux(c,idx,estMain,monRole) {
+function rendreSelecteurChevaux(c,idx,estMain,monRole,isArene) {
   const partants=c.partants||[],maxC=estMain?2:4,mc=c['choix'+monRole.toUpperCase()]||[],bl=estMain&&c.mainBloquee;
   if(!partants.length) return '<p class="text-sm" style="text-align:center;padding:12px;">Aucun partant disponible.</p>';
+  // Match arène + joueur principal : afficher les choix déjà injectés, lecture seule (choix faits en amont)
+  if (isArene && estMain) {
+    const choixNums = mc.slice(0, 2);
+    if (!choixNums.length) return '<p class="text-sm" style="padding:10px;text-align:center;">⚠️ Aucun choix trouvé pour cette course. Vérifiez vos saisies sur la page Arène.</p>';
+    const lignes = choixNums.map((n, i) => {
+      const p = partants.find(p => p.numero === n);
+      const nom = p ? p.nom : '#'+n;
+      const driver = p?.driver || '';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;margin-bottom:5px;background:rgba(200,168,75,.1);border-left:3px solid var(--gold);">' +
+        '<span class="ordre-num">'+(i+1)+'</span>' +
+        '<span class="num-cercle">'+n+'</span>' +
+        '<strong style="font-size:.88rem;">'+nom+'</strong>' +
+        (driver ? '<span style="font-size:.76rem;color:var(--muted);">'+driver+'</span>' : '') +
+        '</div>';
+    }).join('');
+    return '<p class="text-sm" style="margin-bottom:6px;color:var(--muted);">🔒 Vos 2 chevaux (saisis sur l\'Arène) :</p>' + lignes;
+  }
   let html='<p class="text-sm" style="margin-bottom:6px;">Sélectionnez <strong>'+maxC+' cheval'+(maxC>1?'x':'')+'</strong>'+(estMain?'':' dans l\'ordre de préférence')+' :</p>';
   html+='<div style="overflow-x:auto;"><table class="chevaux-table" id="tbl-chevaux-'+idx+'">';
   html+='<thead><tr><th>N°</th><th>Cheval</th><th>Driver/Jockey</th><th>Entr.</th><th>Âge</th><th>Musique</th></tr></thead><tbody>';
