@@ -1511,16 +1511,6 @@ async function _chargerProgrammeMultiJours() {
 
   tabsEl.innerHTML = tabsHtml;
   panelsEl.innerHTML = panelsHtml;
-  // Attacher les clics sur boutons choix via data-attributes (évite les problèmes d'onclick inline)
-  panelsEl.querySelectorAll('[data-ouvrir-choix]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const pmu = btn.dataset.pmu;
-      const numr = btn.dataset.numr;
-      const hippo = decodeURIComponent(btn.dataset.hippo);
-      const disc = btn.dataset.disc;
-      ouvrirChoix(pmu, numr, hippo, disc);
-    });
-  });
 }
 
 function switchAreneDay(idx) {
@@ -1559,6 +1549,18 @@ async function toggleInscription(checkbox, pmuDate, numR, hippo, disc, nbCourses
     checkbox.checked = !checkbox.checked;
   }
 }
+
+// ── délégation globale pour boutons choix (résiste aux rechargements innerHTML) ──
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-ouvrir-choix]');
+  if (!btn) return;
+  e.stopPropagation();
+  const pmu = btn.dataset.pmu;
+  const numr = btn.dataset.numr;
+  const hippo = decodeURIComponent(btn.dataset.hippo || '');
+  const disc = btn.dataset.disc;
+  if (pmu && numr) ouvrirChoix(pmu, numr, hippo, disc);
+});
 
 // ── ouvrir page choix ──
 async function ouvrirChoix(pmuDate, numR, hippo, disc) {
@@ -2594,7 +2596,7 @@ auth.onAuthStateChanged(async user => {
     // Restaurer la dernière page visitée (sauf sous-pages et pages éphémères)
     const lastPage = localStorage.getItem('lastPage') || 'arene';
     const _SAFE_RESTORE = new Set(['arene','matchs-list','annuaire','profil','top-choix']);
-    if(lastPage === 'lobby' || lastPage === 'match' || lastPage === 'fin') {
+    if(lastPage === 'lobby' || lastPage === 'match' || lastPage === 'fin' || lastPage === 'choix-arene') {
       const lastMatchId = localStorage.getItem('lastMatchId');
       chargerTableauBord();
       if(lastMatchId) { await ouvrirMatch(lastMatchId); }
@@ -4933,7 +4935,11 @@ function rendreZoneJeu(data,idx) {
   }
   else if(c.statut==='ouverte') {
     // Toujours afficher le sélecteur pour pouvoir jouer
-    html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId,!!data.arene);
+    if (!c.partants || !c.partants.length) {
+      html += '<p class="text-sm" style="text-align:center;padding:18px;opacity:.65;">⏳ Les partants pour cette course ne sont pas encore disponibles. Revenez un peu avant le départ pour saisir vos choix.</p>';
+    } else {
+      html+=rendreSelecteurChevaux(c,idx,estMain,etat.joueurId,!!data.arene);
+    }
     // En vue admin : afficher aussi les choix en cours de l'adversaire
     if(isAdmin) {
       const choixJ1 = c.choixJ1||[], choixJ2 = c.choixJ2||[];
@@ -5190,16 +5196,6 @@ async function _chargerTcProgramme() {
   }
   tabsEl.innerHTML = tabsHtml;
   panelsEl.innerHTML = panelsHtml;
-  // Attacher les clics sur boutons choix via data-attributes (évite les problèmes d'onclick inline)
-  panelsEl.querySelectorAll('[data-ouvrir-choix]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const pmu = btn.dataset.pmu;
-      const numr = btn.dataset.numr;
-      const hippo = decodeURIComponent(btn.dataset.hippo);
-      const disc = btn.dataset.disc;
-      ouvrirChoix(pmu, numr, hippo, disc);
-    });
-  });
 }
 
 function switchTcDay(idx) {
@@ -5281,7 +5277,7 @@ async function _calculerTcReunion() {
         for (const num of choix) {
           const r = raps.rapports[String(num)];
           if (r?.gagnant) pts += Math.round(r.gagnant / 10);
-          else if (r?.place) pts += Math.round(r.place / 10);
+          if (r?.place) pts += Math.round(r.place / 10); // toujours additionner place (inclus pour le gagnant aussi)
         }
       }
       parCourse[key] = { choix, pts };
@@ -5355,7 +5351,7 @@ async function _calculerTcReunion() {
     if (!existSnap.exists()) {
       const updates = {};
       scorelist.forEach((j, i) => {
-        const pts = N - 1 - i; // premier : N-1, dernier : 0
+        const pts = j.total || 0; // somme réelle des rapports PMU (gagnant+place) sur toutes les courses
         if (pts <= 0) return;
         const disc2 = (disc||'general').toLowerCase();
         ['semaine/'+semaineKey, 'mois/'+moisKey, 'annee/'+anneeKey].forEach(periode => {
