@@ -1034,6 +1034,7 @@
       <span class="choix-badge-v2 cb-v2-3">③ 3e choix</span>
       <span class="choix-badge-v2 cb-v2-4">④ 4e choix</span>
     </div>
+    <div id="choix-progression" style="font-size:.78rem;color:var(--muted);margin-bottom:.4rem;"></div>
     <div id="choix-courses-container"></div>
     <div class="choix-save-bar">
       <button type="button" class="btn btn-vert" onclick="sauvegarderChoix()">💾 Sauvegarder</button>
@@ -1567,7 +1568,7 @@ async function ouvrirChoix(pmuDate, numR, hippo, disc) {
   const dateStr = pmuDate.slice(0,2)+'/'+pmuDate.slice(2,4)+'/'+pmuDate.slice(4);
   document.getElementById('choix-meta').textContent = 'R'+numR+' · '+dateStr;
   document.getElementById('choix-courses-container').innerHTML = '<p class="text-sm">⏳ Chargement des partants…</p>';
-  document.getElementById('choix-progression').textContent = '';
+  const _cpEl = document.getElementById('choix-progression'); if(_cpEl) _cpEl.textContent = '';
   showPage('choix-arene'); setNavActive('arene');
 
   // Charger partants + choix existants
@@ -1711,7 +1712,7 @@ async function sauvegarderChoix() {
     });
     // Confirmation visuelle dans la barre
     if (btn) { btn.textContent = '✅ Sauvegardé !'; btn.style.background = 'var(--green)'; }
-    const el = document.getElementById('choix-progression');
+    const el = document.getElementById('choix-progression'); if(!el) return;
     if (el) el.innerHTML += ' <span style="color:var(--green);font-size:.78rem;">· Sauvegardé ✓</span>';
     setTimeout(() => {
       if (btn) { btn.disabled = false; btn.textContent = '💾 Sauvegarder'; btn.style.background = ''; }
