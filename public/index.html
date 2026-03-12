@@ -1520,9 +1520,50 @@ function _pmuDateFromOffset(offset) {
 async function chargerArene() {
   _buidAreneAlerts();
   await _chargerProgrammeMultiJours();
+  await _tirageAutoSiNecessaire();
   _chargerAreneMatchsV2();
   chargerAreneClassements();
   _chargerChatArene();
+}
+
+// ── Tirage automatique : déclenché si on est à moins de 15 min du départ ──
+async function _tirageAutoSiNecessaire() {
+  if (!utilisateur) return;
+  const { pmuDate, iso: isoDate } = _pmuDateFromOffset(0);
+  try {
+    // Charger programme du jour
+    const data = await pmuGet('programme/'+pmuDate);
+    const all = data.programme?.reunions || data.reunions || data || [];
+    const reunions = all.filter(r =>
+      r.audience === 'NATIONAL' && r.pays?.code === 'FRA' &&
+      !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'') &&
+      (detecterDiscipline(r) === 'TROT' || detecterDiscipline(r) === 'GALOP')
+    );
+    for (const r of reunions) {
+      const numR = String(r.numOfficiel || r.numReunion || '?');
+      const disc = detecterDiscipline(r);
+      const courses = r.courses || [];
+      if (!courses.length) continue;
+      const heureDepart = courses[0].heureDepart;
+      if (!heureDepart) continue;
+      const finInscriptions = heureDepart - 15*60*1000;
+      // Pas encore l'heure → ignorer
+      if (Date.now() < finInscriptions) continue;
+      // Vérifier si le tirage a déjà été fait pour cette réunion
+      const areneSnap = await db.ref('arene/'+isoDate+'/'+numR+'/generatedAt').once('value');
+      if (areneSnap.exists()) continue; // déjà tiré
+      // Vérifier s'il y a au moins 2 inscrits
+      const inscsSnap = await db.ref('arene_inscriptions/'+pmuDate).once('value');
+      const inscsData = inscsSnap.val() || {};
+      const inscritsReunion = Object.entries(inscsData).filter(([uid, reuns]) => reuns && reuns[numR]);
+      if (inscritsReunion.length < 2) continue; // pas assez de joueurs
+      // Déclencher le tirage silencieusement (sans bouton)
+      console.log('[Tirage auto] R'+numR+' '+disc+' — '+inscritsReunion.length+' inscrits');
+      await genererAreneReunion(pmuDate, isoDate, numR, disc, null);
+    }
+  } catch(e) {
+    console.warn('[Tirage auto] Erreur :', e.message);
+  }
 }
 
 // ── alertes : réunions inscrites avec choix incomplets dans les 2h ──
@@ -1620,7 +1661,7 @@ async function _chargerProgrammeMultiJours() {
         // Heure 1ère course
         const h1 = courses[0]?.heureDepart ? formatHeure(courses[0].heureDepart) : '--:--';
         // Fin des inscriptions : 2h avant 1ère course (= même heure que le tirage)
-        const finInscripTs = courses[0]?.heureDepart ? courses[0].heureDepart - 2*60*60*1000 : null;
+        const finInscripTs = courses[0]?.heureDepart ? courses[0].heureDepart - 15*60*1000 : null;
         const limiteStr = finInscripTs ? formatHeure(finInscripTs) : '--:--';
         // Tirage à partir de : même heure
         const tirageTs = finInscripTs;
@@ -2251,15 +2292,16 @@ async function genererArene() {
 
 async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
   const log = document.getElementById('arene-gen-log');
-  const origText = btn.textContent;
-  btn.disabled = true; btn.textContent = '⏳…'; if(log) log.textContent = '';
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
+  if(log) log.textContent = '';
   try {
     const prog = await pmuGet('programme/'+pmuDate);
     const toutesReunions = (prog.programme?.reunions || prog.reunions || prog || [])
       .filter(r => r.audience==='NATIONAL' && r.pays?.code==='FRA'
         && !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||''));
     const reunion = toutesReunions.find(r => String(r.numOfficiel||r.numReunion) === numR);
-    if (!reunion) { toast('⚠️ Réunion R'+numR+' introuvable', true); btn.disabled=false; btn.textContent=origText; return; }
+    if (!reunion) { toast('⚠️ Réunion R'+numR+' introuvable', true); if(btn){btn.disabled=false; btn.textContent=origText;} return; }
 
     const [usersSnap, insSnap] = await Promise.all([
       db.ref('utilisateurs').once('value'),
@@ -2350,12 +2392,12 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     const summary = `R${numR} ${disc} : ${matchsACreer.length} match${matchsACreer.length>1?'s':''} créé${matchsACreer.length>1?'s':''}${exempts.length?' · '+exempts.length+' exempté(s)':''}`;
     if(log) log.textContent = '✅ ' + summary;
     toast('✅ ' + summary);
-    btn.textContent = '✅ Généré';
+    if (btn) btn.textContent = '✅ Généré';
     setTimeout(() => adminPreviewReunions(), 600);
   } catch(e) {
     toast('❌ Erreur : '+e.message, true);
     if(log) log.textContent = '❌ '+e.message;
-    btn.disabled = false; btn.textContent = origText;
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
   }
 }
 
