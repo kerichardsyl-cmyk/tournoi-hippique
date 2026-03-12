@@ -2343,6 +2343,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     const matchsCreated = {};
     for (const m of matchsACreer) {
       const code = genCode();
+      const _mainJ1 = Math.random() < 0.5; // tirage aléatoire indépendant par match
       const matchData = {
         code, statut:'attente', arene:true,
         uidJ1:m.j1.uid, uidJ2:m.j2.uid,
@@ -2353,7 +2354,9 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
           discipline: disc, numReunion: reunion.numOfficiel,
           pmuDate, isoDate, nbCourses: areneCoursesFiltered.length
         },
-        discipline: disc, courses: serieCourses, mainJ1: true, createdAt: Date.now()
+        discipline: disc, courses: serieCourses,
+        mainJ1: _mainJ1, premierMain: _mainJ1 ? 'j1' : 'j2',
+        createdAt: Date.now()
       };
       await db.ref('matchs/'+code).set(matchData);
       matchsCreated[code] = {j1:m.j1.nom, j2:m.j2.nom, uidJ1:m.j1.uid, uidJ2:m.j2.uid};
@@ -3531,7 +3534,9 @@ async function _injecterChoixArene(matchId, data, uid) {
 
   const mesChoix   = mesChoixSnap.val()?.courses || {};
   const advChoix   = advChoixSnap?.val()?.courses || {};
-  const mainRole   = data.mainJ1 ? 'j1' : 'j2';
+  // premierMain : champ canonique (matchs amicaux + arène après fix)
+  // mainJ1 : ancien champ arène — on supporte les deux pour compatibilité
+  const premierMain = data.premierMain || (data.mainJ1 ? 'j1' : 'j2');
 
   const updates = {};
   const courses = normCourses(data.courses);
@@ -3542,11 +3547,10 @@ async function _injecterChoixArene(matchId, data, uid) {
     const mesNums  = mesChoix[key]  || [];
     const advNums  = advChoix[key]  || [];
 
-    // Injecter choixJ1 / choixJ2 (les 4 choix bruts)
-    const choixMonRole  = monRole  === 'j1' ? mesNums  : advNums;
-    const choixAdvRole  = advRole  === 'j1' ? mesNums  : advNums;
+    // La main alterne à chaque course (idx pair = premierMain, idx impair = l'autre)
+    const mainCourse = i % 2 === 0 ? premierMain : (premierMain === 'j1' ? 'j2' : 'j1');
 
-    // Mettre à jour seulement si différent de ce qui est déjà en base
+    // Mettre à jour choixJ1 / choixJ2 (les 4 choix bruts) seulement si différent
     const curMon = co['choix'+monRole.toUpperCase()] || [];
     const curAdv = co['choix'+advRole.toUpperCase()] || [];
 
@@ -3559,13 +3563,13 @@ async function _injecterChoixArene(matchId, data, uid) {
       changed = true;
     }
 
-    // Calculer choixFinal : joueur principal garde ses 2 premiers, second filtre les doublons
+    // Calculer choixFinal avec la main correcte pour cette course
+    // Ne calculer que si les deux joueurs ont des choix (sinon bloquerEtValider s'en charge)
     if (mesNums.length >= 2 || advNums.length >= 2) {
-      const j1nums = monRole==='j1' ? mesNums : advNums;
-      const j2nums = monRole==='j2' ? mesNums : advNums;
-      const isJ1Main = mainRole === 'j1';
+      const j1nums = monRole === 'j1' ? mesNums : advNums;
+      const j2nums = monRole === 'j2' ? mesNums : advNums;
 
-      if (isJ1Main) {
+      if (mainCourse === 'j1') {
         const cfJ1 = j1nums.slice(0, 2);
         const cfJ2 = j2nums.filter(n => !cfJ1.includes(n)).slice(0, 2);
         updates['matchs/'+matchId+'/courses/'+i+'/choixFinalJ1'] = cfJ1;
