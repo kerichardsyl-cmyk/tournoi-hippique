@@ -5516,11 +5516,15 @@ async function _calculerTcReunion() {
   if (areneData) {
     const matchIds = [];
     if (areneData.matchs) {
+      // Ancienne structure plate : arene/{date}/matchs
       matchIds.push(...Object.keys(areneData.matchs));
     } else {
-      Object.values(areneData).forEach(rd => {
-        if (rd && typeof rd === 'object' && rd.matchs) matchIds.push(...Object.keys(rd.matchs));
-      });
+      // Nouvelle structure : arene/{date}/{numR}/matchs
+      // On filtre strictement sur numR pour ne pas mélanger les réunions du même jour
+      const reunionData = areneData[numR];
+      if (reunionData && typeof reunionData === 'object' && reunionData.matchs) {
+        matchIds.push(...Object.keys(reunionData.matchs));
+      }
     }
     for (const mid of matchIds.slice(0, 3)) {
       try {
