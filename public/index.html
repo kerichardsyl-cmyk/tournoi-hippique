@@ -49,7 +49,7 @@
 
     /* ── CONTAINER / HERO ── */
     .container { max-width:min(80vw,1600px); margin:0 auto; padding:1.75rem 1.5rem; }
-    .page-inner { max-width:min(80vw,1600px); margin:0 auto; padding:1.75rem 1.5rem; }
+    .page-inner { max-width:min(80vw,1600px); margin:0 auto; padding:1.75rem 1.5rem; box-sizing:border-box; }
     .hero-band { background:linear-gradient(135deg,var(--ink) 0%,var(--turf) 50%,var(--turf2) 100%); padding:1.8rem 1.5rem; position:relative; overflow:hidden; }
     .hero-band::before { content:''; position:absolute; inset:0; background-image:repeating-linear-gradient(45deg,rgba(200,168,75,.025) 0,rgba(200,168,75,.025) 1px,transparent 1px,transparent 28px); }
     .hero-inner { position:relative; max-width:min(80vw,1600px); margin:0 auto; }
@@ -73,7 +73,7 @@
     .score-sep { font-family:'Cormorant Garamond',serif; font-size:1.8rem; color:rgba(255,255,255,.2); }
 
     /* ── CARDS ── */
-    .card { background:white; border-radius:8px; border:1px solid rgba(0,0,0,.07); box-shadow:0 1px 4px rgba(0,0,0,.06); margin-bottom:1rem; overflow:visible; }
+    .card { background:white; border-radius:8px; border:1px solid rgba(0,0,0,.07); box-shadow:0 1px 4px rgba(0,0,0,.06); margin-bottom:1rem; overflow:visible; max-width:100%; box-sizing:border-box; }
     .card > h2 { font-family:'Cormorant Garamond',serif; font-size:1.05rem; font-weight:700; color:var(--turf); padding:.85rem 1.1rem; border-bottom:1px solid var(--cream2); }
     .card > h2 + * { padding:.85rem 1.1rem; }
     .card-head { padding:.85rem 1.1rem; border-bottom:1px solid var(--cream2); display:flex; justify-content:space-between; align-items:center; }
@@ -119,7 +119,7 @@
     /* ── GRID ── */
     .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
     .home-cols { display:flex; gap:1.25rem; flex-wrap:wrap; }
-    .home-col { flex:1; min-width:280px; }
+    .home-col { flex:1; min-width:min(280px,100%); }
     .arene-cols { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
 
     /* ── MATCH CARDS (mes matchs) ── */
@@ -298,7 +298,7 @@
       .score-manches { font-size:2.4rem; }
       .score-display { gap:1.2rem; }
       .stats-row { display:none; }
-      .container, .page-inner { padding:.9rem .85rem; }
+      .container, .page-inner { padding:.9rem .85rem; max-width:100%; width:100%; }
       .hero-band { padding:1.1rem .85rem; }
       .score-band { padding:1rem .85rem; }
       .card-head, .card-body { padding:.75rem .85rem; }
@@ -337,7 +337,7 @@
     .reunion-v2-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.07); }
     .reunion-v2-card.inscrit { border-left:3px solid var(--green); }
     .reunion-v2-head { padding:.55rem .9rem; border-bottom:1px solid var(--cream2); display:flex; align-items:center; justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
-    .reunion-v2-body { padding:.5rem .9rem; display:grid; grid-template-columns:auto 1fr auto; gap:.5rem; align-items:center; }
+    .reunion-v2-body { padding:.5rem .9rem; display:grid; grid-template-columns:auto 1fr auto; gap:.5rem; align-items:center; min-width:0; overflow:hidden; }
     .reunion-v2-limite { font-size:.73rem; color:var(--muted); }
     .reunion-v2-limite strong { color:var(--text); font-size:.85rem; }
     .reunion-tirage-v2 { text-align:right; }
@@ -5660,11 +5660,12 @@ async function _calculerTcReunion() {
     classCourse.forEach((j, i) => {
       const isMe = j.uid === myUid;
       const rang = i<3?['🥇','🥈','🥉'][i]:(i+1);
-      htmlCourses += `<div class="arene-classement-ligne${isMe?' moi':''}" style="font-size:.76rem;">
-        <span style="width:1.4rem;text-align:center;">${rang}</span>
-        <span style="flex:1;font-weight:${isMe?700:500};">${isMe?'<strong>Vous</strong>':j.prenom}</span>
-        <span style="color:var(--muted);font-size:.7rem;">${j.choix.map(n=>'#'+n).join(' · ')||'—'}</span>
-        <span style="font-family:'Cormorant Garamond',serif;font-weight:700;color:var(--gold);width:2.5rem;text-align:right;">${j.pts} pts</span>
+      htmlCourses += `<div class="arene-classement-ligne${isMe?' moi':''}">
+        <span style="width:1.6rem;text-align:center;font-size:.88rem;">${rang}</span>
+        <div class="joueur-avatar" style="width:24px;height:24px;font-size:.7rem;">${(j.prenom||'?').charAt(0)}</div>
+        <span style="flex:1;font-weight:${isMe?700:500};font-size:.82rem;">${isMe?'<strong>Vous</strong>':j.prenom}</span>
+        <span style="color:var(--muted);font-size:.75rem;margin-right:.3rem;">${j.choix.map(n=>'#'+n).join(' · ')||'—'}</span>
+        <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700;color:var(--gold);">${j.pts} pts</span>
       </div>`;
     });
     htmlCourses += '</div>';
