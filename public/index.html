@@ -426,7 +426,7 @@
     .cd-name { font-weight:700; font-size:.79rem; color:var(--turf); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .cd-pts { font-family:'Cormorant Garamond',serif; font-size:1rem; font-weight:700; color:var(--gold); flex-shrink:0; width:2.2rem; text-align:right; }
     .cd-stat { color:var(--muted); flex-shrink:0; width:1.8rem; text-align:center; }
-    .cd-elo { font-weight:600; font-size:.72rem; flex-shrink:0; width:2.4rem; text-align:right; }
+    .cd-elo { font-weight:600; font-size:.72rem; flex-shrink:0; width:2.6rem; text-align:right; }
     .cd-disc { flex-shrink:0; font-size:.8rem; }
 
     /* ══ V2 : AMICAUX ══ */
@@ -1073,9 +1073,7 @@
       <div style="width:1.8rem;text-align:center;">V</div>
       <div style="width:1.8rem;text-align:center;">N</div>
       <div style="width:1.8rem;text-align:center;">P</div>
-      <div style="width:2.4rem;text-align:right;">WIN</div>
-      <div style="width:2.4rem;text-align:right;" id="cd-hdr-elo">T+G</div>
-      <div style="width:1.5rem;"></div>
+      <div style="width:2.6rem;text-align:right;">WIN</div>
     </div>
     <div class="card"><div id="classement-detail-content" style="padding:0;"><p class="text-sm" style="padding:.9rem;">Chargement…</p></div></div>
     <p style="font-size:.67rem;color:var(--muted);margin-top:.5rem;padding:.2rem;">Pts = points Arène du mois (Victoire=2, Nul=1, Exempté=1) · V/N/D = victoires/nuls/défaites · ELO = classement Arène uniquement · 🔵🟡 = disciplines jouées</p>
@@ -2318,7 +2316,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     Object.entries(insData).forEach(([uid, reunions]) => {
       if (reunions[numR]) joueursInscrits.push({uid, nom: usersData[uid]?.prenom || uid});
     });
-    if (!joueursInscrits.length) { toast('⚠️ Aucun joueur inscrit sur R'+numR, true); if(btn){btn.disabled=false; btn.textContent=origText;} return; }
+    if (!joueursInscrits.length) { toast('⚠️ Aucun joueur inscrit sur R'+numR, true); btn.disabled=false; btn.textContent=origText; return; }
 
     const _shuffle = arr => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
     const matchsACreer = [], exempts = [];
@@ -2330,7 +2328,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     }
     for (let i=0; i<pool.length; i+=2) matchsACreer.push({j1:pool[i], j2:pool[i+1]});
 
-    if(btn) btn.textContent = '⏳ Courses…';
+    btn.textContent = '⏳ Courses…';
     const areneCoursesFiltered = filtrerCoursesPaires(reunion.courses||[]);
     const serieCourses = [];
     for (const co of areneCoursesFiltered) {
@@ -2343,7 +2341,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
       }
     }
 
-    if(btn) btn.textContent = '⏳ Matchs…';
+    btn.textContent = '⏳ Matchs…';
     const matchsCreated = {};
     for (const m of matchsACreer) {
       const code = genCode();
@@ -2733,11 +2731,9 @@ function switchClassementDetail(type) {
 }
 
 async function chargerClassementDetail(type) {
-  // Adapter en-têtes selon type arène ou ELO
+  // Adapter label Pts/ELO selon le type
   const _hPts = document.getElementById('cd-hdr-pts');
-  const _hElo = document.getElementById('cd-hdr-elo');
   if(_hPts) _hPts.textContent = type.startsWith('arene') ? 'Pts' : 'ELO';
-  if(_hElo) _hElo.textContent = type.startsWith('arene') ? 'ELO' : 'T+G';
 
   _classDetailCurrent = type;
   const el = document.getElementById('classement-detail-content');
@@ -2809,10 +2805,7 @@ async function chargerClassementDetail(type) {
     const isMe = j.uid === uid;
     const discHtml = (j.trot?'🔵':'') + (j.galop?'🟡':'');
     const init = (j.prenom||'?').charAt(0).toUpperCase();
-    const _isAreneType = type.startsWith('arene');
     const mj = j.victoires + j.nuls + j.defaites;
-    const eloTrotStr = (j.eloTrot&&j.eloTrot!==1200) ? j.eloTrot+'🔵' : '—';
-    const eloGalopStr = (j.eloGalop&&j.eloGalop!==1200) ? j.eloGalop+'🟡' : '—';
     html += `<div class="classement-detail-row${isMe?' moi':''}">
       <div class="cd-num">${rang}</div>
       <div class="cd-avatar">${init}</div>
@@ -2822,8 +2815,7 @@ async function chargerClassementDetail(type) {
       <div class="cd-stat" style="color:rgba(100,220,120,.9);">${j.victoires}</div>
       <div class="cd-stat">${j.nuls}</div>
       <div class="cd-stat" style="color:rgba(220,80,80,.9);">${j.defaites}</div>
-      <div class="cd-elo" style="color:var(--muted);font-size:.68rem;">${winPct}%</div>
-      <div class="cd-elo" style="font-size:.68rem;">${_isAreneType ? (discHtml||'—') : eloTrotStr+' / '+eloGalopStr}</div>
+      <div class="cd-elo" style="color:var(--muted);">${winPct}%</div>
     </div>`;
   });
   el.innerHTML = html || '<p class="text-sm" style="padding:.9rem;">Aucune donnée.</p>';
@@ -4685,8 +4677,8 @@ function _ajouterBulle(containerId, m) {
   div.innerHTML = (!moi ? `<div class="chat-auteur">${m.prenom||'?'}</div>` : '')
     + `<div>${m.texte}</div>`
     + `<div class="chat-heure">${formatChatHeure(m.ts)}</div>`;
-  el.prepend(div);
-  // column-reverse : prepend place le message récent en haut visuellement
+  el.appendChild(div);
+  // column-reverse : appendChild place le dernier élément en haut visuellement
 }
 
 function _stopChat(key) {
