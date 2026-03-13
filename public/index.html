@@ -2110,12 +2110,15 @@ async function _buildAreneMatchCard(m, uid, key, today, yesterday, showAll) {
         const nbTotal = cs.length;
         const progression = nbTotal > 0 ? `<span style="font-size:.68rem;color:var(--muted);margin-left:4px;">${nbTerminees}/${nbTotal} courses</span>` : '';
         if (isParticipant) {
+          // Afficher dans l'ordre J1–J2 pour correspondre aux noms affichés
+          const colJ1 = mJ1>mJ2?'var(--green)':mJ1<mJ2?'var(--red)':'var(--gold)';
+          const colJ2 = mJ2>mJ1?'var(--green)':mJ2<mJ1?'var(--red)':'var(--gold)';
           statutBadge = `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
             <span class="badge badge-gold" style="animation:pulse 2s infinite;font-size:.68rem;">⚔️ En cours ${progression}</span>
             <div style="display:flex;gap:6px;align-items:center;font-size:.82rem;font-weight:700;">
-              <span style="color:${colMe};">${myM} <span style="font-size:.68rem;font-weight:400;color:var(--muted);">(${myP})</span></span>
+              <span style="color:${colJ1};">${mJ1} <span style="font-size:.68rem;font-weight:400;color:var(--muted);">(${pJ1})</span></span>
               <span style="color:var(--muted);font-size:.72rem;">–</span>
-              <span style="color:${colAdv};">${advM} <span style="font-size:.68rem;font-weight:400;color:var(--muted);">(${advP})</span></span>
+              <span style="color:${colJ2};">${mJ2} <span style="font-size:.68rem;font-weight:400;color:var(--muted);">(${pJ2})</span></span>
             </div>
           </div>`;
         } else {
@@ -4521,8 +4524,8 @@ async function bloquerChoixMain(idx) {
   const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
   const co = normCourses(data.courses)[idx];
   if(co.statut!=='ouverte') return;
-  // Vérifier que le départ est réellement dans moins de 15 min
-  if(co.heureDepart && co.heureDepart - Date.now() > 15*60*1000) return;
+  // Vérifier que le départ est réellement dans moins de 10 min (seuil de blocage main)
+  if(co.heureDepart && co.heureDepart - Date.now() > 10*60*1000) return;
   await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({mainBloquee:true});
 }
 
@@ -4530,8 +4533,8 @@ async function bloquerEtValider(idx) {
   const data=(await db.ref('matchs/'+etat.matchId).once('value')).val();
   const c=normCourses(data.courses)[idx];
   if(c.statut==='bloquee'||c.statut==='terminee') return;
-  // Vérifier que le départ est réellement dans moins de 10 min
-  if(c.heureDepart && c.heureDepart - Date.now() > 10*60*1000) return;
+  // Vérifier que le départ est réellement dans moins de 5 min (seuil de blocage second)
+  if(c.heureDepart && c.heureDepart - Date.now() > 5*60*1000) return;
   const mr=getMainPourCourse(idx), sr=mr==='j1'?'j2':'j1';
   const cmAll=c['choix'+mr.toUpperCase()]||[], cs=c['choix'+sr.toUpperCase()]||[];
   const cm2 = cmAll.slice(0,2); // les 2 premiers de la main — base du filtrage
