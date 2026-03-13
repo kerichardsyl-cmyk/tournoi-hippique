@@ -2439,12 +2439,18 @@ async function chargerAreneClassementMensuel(disc) {
       if(!dayKey.startsWith(isoMois)) return;
       // Nouvelle structure : exempts_uids par réunion
       if (dayData.exempts_uids) {
-        // ancienne structure plate
-        (dayData.exempts_uids||[]).forEach(uid => { _get(uid).pts += 1; _get(uid).exempts += 1; });
+        // ancienne structure plate (pas de discipline stockée — on inclut dans general seulement)
+        if (disc === 'general') {
+          Object.keys(dayData.exempts_uids).forEach(uid => { _get(uid).pts += 1; _get(uid).exempts += 1; });
+        }
       } else {
         Object.values(dayData).forEach(rd => {
           if (rd && typeof rd === 'object' && rd.exempts_uids) {
-            Object.keys(rd.exempts_uids).forEach(uid => { _get(uid).pts += 1; _get(uid).exempts += 1; });
+            const rdDisc = (rd.discipline || '').toUpperCase();
+            // Filtre discipline : general = tout, trot = TROT seulement, galop = GALOP seulement
+            if (disc === 'general' || (disc === 'trot' && rdDisc === 'TROT') || (disc === 'galop' && rdDisc === 'GALOP')) {
+              Object.keys(rd.exempts_uids).forEach(uid => { _get(uid).pts += 1; _get(uid).exempts += 1; });
+            }
           }
         });
       }
@@ -2766,11 +2772,15 @@ async function chargerClassementDetail(type) {
       Object.entries(areneSnap2.val()).forEach(([dayKey, dayData]) => {
         if(!dayKey.startsWith(moisKey)) return;
         if(dayData.exempts_uids) {
-          Object.keys(dayData.exempts_uids).forEach(uid => { _g(uid).exempts += 1; _g(uid).pts += 1; });
+          // ancienne structure plate sans discipline — general seulement
+          if(disc === 'general') Object.keys(dayData.exempts_uids).forEach(uid => { _g(uid).exempts += 1; _g(uid).pts += 1; });
         } else {
           Object.values(dayData).forEach(rd => {
-            if(rd && typeof rd === 'object' && rd.exempts_uids)
-              Object.keys(rd.exempts_uids).forEach(uid => { _g(uid).exempts += 1; _g(uid).pts += 1; });
+            if(rd && typeof rd === 'object' && rd.exempts_uids) {
+              const rdDisc = (rd.discipline || '').toUpperCase();
+              if(disc === 'general' || (disc === 'trot' && rdDisc === 'TROT') || (disc === 'galop' && rdDisc === 'GALOP'))
+                Object.keys(rd.exempts_uids).forEach(uid => { _g(uid).exempts += 1; _g(uid).pts += 1; });
+            }
           });
         }
       });
