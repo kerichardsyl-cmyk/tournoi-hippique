@@ -2538,20 +2538,47 @@ function chargerAreneElo() {
 
 // Calcule V/N/D depuis tous les matchs arène terminés, filtrés par discipline
 async function _buildStatsDisc(disc) {
-  const snap = await db.ref('matchs').once('value');
-  const stats = {}; // uid → {v,n,d,m}
-  const _g = uid => stats[uid] || (stats[uid] = {v:0, n:0, d:0, m:0});
-  snap.forEach(child => {
+  const [matchsSnap, classSnap] = await Promise.all([
+    db.ref('matchs').once('value'),
+    db.ref('arene_classements').once('value')
+  ]);
+  const stats = {}; // uid → {v,n,d,m,pts}
+  const _g = uid => stats[uid] || (stats[uid] = {v:0, n:0, d:0, m:0, pts:0});
+
+  // 1. Matchs terminés (victoires, nuls, défaites)
+  matchsSnap.forEach(child => {
     const m = child.val();
     if (!m.arene || m.statut !== 'termine') return;
     const mDisc = (m.reunion?.discipline || m.discipline || '').toUpperCase();
     if (disc === 'trot'  && mDisc !== 'TROT')  return;
     if (disc === 'galop' && mDisc !== 'GALOP') return;
     _g(m.uidJ1).m++; _g(m.uidJ2).m++;
-    if (m.vainqueur === 'j1')   { _g(m.uidJ1).v++; _g(m.uidJ2).d++; }
-    else if (m.vainqueur === 'j2') { _g(m.uidJ2).v++; _g(m.uidJ1).d++; }
-    else if (m.vainqueur === 'egal') { _g(m.uidJ1).n++; _g(m.uidJ2).n++; }
+    if (m.vainqueur === 'j1')        { _g(m.uidJ1).v++; _g(m.uidJ2).d++; _g(m.uidJ1).pts+=2; }
+    else if (m.vainqueur === 'j2')   { _g(m.uidJ2).v++; _g(m.uidJ1).d++; _g(m.uidJ2).pts+=2; }
+    else if (m.vainqueur === 'egal') { _g(m.uidJ1).n++; _g(m.uidJ2).n++; _g(m.uidJ1).pts+=1; _g(m.uidJ2).pts+=1; }
   });
+
+  // 2. Points d'exemption depuis arene_classements (exemptés sans match fictif)
+  // Un exempté a pts>0 mais pas de match terminé → on l'ajoute avec m+=1
+  classSnap.forEach(moisChild => {
+    const moisData = moisChild.val() || {};
+    const discKey = disc === 'general' ? null : disc; // general = tous
+    const sources = discKey ? [moisData[discKey]] : [moisData.trot, moisData.galop, moisData.general];
+    sources.forEach(src => {
+      if (!src) return;
+      Object.entries(src).forEach(([uid, d]) => {
+        if (!d || !d.pts) return;
+        // Ne compter que les points qui ne viennent PAS d'un match terminé déjà comptabilisé
+        // Un exempté a pts=1, victoires=0, nuls=0, defaites=0
+        const estExempt = (d.pts > 0) && !(d.victoires > 0) && !(d.nuls > 0) && !(d.defaites > 0);
+        if (estExempt) {
+          _g(uid).m += 1;   // compte comme 1 match joué
+          _g(uid).pts += d.pts;
+        }
+      });
+    });
+  });
+
   return stats;
 }
 
