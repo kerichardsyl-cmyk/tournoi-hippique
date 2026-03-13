@@ -2318,7 +2318,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     Object.entries(insData).forEach(([uid, reunions]) => {
       if (reunions[numR]) joueursInscrits.push({uid, nom: usersData[uid]?.prenom || uid});
     });
-    if (!joueursInscrits.length) { toast('⚠️ Aucun joueur inscrit sur R'+numR, true); btn.disabled=false; btn.textContent=origText; return; }
+    if (!joueursInscrits.length) { toast('⚠️ Aucun joueur inscrit sur R'+numR, true); if(btn){btn.disabled=false; btn.textContent=origText;} return; }
 
     const _shuffle = arr => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
     const matchsACreer = [], exempts = [];
@@ -2330,7 +2330,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     }
     for (let i=0; i<pool.length; i+=2) matchsACreer.push({j1:pool[i], j2:pool[i+1]});
 
-    btn.textContent = '⏳ Courses…';
+    if(btn) btn.textContent = '⏳ Courses…';
     const areneCoursesFiltered = filtrerCoursesPaires(reunion.courses||[]);
     const serieCourses = [];
     for (const co of areneCoursesFiltered) {
@@ -2343,7 +2343,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
       }
     }
 
-    btn.textContent = '⏳ Matchs…';
+    if(btn) btn.textContent = '⏳ Matchs…';
     const matchsCreated = {};
     for (const m of matchsACreer) {
       const code = genCode();
