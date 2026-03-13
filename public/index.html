@@ -2396,7 +2396,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     if(log) log.textContent = '✅ ' + summary;
     toast('✅ ' + summary);
     if (btn) btn.textContent = '✅ Généré';
-    setTimeout(() => adminPreviewReunions(), 600);
+    if (btn) setTimeout(() => adminPreviewReunions(), 600);
   } catch(e) {
     toast('❌ Erreur : '+e.message, true);
     if(log) log.textContent = '❌ '+e.message;
@@ -4533,11 +4533,12 @@ async function bloquerEtValider(idx) {
   // Vérifier que le départ est réellement dans moins de 10 min
   if(c.heureDepart && c.heureDepart - Date.now() > 10*60*1000) return;
   const mr=getMainPourCourse(idx), sr=mr==='j1'?'j2':'j1';
-  const cm=c['choix'+mr.toUpperCase()]||[], cs=c['choix'+sr.toUpperCase()]||[];
-  const cfs=cs.filter(n=>!cm.includes(n)).slice(0,2); // toujours 2 max, même si main n'a pas choisi
+  const cmAll=c['choix'+mr.toUpperCase()]||[], cs=c['choix'+sr.toUpperCase()]||[];
+  const cm2 = cmAll.slice(0,2); // les 2 premiers de la main — base du filtrage
+  const cfs = cs.filter(n => !cm2.includes(n)).slice(0,2); // 2 premiers du second absents des 2 de la main
   await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({
     statut:'bloquee',
-    [`choixFinal${mr.toUpperCase()}`]:cm.slice(0,2),
+    [`choixFinal${mr.toUpperCase()}`]:cm2,
     [`choixFinal${sr.toUpperCase()}`]:cfs
   });
   demarrerPollingResultats(idx);
