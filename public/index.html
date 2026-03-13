@@ -2495,7 +2495,7 @@ async function chargerAreneClassementMensuel(disc) {
           <span style="color:rgba(220,80,80,.9);">${j.defaites}P</span>
           <span style="color:rgba(200,168,75,.8);">${j.exempts||0}E</span>
           <span style="opacity:.25;">|</span>
-          <span>${j.matchsJoues>0?Math.round(j.victoires/j.matchsJoues*100):0}%</span>
+          <span>${(j.victoires+j.nuls+j.defaites)>0?Math.round(j.victoires/(j.victoires+j.nuls+j.defaites)*100):0}%</span>
         </span>
       </span>
     </div>`;
@@ -3139,7 +3139,8 @@ function ligneClassement(j, i, uid, key) {
   const isMe = j.uid === uid;
   const _sd = key==='trot' ? (j.statsTrot||j.stats) : key==='galop' ? (j.statsGalop||j.stats) : (j.statsGeneral||j.stats);
   const _sv = _sd?.victoires||0, _sn = _sd?.nuls||0, _sp = _sd?.defaites||0, _sm = _sd?.matchsJoues||0, _se = _sd?.exempts||0;
-  const _win = _sm > 0 ? Math.round(_sv/_sm*100) : 0;
+  const _mj_reel = _sv + _sn + _sp; // matchs réels sans exemptions
+  const _win = _mj_reel > 0 ? Math.round(_sv/_mj_reel*100) : 0;
   const statsHtml = `<span style="display:flex;gap:5px;align-items:center;font-size:.7rem;color:var(--muted);white-space:nowrap;">` +
     `<span title="Matchs joués" style="opacity:.8;">${_sm}<span style="font-size:.6rem;opacity:.65;">MJ</span></span>` +
     `<span style="opacity:.25;">|</span>` +
