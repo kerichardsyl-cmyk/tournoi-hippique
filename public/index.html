@@ -1073,6 +1073,7 @@
       <div style="width:1.8rem;text-align:center;">V</div>
       <div style="width:1.8rem;text-align:center;">N</div>
       <div style="width:1.8rem;text-align:center;">P</div>
+      <div style="width:1.8rem;text-align:center;" id="cd-hdr-e">E</div>
       <div style="width:2.6rem;text-align:right;">WIN</div>
     </div>
     <div class="card"><div id="classement-detail-content" style="padding:0;"><p class="text-sm" style="padding:.9rem;">Chargement…</p></div></div>
@@ -2430,7 +2431,7 @@ async function chargerAreneClassementMensuel(disc) {
   const prenoms = {};
   usersSnap.forEach(child => { prenoms[child.key] = child.val().prenom || child.val().email || child.key; });
   const scores = {};
-  const _get = uid => scores[uid] || (scores[uid] = {pts:0, victoires:0, nuls:0, defaites:0, matchsJoues:0, manchesGagnees:0, ptsTotal:0, nom:prenoms[uid]||'?'});
+  const _get = uid => scores[uid] || (scores[uid] = {pts:0, victoires:0, nuls:0, defaites:0, matchsJoues:0, manchesGagnees:0, ptsTotal:0, exempts:0, nom:prenoms[uid]||'?'});
   // Points exempts
   const areneSnap = await db.ref('arene').once('value');
   if(areneSnap.val()) {
@@ -2439,11 +2440,11 @@ async function chargerAreneClassementMensuel(disc) {
       // Nouvelle structure : exempts_uids par réunion
       if (dayData.exempts_uids) {
         // ancienne structure plate
-        (dayData.exempts_uids||[]).forEach(uid => { _get(uid).pts += 1; });
+        (dayData.exempts_uids||[]).forEach(uid => { _get(uid).pts += 1; _get(uid).exempts += 1; });
       } else {
         Object.values(dayData).forEach(rd => {
           if (rd && typeof rd === 'object' && rd.exempts_uids) {
-            Object.keys(rd.exempts_uids).forEach(uid => { _get(uid).pts += 1; });
+            Object.keys(rd.exempts_uids).forEach(uid => { _get(uid).pts += 1; _get(uid).exempts += 1; });
           }
         });
       }
@@ -2492,6 +2493,7 @@ async function chargerAreneClassementMensuel(disc) {
           <span style="color:rgba(100,220,120,.9);">${j.victoires}V</span>
           <span>${j.nuls}N</span>
           <span style="color:rgba(220,80,80,.9);">${j.defaites}P</span>
+          <span style="color:rgba(200,168,75,.8);">${j.exempts||0}E</span>
           <span style="opacity:.25;">|</span>
           <span>${j.matchsJoues>0?Math.round(j.victoires/j.matchsJoues*100):0}%</span>
         </span>
@@ -2541,9 +2543,9 @@ function chargerAreneElo() {
       const gs = genStats[child.key]   || {v:0,n:0,d:0,m:0};
       _joueursCache.push({
         uid: child.key, ...u,
-        statsGeneral: {victoires:gs.v, nuls:gs.n, defaites:gs.d, matchsJoues:gs.m},
-        statsTrot:    {victoires:td.v, nuls:td.n, defaites:td.d, matchsJoues:td.m},
-        statsGalop:   {victoires:gd.v, nuls:gd.n, defaites:gd.d, matchsJoues:gd.m}
+        statsGeneral: {victoires:gs.v, nuls:gs.n, defaites:gs.d, matchsJoues:gs.m, exempts:gs.e||0},
+        statsTrot:    {victoires:td.v, nuls:td.n, defaites:td.d, matchsJoues:td.m, exempts:td.e||0},
+        statsGalop:   {victoires:gd.v, nuls:gd.n, defaites:gd.d, matchsJoues:gd.m, exempts:gd.e||0}
       });
     });
     _afficherAreneElo();
@@ -2556,8 +2558,8 @@ async function _buildStatsDisc(disc) {
     db.ref('matchs').once('value'),
     db.ref('arene_classements').once('value')
   ]);
-  const stats = {}; // uid → {v,n,d,m,pts}
-  const _g = uid => stats[uid] || (stats[uid] = {v:0, n:0, d:0, m:0, pts:0});
+  const stats = {}; // uid → {v,n,d,m,pts,e}
+  const _g = uid => stats[uid] || (stats[uid] = {v:0, n:0, d:0, m:0, pts:0, e:0});
 
   // 1. Matchs terminés (victoires, nuls, défaites)
   matchsSnap.forEach(child => {
@@ -2588,6 +2590,7 @@ async function _buildStatsDisc(disc) {
         if (estExempt) {
           _g(uid).m += 1;   // compte comme 1 match joué
           _g(uid).pts += d.pts;
+          _g(uid).e += 1;   // nb d'exemptions
         }
       });
     });
@@ -2756,7 +2759,22 @@ async function chargerClassementDetail(type) {
     const fin   = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59).getTime();
     const matchsSnap2 = await db.ref('matchs').once('value');
     const sc = {};
-    const _g = uid => sc[uid]||(sc[uid]={uid, prenom:users[uid]?.prenom||'?', pts:0, victoires:0, nuls:0, defaites:0, manchesGagnees:0, ptsTotal:0, elo:users[uid]?.elo?.general||1200, trot:!!(users[uid]?.elo?.trot&&users[uid].elo.trot!==1200), galop:!!(users[uid]?.elo?.galop&&users[uid].elo.galop!==1200)});
+    const _g = uid => sc[uid]||(sc[uid]={uid, prenom:users[uid]?.prenom||'?', pts:0, victoires:0, nuls:0, defaites:0, manchesGagnees:0, ptsTotal:0, exempts:0, elo:users[uid]?.elo?.general||1200, trot:!!(users[uid]?.elo?.trot&&users[uid].elo.trot!==1200), galop:!!(users[uid]?.elo?.galop&&users[uid].elo.galop!==1200)});
+    // Points exempts du mois
+    const areneSnap2 = await db.ref('arene').once('value');
+    if(areneSnap2.val()) {
+      Object.entries(areneSnap2.val()).forEach(([dayKey, dayData]) => {
+        if(!dayKey.startsWith(moisKey)) return;
+        if(dayData.exempts_uids) {
+          Object.keys(dayData.exempts_uids).forEach(uid => { _g(uid).exempts += 1; _g(uid).pts += 1; });
+        } else {
+          Object.values(dayData).forEach(rd => {
+            if(rd && typeof rd === 'object' && rd.exempts_uids)
+              Object.keys(rd.exempts_uids).forEach(uid => { _g(uid).exempts += 1; _g(uid).pts += 1; });
+          });
+        }
+      });
+    }
     matchsSnap2.forEach(child => {
       const m = child.val();
       if(!m.arene || m.statut!=='termine') return;
@@ -2772,7 +2790,7 @@ async function chargerClassementDetail(type) {
       else if(m.vainqueur==='j2'){_g(m.uidJ2).pts+=2;_g(m.uidJ2).victoires+=1;_g(m.uidJ1).defaites+=1;}
       else if(m.vainqueur==='egal'){_g(m.uidJ1).pts+=1;_g(m.uidJ1).nuls+=1;_g(m.uidJ2).pts+=1;_g(m.uidJ2).nuls+=1;}
     });
-    joueurs = Object.values(sc).filter(j => j.pts>0||j.victoires>0||j.nuls>0||j.defaites>0);
+    joueurs = Object.values(sc).filter(j => j.pts>0||j.victoires>0||j.nuls>0||j.defaites>0||j.exempts>0);
     joueurs.sort((a,b) => b.pts-a.pts || b.victoires-a.victoires);
   } else {
     const disc = type === 'elo-gen' ? 'general' : type === 'elo-trot' ? 'trot' : 'galop';
@@ -2797,15 +2815,21 @@ async function chargerClassementDetail(type) {
     joueurs.sort((a,b) => b.pts-a.pts);
   }
 
+  // Colonne E : visible uniquement pour les classements Arène
+  const hdrE = document.getElementById('cd-hdr-e');
+  if(hdrE) hdrE.style.display = type.startsWith('arene') ? '' : 'none';
+
   let html = '';
   joueurs.forEach((j, i) => {
     const rang = i < 3 ? ['🥇','🥈','🥉'][i] : (i+1);
     const total = j.victoires + j.nuls + j.defaites;
     const winPct = total > 0 ? Math.round(j.victoires/total*100) : 0;
     const isMe = j.uid === uid;
-    const discHtml = (j.trot?'🔵':'') + (j.galop?'🟡':'');
     const init = (j.prenom||'?').charAt(0).toUpperCase();
     const mj = j.victoires + j.nuls + j.defaites;
+    const eCol = type.startsWith('arene')
+      ? `<div class="cd-stat" style="color:rgba(200,168,75,.8);">${j.exempts||0}</div>`
+      : `<div class="cd-stat" style="display:none;"></div>`;
     html += `<div class="classement-detail-row${isMe?' moi':''}">
       <div class="cd-num">${rang}</div>
       <div class="cd-avatar">${init}</div>
@@ -2815,6 +2839,7 @@ async function chargerClassementDetail(type) {
       <div class="cd-stat" style="color:rgba(100,220,120,.9);">${j.victoires}</div>
       <div class="cd-stat">${j.nuls}</div>
       <div class="cd-stat" style="color:rgba(220,80,80,.9);">${j.defaites}</div>
+      ${eCol}
       <div class="cd-elo" style="color:var(--muted);">${winPct}%</div>
     </div>`;
   });
@@ -3113,7 +3138,7 @@ function ligneClassement(j, i, uid, key) {
   const eloVal = j.elo?.[key] || 1200;
   const isMe = j.uid === uid;
   const _sd = key==='trot' ? (j.statsTrot||j.stats) : key==='galop' ? (j.statsGalop||j.stats) : (j.statsGeneral||j.stats);
-  const _sv = _sd?.victoires||0, _sn = _sd?.nuls||0, _sp = _sd?.defaites||0, _sm = _sd?.matchsJoues||0;
+  const _sv = _sd?.victoires||0, _sn = _sd?.nuls||0, _sp = _sd?.defaites||0, _sm = _sd?.matchsJoues||0, _se = _sd?.exempts||0;
   const _win = _sm > 0 ? Math.round(_sv/_sm*100) : 0;
   const statsHtml = `<span style="display:flex;gap:5px;align-items:center;font-size:.7rem;color:var(--muted);white-space:nowrap;">` +
     `<span title="Matchs joués" style="opacity:.8;">${_sm}<span style="font-size:.6rem;opacity:.65;">MJ</span></span>` +
@@ -3121,6 +3146,7 @@ function ligneClassement(j, i, uid, key) {
     `<span style="color:rgba(100,220,120,.9);">${_sv}V</span>` +
     `<span>${_sn}N</span>` +
     `<span style="color:rgba(220,80,80,.9);">${_sp}P</span>` +
+    `<span style="color:rgba(200,168,75,.8);">${_se}E</span>` +
     `<span style="opacity:.25;">|</span>` +
     `<span>${_win}%</span>` +
     `</span>`;
