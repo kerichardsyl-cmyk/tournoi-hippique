@@ -3593,8 +3593,15 @@ async function ouvrirMatch(matchId) {
     etat.joueurId = 'j1';
   }
   // Match arène : injecter les choix depuis arene_choix puis démarrer directement
+  // Si admin non-participant, on injecte depuis le point de vue de j1 (uid réel du joueur)
   if (data.arene && (data.statut==='attente'||data.statut==='en_cours')) {
-    await _injecterChoixArene(matchId, data, uid);
+    const isParticipantArene = data.uidJ1===uid || data.uidJ2===uid;
+    if (isParticipantArene) {
+      await _injecterChoixArene(matchId, data, uid);
+    } else if (isAdmin && data.uidJ1) {
+      // Admin spectateur : injecter depuis la perspective de j1 pour réconcilier les choix
+      await _injecterChoixArene(matchId, data, data.uidJ1);
+    }
     ecouterMatch();
     showPage('match');
     return;
