@@ -4859,7 +4859,7 @@ async function recalculerTousElo() {
   const matchsTermines = [];
   matchsSnap.forEach(child => {
     const d = child.val();
-    if(d.statut === 'termine') matchsTermines.push({id: child.key, ...d});
+    if(d.statut === 'termine' && d.arene) matchsTermines.push({id: child.key, ...d}); // arène uniquement
   });
   matchsTermines.sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
 
@@ -4915,9 +4915,9 @@ async function recalculerTousElo() {
     eloSnapshot[uidJ2] = {eloBefore: eloJ2Raw, statsBefore: statsJ2Raw};
 
     await db.ref('utilisateurs/'+uidJ1+'/elo').set(newEloJ1);
-    await db.ref('utilisateurs/'+uidJ1+'/stats').set(appliquerStats(statsJ1Raw,'j1'));
+    await db.ref('utilisateurs/'+uidJ1+'/stats').set(appliquerStats(statsJ1Raw,'j1')); // arène seulement (filtré plus haut)
     await db.ref('utilisateurs/'+uidJ2+'/elo').set(newEloJ2);
-    await db.ref('utilisateurs/'+uidJ2+'/stats').set(appliquerStats(statsJ2Raw,'j2'));
+    await db.ref('utilisateurs/'+uidJ2+'/stats').set(appliquerStats(statsJ2Raw,'j2')); // arène seulement (filtré plus haut)
     await db.ref('matchs/'+match.id+'/eloSnapshot').set(eloSnapshot);
     nb++;
   }
@@ -4958,9 +4958,9 @@ async function cloturerMatch(matchId) {
   const annulerAncienCalc = async (uid) => {
     if(!uid || !dejaClotureSnap?.[uid]) return;
     const snap = dejaClotureSnap[uid];
-    // Restaurer ELO et stats d'avant la dernière clôture
+    // Restaurer ELO (toujours) et stats (uniquement si arène — statsBefore absent pour les amicaux)
     await db.ref('utilisateurs/'+uid+'/elo').set(snap.eloBefore);
-    await db.ref('utilisateurs/'+uid+'/stats').set(snap.statsBefore);
+    if(snap.statsBefore) await db.ref('utilisateurs/'+uid+'/stats').set(snap.statsBefore);
   };
   if(dejaClotureSnap) {
     await annulerAncienCalc(uidJ1);
@@ -5009,26 +5009,28 @@ async function cloturerMatch(matchId) {
     else ns.defaites = (ns.defaites||0)+1;
     return ns;
   };
-  const newStatsJ1 = uidJ1 ? appliquerStats(statsJ1Raw,'j1') : null;
-  const newStatsJ2 = uidJ2 ? appliquerStats(statsJ2Raw,'j2') : null;
+  // Stats et ELO uniquement pour les matchs Arène
+  const newStatsJ1 = (uidJ1 && isAreneMatch) ? appliquerStats(statsJ1Raw,'j1') : null;
+  const newStatsJ2 = (uidJ2 && isAreneMatch) ? appliquerStats(statsJ2Raw,'j2') : null;
 
   // ── Snapshot pour pouvoir annuler si on re-clôture ──
+  // statsBefore uniquement si arène (seuls les matchs arène modifient les stats)
   const eloSnapshot = {};
-  if(uidJ1) eloSnapshot[uidJ1] = {eloBefore: eloJ1Raw||{general:1200,trot:1200,galop:1200}, eloAfter: newEloJ1, statsBefore: statsJ1Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}};
-  if(uidJ2) eloSnapshot[uidJ2] = {eloBefore: eloJ2Raw||{general:1200,trot:1200,galop:1200}, eloAfter: newEloJ2, statsBefore: statsJ2Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}};
+  if(uidJ1) eloSnapshot[uidJ1] = {eloBefore: eloJ1Raw||{general:1200,trot:1200,galop:1200}, eloAfter: newEloJ1, ...(isAreneMatch ? {statsBefore: statsJ1Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}} : {})};
+  if(uidJ2) eloSnapshot[uidJ2] = {eloBefore: eloJ2Raw||{general:1200,trot:1200,galop:1200}, eloAfter: newEloJ2, ...(isAreneMatch ? {statsBefore: statsJ2Raw||{matchsJoues:0,victoires:0,defaites:0,egalites:0}} : {})};
 
   // ── Appliquer ──
   const eloGain_j1 = (uidJ1 && isAreneMatch) ? deltaJ1gen : 0;
   const eloGain_j2 = (uidJ2 && isAreneMatch) ? deltaJ2gen : 0;
   await db.ref('matchs/'+matchId).update({statut:'termine', vainqueur, manchesJ1:m1, manchesJ2:m2, eloSnapshot, eloGain_j1, eloGain_j2});
-  if(uidJ1 && newStatsJ1) {
-    await db.ref('utilisateurs/'+uidJ1+'/stats').set(newStatsJ1);
-    if(isAreneMatch) await db.ref('utilisateurs/'+uidJ1+'/elo').set(newEloJ1); // ELO seulement arène
+  if(uidJ1) {
+    if(newStatsJ1) await db.ref('utilisateurs/'+uidJ1+'/stats').set(newStatsJ1); // stats arène seulement
+    if(isAreneMatch) await db.ref('utilisateurs/'+uidJ1+'/elo').set(newEloJ1);   // ELO arène seulement
     await db.ref('utilisateurs/'+uidJ1+'/statut').set('disponible');
   }
-  if(uidJ2 && newStatsJ2) {
-    await db.ref('utilisateurs/'+uidJ2+'/stats').set(newStatsJ2);
-    if(isAreneMatch) await db.ref('utilisateurs/'+uidJ2+'/elo').set(newEloJ2); // ELO seulement arène
+  if(uidJ2) {
+    if(newStatsJ2) await db.ref('utilisateurs/'+uidJ2+'/stats').set(newStatsJ2); // stats arène seulement
+    if(isAreneMatch) await db.ref('utilisateurs/'+uidJ2+'/elo').set(newEloJ2);   // ELO arène seulement
     await db.ref('utilisateurs/'+uidJ2+'/statut').set('disponible');
   }
   await viderChatMatch(matchId);
