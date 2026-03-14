@@ -424,7 +424,7 @@
     .cd-num { width:1.2rem; text-align:center; font-family:'Cormorant Garamond',serif; font-size:.95rem; font-weight:700; color:var(--muted); flex-shrink:0; }
     .cd-avatar { width:24px; height:24px; border-radius:50%; background:var(--turf); color:var(--gold); font-size:.68rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'Cormorant Garamond',serif; }
     .cd-name { font-weight:700; font-size:.79rem; color:var(--turf); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .cd-pts { font-family:'Cormorant Garamond',serif; font-size:1rem; font-weight:700; color:var(--gold); flex-shrink:0; width:2.2rem; text-align:right; }
+    .cd-pts { font-size:1rem; font-weight:700; color:var(--text); flex-shrink:0; width:2.6rem; text-align:right; }
     .cd-stat { color:var(--muted); flex-shrink:0; width:1.8rem; text-align:center; }
     .cd-elo { font-weight:600; font-size:.72rem; flex-shrink:0; width:2.6rem; text-align:right; }
     .cd-disc { flex-shrink:0; font-size:.8rem; }
@@ -962,23 +962,6 @@
         <!-- Palmarès top 3 -->
         <div id="arene-palmares-top3" onclick="navClassementDetail()" style="cursor:pointer;"></div>
 
-        <!-- Classement Arène mensuel -->
-        <div class="card">
-          <div class="card-head" style="padding-bottom:.5rem;">
-            <h3>📊 Classement Arène — <span id="arene-classement-mois-label">ce mois</span></h3>
-          </div>
-          <div class="card-body" style="padding:.5rem .9rem;">
-            <p class="text-sm" style="color:var(--muted);margin-bottom:.6rem;font-size:.73rem;">Classement Arène : 2 pts Victoire · 1 pt Nul · 1 pt Exempté · Départage : manches gagnées → points PMU</p>
-            <div class="arene-section-tabs" id="arene-tabs-mensuel">
-              <div class="arene-stab active" onclick="switchAreneMensuel('general',this)">Général</div>
-              <div class="arene-stab" onclick="switchAreneMensuel('trot',this)">🔵 Trot</div>
-              <div class="arene-stab" onclick="switchAreneMensuel('galop',this)">🟡 Galop</div>
-            </div>
-            <div id="arene-classement-mensuel"><p class="text-sm">Chargement…</p></div>
-            <button type="button" class="btn btn-gris btn-sm" style="width:100%;margin-top:8px;" onclick="navClassementDetail()">📋 Classement complet →</button>
-          </div>
-        </div>
-
         <!-- Classements ELO -->
         <div class="card">
           <div class="card-head" style="padding-bottom:.5rem;">
@@ -993,6 +976,23 @@
             <div id="arene-elo-classement"><p class="text-sm">Chargement…</p></div>
             <div id="arene-elo-classement-suite" style="display:none;"></div>
             <button id="arene-btn-voir-tout" type="button" class="btn btn-gris btn-sm" style="width:100%;margin-top:8px;display:none;" onclick="toggleAreneEloComplet()">▼ Voir le classement complet</button>
+          </div>
+        </div>
+
+        <!-- Classement Arène mensuel -->
+        <div class="card">
+          <div class="card-head" style="padding-bottom:.5rem;">
+            <h3>📊 Classement Arène — <span id="arene-classement-mois-label">ce mois</span></h3>
+          </div>
+          <div class="card-body" style="padding:.5rem .9rem;">
+            <p class="text-sm" style="color:var(--muted);margin-bottom:.6rem;font-size:.73rem;">Classement Arène : 2 pts Victoire · 1 pt Nul · 1 pt Exempté · Départage : manches gagnées → points PMU</p>
+            <div class="arene-section-tabs" id="arene-tabs-mensuel">
+              <div class="arene-stab active" onclick="switchAreneMensuel('general',this)">Général</div>
+              <div class="arene-stab" onclick="switchAreneMensuel('trot',this)">🔵 Trot</div>
+              <div class="arene-stab" onclick="switchAreneMensuel('galop',this)">🟡 Galop</div>
+            </div>
+            <div id="arene-classement-mensuel"><p class="text-sm">Chargement…</p></div>
+            <button type="button" class="btn btn-gris btn-sm" style="width:100%;margin-top:8px;" onclick="navClassementDetail()">📋 Classement complet →</button>
           </div>
         </div>
       </div>
@@ -2491,16 +2491,16 @@ async function chargerAreneClassementMensuel(disc) {
     const bg=bgs[i]||'';
     return `<div class="arene-classement-ligne${isMe?' moi':''}" style="${bg?'background:'+bg+';border:1px solid rgba(255,255,255,.1);':''}">
       <span style="display:flex;align-items:center;gap:6px;">${medal}<strong>${j.nom}</strong>${isMe?'<span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}</span>
-      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
-        <strong style="color:var(--or);font-family:'Cormorant Garamond',serif;font-size:1.05rem;">${j.pts} pt${j.pts>1?'s':''}</strong>
-        <span style="display:flex;gap:5px;font-size:.7rem;color:var(--muted);white-space:nowrap;">
-          <span title="Matchs joués">${j.matchsJoues}<span style="font-size:.6rem;opacity:.65;">MJ</span></span>
-          <span style="opacity:.25;">|</span>
+      <span style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">
+        <strong style="font-size:1rem;font-weight:700;color:var(--text);min-width:2rem;text-align:right;">${j.pts} pt${j.pts>1?'s':''}</strong>
+        <span style="display:flex;gap:4px;font-size:.68rem;color:var(--muted);white-space:nowrap;">
+          <span style="opacity:.7;">${j.matchsJoues}<span style="font-size:.58rem;opacity:.65;">MJ</span></span>
+          <span style="opacity:.2;">|</span>
           <span style="color:rgba(100,220,120,.9);">${j.victoires}V</span>
           <span>${j.nuls}N</span>
           <span style="color:rgba(220,80,80,.9);">${j.defaites}P</span>
           <span style="color:rgba(200,168,75,.8);">${j.exempts||0}E</span>
-          <span style="opacity:.25;">|</span>
+          <span style="opacity:.2;">|</span>
           <span>${(j.victoires+j.nuls+j.defaites)>0?Math.round(j.victoires/(j.victoires+j.nuls+j.defaites)*100):0}%</span>
         </span>
       </span>
@@ -3151,34 +3151,30 @@ function ligneClassement(j, i, uid, key) {
   const _sv = _sd?.victoires||0, _sn = _sd?.nuls||0, _sp = _sd?.defaites||0, _sm = _sd?.matchsJoues||0, _se = _sd?.exempts||0;
   const _mj_reel = _sv + _sn + _sp; // matchs réels sans exemptions
   const _win = _mj_reel > 0 ? Math.round(_sv/_mj_reel*100) : 0;
-  const statsHtml = `<span style="display:flex;gap:5px;align-items:center;font-size:.7rem;color:var(--muted);white-space:nowrap;">` +
-    `<span title="Matchs joués" style="opacity:.8;">${_sm}<span style="font-size:.6rem;opacity:.65;">MJ</span></span>` +
-    `<span style="opacity:.25;">|</span>` +
-    `<span style="color:rgba(100,220,120,.9);">${_sv}V</span>` +
-    `<span>${_sn}N</span>` +
-    `<span style="color:rgba(220,80,80,.9);">${_sp}P</span>` +
-    `<span style="color:rgba(200,168,75,.8);">${_se}E</span>` +
-    `<span style="opacity:.25;">|</span>` +
-    `<span>${_win}%</span>` +
-    `</span>`;
-  if(medal) {
-    return `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:${medal.bg};border:1px solid ${medal.border};${isMe?'outline:2px solid var(--or);':''}">
-      <span style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:${medal.size};line-height:1;display:inline-block;">${medal.icon}</span>
-        <strong>${j.prenom||'?'}</strong>
-        ${isMe?'<span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}
+  const rowStyle = medal
+    ? `display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:${medal.bg};border:1px solid ${medal.border};${isMe?'outline:2px solid var(--or);':''}`
+    : `padding:5px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;`;
+  const rankHtml = medal
+    ? `<span style="font-size:${medal.size};line-height:1;display:inline-block;">${medal.icon}</span>`
+    : `<span style="font-size:.8rem;opacity:.5;margin-right:2px;">${i+1}.</span>`;
+  return `<div class="${medal?'':('score-ligne '+(isMe?'gagnant':''))}" style="${rowStyle}">
+    <span style="display:flex;align-items:center;gap:6px;">
+      ${rankHtml}
+      <strong>${j.prenom||'?'}</strong>
+      ${isMe?'<span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}
+    </span>
+    <span style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">
+      <strong style="font-size:1rem;font-weight:700;color:var(--text);min-width:2.2rem;text-align:right;">${eloVal}</strong>
+      <span style="display:flex;gap:4px;align-items:center;font-size:.68rem;color:var(--muted);white-space:nowrap;">
+        <span style="opacity:.7;">${_sm}<span style="font-size:.58rem;opacity:.65;">MJ</span></span>
+        <span style="opacity:.2;">|</span>
+        <span style="color:rgba(100,220,120,.9);">${_sv}V</span>
+        <span>${_sn}N</span>
+        <span style="color:rgba(220,80,80,.9);">${_sp}P</span>
+        <span style="color:rgba(200,168,75,.8);">${_se}E</span>
+        <span style="opacity:.2;">|</span>
+        <span>${_win}%</span>
       </span>
-      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
-        <strong style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--gold);">${eloVal}</strong>
-        ${statsHtml}
-      </span>
-    </div>`;
-  }
-  return `<div class="score-ligne ${isMe?'gagnant':''}" style="padding:5px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
-    <span><span style="font-size:.8rem;opacity:.5;margin-right:6px;">${i+1}.</span>${j.prenom||'?'} ${isMe?'<span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}</span>
-    <span style="display:flex;align-items:center;gap:7px;">
-      <strong style="font-size:.88rem;">${eloVal}</strong>
-      ${statsHtml}
     </span>
   </div>`;
 }
@@ -5751,7 +5747,7 @@ async function _calculerTcReunion() {
         <span style="width:1.6rem;text-align:center;font-size:.88rem;">${rang}</span>
         <div class="joueur-avatar" style="width:24px;height:24px;font-size:.7rem;">${(j.prenom||'?').charAt(0)}</div>
         <span style="flex:1;font-weight:${isMe?700:500};font-size:.82rem;">${isMe?'<strong>Vous</strong>':j.prenom}</span>
-        <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700;color:var(--gold);">${j.total} pts</span>
+        <strong style="font-size:1rem;font-weight:700;color:var(--text);">${j.total} pts</strong>
       </div>`;
     }).join('');
   }
@@ -5778,7 +5774,7 @@ async function _calculerTcReunion() {
         <div class="joueur-avatar" style="width:24px;height:24px;font-size:.7rem;">${(j.prenom||'?').charAt(0)}</div>
         <span style="flex:1;font-weight:${isMe?700:500};font-size:.82rem;">${isMe?'<strong>Vous</strong>':j.prenom}</span>
         <span style="color:var(--muted);font-size:.75rem;margin-right:.3rem;">${j.choix.map(n=>'#'+n).join(' · ')||'—'}</span>
-        <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700;color:var(--gold);">${j.pts} pts</span>
+        <strong style="font-size:1rem;font-weight:700;color:var(--text);">${j.pts} pts</strong>
       </div>`;
     });
     htmlCourses += '</div>';
