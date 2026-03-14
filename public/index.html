@@ -1680,10 +1680,21 @@ async function _buidAreneAlerts() {
     try {
       const snap = await db.ref('arene_inscriptions/'+pmuDate+'/'+uid).once('value');
       const inscs = snap.val() || {};
+      // Charger le programme pour calculer nbCourses filtré (après retrait course impaire)
+      let nbCoursesFiltreesParR = {};
+      try {
+        const prog = await pmuGet('programme/'+pmuDate);
+        const toutesR = prog.programme?.reunions || prog.reunions || prog || [];
+        toutesR.forEach(r => {
+          const nr = String(r.numOfficiel||r.numReunion);
+          nbCoursesFiltreesParR[nr] = filtrerCoursesPaires(r.courses||[]).length;
+        });
+      } catch(e) {}
       for (const numR of Object.keys(inscs)) {
         const choixSnap = await db.ref('arene_choix/'+pmuDate+'/'+numR+'/'+uid).once('value');
         const choix = choixSnap.val() || {};
-        const nbCourses = inscs[numR].nbCourses || 0;
+        // Utiliser nbCourses filtré si disponible, sinon fallback sur la valeur stockée
+        const nbCourses = nbCoursesFiltreesParR[numR] || inscs[numR].nbCourses || 0;
         const nbRemplis = Object.values(choix.courses || {}).filter(cc => (cc||[]).length >= 4).length;
         if (nbRemplis < nbCourses) {
           const hippo = inscs[numR].hippodrome || 'Réunion';
