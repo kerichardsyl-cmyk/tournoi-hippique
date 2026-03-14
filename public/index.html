@@ -3352,7 +3352,7 @@ function ligneClassement(j, i, uid, key) {
   const eloVal = j.elo?.[key] || 1200;
   const isMe = j.uid === uid;
   const _sd = key==='trot' ? (j.statsTrot||j.stats) : key==='galop' ? (j.statsGalop||j.stats) : (j.statsGeneral||j.stats);
-  const _sv = _sd?.victoires||0, _sn = _sd?.nuls||0, _sp = _sd?.defaites||0, _sm = _sd?.matchsJoues||0, _se = _sd?.exempts||0;
+  const _sv = _sd?.victoires||0, _sn = _sd?.nuls||0, _sp = _sd?.defaites||0, _sm = _sd?.matchsJoues||0;
   const _mj_reel = _sv + _sn + _sp; // matchs réels sans exemptions
   const _win = _mj_reel > 0 ? Math.round(_sv/_mj_reel*100) : 0;
   const rowStyle = medal
@@ -3375,7 +3375,6 @@ function ligneClassement(j, i, uid, key) {
         <span style="color:rgba(100,220,120,.9);">${_sv}V</span>
         <span>${_sn}N</span>
         <span style="color:rgba(220,80,80,.9);">${_sp}P</span>
-        <span style="color:rgba(200,168,75,.8);">${_se}E</span>
         <span style="opacity:.2;">|</span>
         <span>${_win}%</span>
       </span>
