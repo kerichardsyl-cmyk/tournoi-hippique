@@ -236,7 +236,7 @@
     /* ── CHAT ── */
     .chat-box { display:flex; flex-direction:column-reverse; height:290px; }
     .chat-box-tall { height:700px; }
-    .chat-messages { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column-reverse; gap:5px; scroll-behavior:smooth; }
+    .chat-messages { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:5px; scroll-behavior:smooth; }
     .chat-msg { max-width:75%; padding:6px 11px; border-radius:14px; font-size:.83rem; line-height:1.45; word-break:break-word; }
     .chat-msg.moi   { align-self:flex-end; background:var(--gold); color:var(--ink); border-bottom-right-radius:3px; }
     .chat-msg.autre { align-self:flex-start; background:rgba(0,0,0,.06); color:var(--text); border-bottom-left-radius:3px; }
@@ -2296,22 +2296,25 @@ function _chargerChatArene() {
   if (_chatAreneListener) db.ref('arene_chat').off('value', _chatAreneListener);
   const cutoff = Date.now() - 48*60*60*1000;
   _chatAreneListener = db.ref('arene_chat').orderByChild('ts').startAt(cutoff).on('value', snap => {
-    let html = '';
     const uid = utilisateur.uid;
+    const msgs = [];
     snap.forEach(child => {
       const m = child.val();
       if (!m || m.ts < cutoff) return;
+      msgs.push(m);
+    });
+    // Récents en premier (ordre décroissant)
+    msgs.reverse();
+    const html = msgs.map(m => {
       const isMoi = m.uid === uid;
-      const heure = formatHeure(m.ts);
-      html += `<div class="chat-msg ${isMoi?'moi':'autre'}">
+      return `<div class="chat-msg ${isMoi?'moi':'autre'}">
         ${!isMoi?`<div class="chat-auteur">${m.prenom||'?'}</div>`:''}
         ${m.texte}
-        <div class="chat-heure">${heure}</div>
+        <div class="chat-heure">${formatHeure(m.ts)}</div>
       </div>`;
-    });
+    }).join('');
     msgsEl.innerHTML = html || '<p class="chat-vide">Aucun message récent.</p>';
-    // column-reverse : forcer position en haut après rendu DOM
-    requestAnimationFrame(() => { msgsEl.scrollTop = 0; });
+    msgsEl.scrollTop = 0; // récents en premier → on reste en haut
   });
 }
 
@@ -4919,8 +4922,7 @@ function _ajouterBulle(containerId, m) {
   div.innerHTML = (!moi ? `<div class="chat-auteur">${m.prenom||'?'}</div>` : '')
     + `<div>${m.texte}</div>`
     + `<div class="chat-heure">${formatChatHeure(m.ts)}</div>`;
-  el.appendChild(div);
-  // column-reverse : appendChild place le dernier élément en haut visuellement
+  el.prepend(div); // récents en premier : prepend place le nouveau message en haut
 }
 
 function _stopChat(key) {
@@ -4940,9 +4942,7 @@ function _startChat(key, ref) {
   const handler = snap => _ajouterBulle(containerId, snap.val());
   ref.on('child_added', handler);
   _chatListeners[key] = {ref, handler};
-  // Après chargement initial, positionner en haut (messages récents avec column-reverse)
-  // column-reverse : forcer position en haut après rendu DOM
-  setTimeout(() => { const e = document.getElementById(containerId); if(e) { e.scrollTop = 0; requestAnimationFrame(() => { e.scrollTop = 0; }); } }, 150);
+  // Nouveau message en haut : scrollTop = 0 suffit
 }
 
 // ── CHAT ACCUEIL (durée de vie 2h) ──────────────────
