@@ -1773,7 +1773,8 @@ async function _chargerProgrammeMultiJours() {
         const discIcon = disc==='TROT'?'🔵 Trot':'🟡 Galop';
         const discCls = disc==='TROT'?'disc-trot':'disc-galop';
         const courses = (r.courses || []);
-        const nbCourses = courses.length;
+        const coursesFiltrees = filtrerCoursesPaires(courses);
+        const nbCourses = coursesFiltrees.length;
         // Compter les inscrits sur cette réunion
         const nbInscritsReunion = Object.values(allInscsDay).filter(u => u && u[numR]).length;
         const inscritsBadgeHtml = nbInscritsReunion > 0
