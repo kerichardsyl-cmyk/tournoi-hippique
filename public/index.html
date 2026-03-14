@@ -1811,13 +1811,14 @@ async function _chargerProgrammeMultiJours() {
         panelContent += `
           <div class="reunion-v2-card${inscritCls}">
             <div class="reunion-v2-head">
-              <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
-                <span class="reunion-disc ${discCls}" style="font-size:.72rem;padding:.12rem .45rem;border-radius:100px;">${discIcon}</span>
-                <span class="reunion-hippo">${hippo}</span>
-                <span class="reunion-meta">${nbCourses} courses · 1ère à ${h1}</span>
-                ${badgeArene}
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:.4rem;width:100%;">
+                <div style="display:flex;align-items:center;gap:.4rem;min-width:0;">
+                  <span class="reunion-disc ${discCls}" style="font-size:.72rem;padding:.12rem .45rem;border-radius:100px;flex-shrink:0;">${discIcon}</span>
+                  <span class="reunion-hippo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${hippo}</span>
+                </div>
+                <div style="flex-shrink:0;">${inscritsBadgeHtml}</div>
               </div>
-              <div>${inscritsBadgeHtml}</div>
+              ${badgeArene ? `<div style="margin-top:.2rem;">${badgeArene}</div>` : ''}
             </div>
             <div class="reunion-v2-body">
               <div class="reunion-v2-limite">Fin inscriptions<br><strong>${limiteStr}</strong></div>
