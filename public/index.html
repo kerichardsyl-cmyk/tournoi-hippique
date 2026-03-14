@@ -1816,9 +1816,8 @@ async function _chargerProgrammeMultiJours() {
                 <span class="reunion-hippo">${hippo}</span>
                 <span class="reunion-meta">${nbCourses} courses · 1ère à ${h1}</span>
                 ${badgeArene}
-                ${inscritsBadgeHtml}
               </div>
-              <div class="reunion-tirage-v2"><div class="reunion-tirage-v2-label">Tirage à partir de</div><div class="reunion-tirage-v2-val">${tirageStr}</div></div>
+              <div>${inscritsBadgeHtml}</div>
             </div>
             <div class="reunion-v2-body">
               <div class="reunion-v2-limite">Fin inscriptions<br><strong>${limiteStr}</strong></div>
@@ -2201,7 +2200,18 @@ async function _buildAreneMatchCard(m, uid, key, today, yesterday, showAll) {
           statutBadge += ` <span style="font-size:.72rem;font-weight:700;color:${col};">${d>0?'+':''}${d} ELO</span>`;
         }
       } else {
-        statutBadge = '<span class="badge badge-gray" style="font-size:.68rem;">Terminé</span>';
+        const mJ1fin = mData?.manchesJ1 ?? 0;
+        const mJ2fin = mData?.manchesJ2 ?? 0;
+        const colJ1fin = mJ1fin>mJ2fin?'var(--green)':mJ1fin<mJ2fin?'var(--red)':'var(--muted)';
+        const colJ2fin = mJ2fin>mJ1fin?'var(--green)':mJ2fin<mJ1fin?'var(--red)':'var(--muted)';
+        statutBadge = `<div style="display:flex;align-items:center;gap:6px;">
+          <span class="badge badge-gray" style="font-size:.68rem;">Terminé</span>
+          <span style="font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:4px;">
+            <span style="color:${colJ1fin};">${mJ1fin}</span>
+            <span style="color:var(--muted);font-size:.7rem;">–</span>
+            <span style="color:${colJ2fin};">${mJ2fin}</span>
+          </span>
+        </div>`;
       }
     } catch(e) { statutBadge = '<span class="badge badge-gray">Terminé</span>'; }
   } else if (statut === 'en_cours' || statut === 'pret') {
