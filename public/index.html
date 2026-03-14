@@ -1812,13 +1812,13 @@ async function _chargerProgrammeMultiJours() {
           <div class="reunion-v2-card${inscritCls}">
             <div class="reunion-v2-head">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:.4rem;width:100%;">
-                <div style="display:flex;align-items:center;gap:.4rem;min-width:0;">
+                <div style="display:flex;align-items:center;gap:.4rem;min-width:0;flex:1;">
                   <span class="reunion-disc ${discCls}" style="font-size:.72rem;padding:.12rem .45rem;border-radius:100px;flex-shrink:0;">${discIcon}</span>
                   <span class="reunion-hippo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${hippo}</span>
                 </div>
+                <div style="flex-shrink:0;">${badgeArene}</div>
                 <div style="flex-shrink:0;">${inscritsBadgeHtml}</div>
               </div>
-              ${badgeArene ? `<div style="margin-top:.2rem;">${badgeArene}</div>` : ''}
             </div>
             <div class="reunion-v2-body">
               <div class="reunion-v2-limite">Fin inscriptions<br><strong>${limiteStr}</strong></div>
