@@ -1745,6 +1745,15 @@ async function _chargerProgrammeMultiJours() {
       const metaSnap = await db.ref('arene_meta/'+_isoJour+'/reunions').once('value');
       metaReunions = metaSnap.val() || {};
     } catch(e) {}
+    // Charger les exempts du tirage pour ce jour
+    let exemptsJour = {}; // {numR: {uid: true}}
+    try {
+      const areneJourSnap = await db.ref('arene/'+_isoJour).once('value');
+      const areneJourData = areneJourSnap.val() || {};
+      Object.entries(areneJourData).forEach(([k, v]) => {
+        if (v && typeof v === 'object' && v.exempts_uids) exemptsJour[k] = v.exempts_uids;
+      });
+    } catch(e) {}
 
     const count = reunions.length;
     const nbInscrits = Object.keys(inscs).length;
@@ -1807,7 +1816,12 @@ async function _chargerProgrammeMultiJours() {
             : `<span class="badge-elo-only">📈 ELO</span>`)
           : '';
         const inscritCls = (inscrit ? ' inscrit' : '') + (estPrincipale ? ' principale' : '');
-        const inscritStatus = inscrit ? `<div class="check-sub-v2" style="color:var(--green);">✓ Inscrit</div>` : '';
+        const estExempt = inscrit && exemptsJour[numR] && exemptsJour[numR][uid] === true;
+        const inscritStatus = inscrit
+          ? estExempt
+            ? `<div class="check-sub-v2" style="color:var(--green);">✓ Inscrit</div><div class="check-sub-v2" style="color:var(--gold);font-size:.62rem;">⭐ Exempté</div>`
+            : `<div class="check-sub-v2" style="color:var(--green);">✓ Inscrit</div>`
+          : '';
         panelContent += `
           <div class="reunion-v2-card${inscritCls}">
             <div class="reunion-v2-head">
@@ -5901,12 +5915,14 @@ async function _calculerTcReunion() {
         matchIds.push(...Object.keys(reunionData.matchs));
       }
     }
+    const statutsCourses = {}; // numOrdre → statut
     for (const mid of matchIds.slice(0, 3)) {
       try {
         const mSnap = await db.ref('matchs/'+mid+'/courses').once('value');
         mSnap.forEach(cs => {
           const co = cs.val();
           const key = co.numOrdre;
+          if (co.statut) statutsCourses[key] = co.statut;
           if (co.rapports && Object.keys(co.rapports).length) rapportsData[key] = { rapports: co.rapports, arrivee: co.arrivee || [] };
         });
       } catch(e) {}
@@ -5959,9 +5975,16 @@ async function _calculerTcReunion() {
   const scorelist = Object.entries(scores).map(([uid,s]) => ({uid,...s})).sort((a,b) => b.total - a.total);
   const myUid = utilisateur?.uid;
 
-  // Afficher classement total
-  const hasFinalScores = Object.values(rapportsData).length > 0;
-  let html = hasFinalScores ? '' : '<div class="arene-alert" style="margin-bottom:.5rem;font-size:.74rem;">⏳ Résultats PMU pas encore disponibles — les points seront calculés une fois les courses terminées.</div>';
+  // Afficher classement total — live ou final selon les rapports disponibles
+  const nbCoursesAvecRapports = Object.values(rapportsData).length;
+  const nbCoursesTotal = courses.length;
+  const hasFinalScores = nbCoursesAvecRapports > 0;
+  let html = '';
+  if (!hasFinalScores) {
+    html = '<div class="arene-alert" style="margin-bottom:.5rem;font-size:.74rem;">⏳ Aucun résultat disponible pour l'instant — revenez après le départ des courses.</div>';
+  } else if (nbCoursesAvecRapports < nbCoursesTotal) {
+    html = `<div style="background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.25);border-radius:6px;padding:.4rem .75rem;margin-bottom:.5rem;font-size:.74rem;color:#7a5c10;">⏳ Résultats partiels — ${nbCoursesAvecRapports}/${nbCoursesTotal} courses terminées</div>`;
+  }
   if (!scorelist.length) { html += '<p class="text-sm">Aucun joueur n\'a saisi ses choix.</p>'; }
   else {
     html += scorelist.map((j, i) => {
@@ -5979,25 +6002,37 @@ async function _calculerTcReunion() {
   _tcReunionCtx._scorelist = scorelist;
   _tcReunionCtx._courses = courses;
   _tcReunionCtx._rapportsData = rapportsData;
+  _tcReunionCtx._statutsCourses = statutsCourses || {};
 
   // Afficher par course
   let htmlCourses = '';
+  const _statuts = _tcReunionCtx._statutsCourses || {};
   for (const co of courses) {
     const key = String(co.numOrdre);
     const raps = rapportsData[co.numOrdre];
+    const statutCo = _statuts[co.numOrdre] || (raps ? 'terminee' : 'ouverte');
+    const courseOuverte = statutCo === 'ouverte';
     const classCourse = scorelist.map(j => ({
       prenom: j.prenom, uid: j.uid, pts: j.parCourse[key]?.pts || 0, choix: j.parCourse[key]?.choix || []
     })).sort((a,b) => b.pts - a.pts);
-    htmlCourses += `<div style="margin-bottom:.9rem;"><div style="font-size:.78rem;font-weight:700;color:var(--turf);margin-bottom:.3rem;">C${co.numOrdre} — ${co.libelle||'Course '+co.numOrdre}${co.heureDepart?' · '+formatHeure(co.heureDepart):''}</div>`;
+    const statutLabel = courseOuverte
+      ? '<span class="course-statut statut-ouverte" style="margin-left:.4rem;">Ouverte</span>'
+      : statutCo === 'bloquee'
+        ? '<span class="course-statut statut-bloquee" style="margin-left:.4rem;">Bloquée</span>'
+        : '';
+    htmlCourses += `<div style="margin-bottom:.9rem;"><div style="font-size:.78rem;font-weight:700;color:var(--turf);margin-bottom:.3rem;display:flex;align-items:center;flex-wrap:wrap;gap:.3rem;">C${co.numOrdre} — ${co.libelle||'Course '+co.numOrdre}${co.heureDepart?' · '+formatHeure(co.heureDepart):''}${statutLabel}</div>`;
     if (!classCourse.length) { htmlCourses += '<p class="text-sm">Aucun choix.</p></div>'; continue; }
     classCourse.forEach((j, i) => {
       const isMe = j.uid === myUid;
       const rang = i<3?['🥇','🥈','🥉'][i]:(i+1);
+      const choixHtml = courseOuverte
+        ? '<span style="color:var(--muted);font-size:.75rem;margin-right:.3rem;font-style:italic;">🔒 Choix masqués</span>'
+        : `<span style="color:var(--muted);font-size:.75rem;margin-right:.3rem;">${j.choix.map(n=>'#'+n).join(' · ')||'—'}</span>`;
       htmlCourses += `<div class="arene-classement-ligne${isMe?' moi':''}">
         <span style="width:1.6rem;text-align:center;font-size:.88rem;">${rang}</span>
         <div class="joueur-avatar" style="width:24px;height:24px;font-size:.7rem;">${(j.prenom||'?').charAt(0)}</div>
         <span style="flex:1;font-weight:${isMe?700:500};font-size:.82rem;">${isMe?'<strong>Vous</strong>':j.prenom}</span>
-        <span style="color:var(--muted);font-size:.75rem;margin-right:.3rem;">${j.choix.map(n=>'#'+n).join(' · ')||'—'}</span>
+        ${choixHtml}
         <strong style="font-size:1rem;font-weight:700;color:var(--text);">${j.pts} pts</strong>
       </div>`;
     });
@@ -6087,16 +6122,18 @@ async function _chargerTcClassementPerma() {
     const _g=uid=>scores[uid]||(scores[uid]={pts:0, prenom:prenoms[uid]||'?'});
     matchsSnap.forEach(child => {
       const m=child.val();
-      if(!m.arene || m.statut!=='termine') return;
+      if(!m.arene) return;
+      // Inclure matchs terminés ET en cours (points partiels des courses déjà terminées)
+      if(m.statut!=='termine' && m.statut!=='en_cours') return;
       if(m.createdAt<debut || m.createdAt>fin) return;
       // Filtre discipline
       const mDisc=(m.reunion?.discipline||m.discipline||'').toUpperCase();
       if(_tcDisc==='trot'  && mDisc!=='TROT')  return;
       if(_tcDisc==='galop' && mDisc!=='GALOP') return;
-      // Sommer les points PMU (pointsJ1/J2 = points rapports entre parenthèses)
+      // Sommer uniquement les courses déjà terminées
       const cs=normCourses(m.courses);
-      const pJ1=cs.reduce((s,c)=>s+(c.pointsJ1||0),0);
-      const pJ2=cs.reduce((s,c)=>s+(c.pointsJ2||0),0);
+      const pJ1=cs.reduce((s,c)=>s+(c.statut==='terminee'?c.pointsJ1||0:0),0);
+      const pJ2=cs.reduce((s,c)=>s+(c.statut==='terminee'?c.pointsJ2||0:0),0);
       if(m.uidJ1) _g(m.uidJ1).pts+=pJ1;
       if(m.uidJ2) _g(m.uidJ2).pts+=pJ2;
     });
