@@ -1689,7 +1689,7 @@ async function _chargerProgrammeMultiJours() {
       });
     } catch(e) {}
     // Définir automatiquement les principales si conditions remplies
-    const { pmuDate: _pd, isoDate: _id } = jours[i];
+    const { pmuDate: _pd, iso: _id } = jours[i];
     await _definirPrincipalesAutoSiNecessaire(_pd, _id);
 
     // Lire inscriptions : les miennes + toutes pour compter les inscrits par réunion
@@ -1700,7 +1700,7 @@ async function _chargerProgrammeMultiJours() {
       const [mySnap, allSnap, metaSnap] = await Promise.all([
         db.ref('arene_inscriptions/'+pmuDate+'/'+uid).once('value'),
         db.ref('arene_inscriptions/'+pmuDate).once('value'),
-        db.ref('arene_meta/'+jours[i].isoDate+'/reunions').once('value')
+        db.ref('arene_meta/'+jours[i].iso+'/reunions').once('value')
       ]);
       inscs = mySnap.val() || {};
       allInscsDay = allSnap.val() || {};
@@ -2162,18 +2162,7 @@ async function _buildAreneMatchCard(m, uid, key, today, yesterday, showAll) {
           statutBadge += ` <span style="font-size:.72rem;font-weight:700;color:${col};">${d>0?'+':''}${d} ELO</span>`;
         }
       } else {
-        const mJ1 = mData?.manchesJ1 ?? 0;
-        const mJ2 = mData?.manchesJ2 ?? 0;
-        const colJ1 = mJ1>mJ2?'var(--green)':mJ1<mJ2?'var(--red)':'var(--muted)';
-        const colJ2 = mJ2>mJ1?'var(--green)':mJ2<mJ1?'var(--red)':'var(--muted)';
-        statutBadge = `<div style="display:flex;align-items:center;gap:6px;">
-          <span class="badge badge-gray" style="font-size:.68rem;">Terminé</span>
-          <span style="font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:4px;">
-            <span style="color:${colJ1};">${mJ1}</span>
-            <span style="color:var(--muted);font-size:.7rem;">–</span>
-            <span style="color:${colJ2};">${mJ2}</span>
-          </span>
-        </div>`;
+        statutBadge = '<span class="badge badge-gray" style="font-size:.68rem;">Terminé</span>';
       }
     } catch(e) { statutBadge = '<span class="badge badge-gray">Terminé</span>'; }
   } else if (statut === 'en_cours' || statut === 'pret') {
