@@ -1693,17 +1693,20 @@ async function _chargerProgrammeMultiJours() {
     await _definirPrincipalesAutoSiNecessaire(_pd, _id);
 
     // Lire inscriptions : les miennes + toutes pour compter les inscrits par réunion
+    const _isoJour = jours[i].iso;
     let inscs = {};
     let allInscsDay = {};
     let metaReunions = {};
     try {
-      const [mySnap, allSnap, metaSnap] = await Promise.all([
+      const [mySnap, allSnap] = await Promise.all([
         db.ref('arene_inscriptions/'+pmuDate+'/'+uid).once('value'),
-        db.ref('arene_inscriptions/'+pmuDate).once('value'),
-        db.ref('arene_meta/'+jours[i].iso+'/reunions').once('value')
+        db.ref('arene_inscriptions/'+pmuDate).once('value')
       ]);
       inscs = mySnap.val() || {};
       allInscsDay = allSnap.val() || {};
+    } catch(e) {}
+    try {
+      const metaSnap = await db.ref('arene_meta/'+_isoJour+'/reunions').once('value');
       metaReunions = metaSnap.val() || {};
     } catch(e) {}
 
