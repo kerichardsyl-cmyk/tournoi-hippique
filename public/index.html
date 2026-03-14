@@ -4898,6 +4898,33 @@ async function reimporterRapports(idx) {
   }
 }
 
+async function forcerBlocageEtTraiter(idx) {
+  // Pour les courses restées "ouverte" alors que le départ est passé
+  const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
+  const course = normCourses(data.courses)[idx];
+  if(!course) return;
+  if(!confirm('Forcer le blocage et récupérer les résultats de cette course ?')) return;
+  toast('⏳ Blocage et récupération en cours…');
+  try {
+    const mr = getMainPourCourse(idx), sr = mr==='j1'?'j2':'j1';
+    const cmAll = course['choix'+mr.toUpperCase()]||[];
+    const cs    = course['choix'+sr.toUpperCase()]||[];
+    const cm2 = cmAll.slice(0,2);
+    const cfs = cs.filter(n => !cm2.includes(n)).slice(0,2);
+    await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({
+      statut: 'bloquee',
+      [`choixFinal${mr.toUpperCase()}`]: cm2,
+      [`choixFinal${sr.toUpperCase()}`]: cfs
+    });
+    const res = await pmuGet(`programme/${course.pmuDate}/R${course.numReunion}/C${course.numOrdre}`);
+    res._rapportsDefinitifs = await pmuGet(`programme/${course.pmuDate}/R${course.numReunion}/C${course.numOrdre}/rapports-definitifs`).catch(()=>[]);
+    await traiterResultats(idx, res);
+    toast('✅ Course forcée et traitée !');
+  } catch(e) {
+    toast('❌ Erreur : '+e.message, true);
+  }
+}
+
 async function forceTraiterCourse(idx) {
   const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
   const course = normCourses(data.courses)[idx];
@@ -5585,6 +5612,13 @@ function rendreZoneJeu(data,idx) {
     }
   }
   else if(c.statut==='ouverte') {
+    // Bouton admin si course ouverte mais départ déjà passé
+    if(etat._adminView && c.heureDepart && c.heureDepart < Date.now()) {
+      html+=`<div style="margin-bottom:10px;padding:10px;background:rgba(204,34,0,.12);border:1px solid rgba(204,34,0,.35);border-radius:8px;">
+        <p class="text-sm" style="color:rgba(255,150,100,.9);margin-bottom:8px;">⚠️ Départ passé — course encore ouverte. Calculer les choixFinal et récupérer les résultats.</p>
+        <button class="btn btn-or btn-sm" onclick="forcerBlocageEtTraiter(${idx})">⚡ Forcer blocage + résultats</button>
+      </div>`;
+    }
     // Toujours afficher le sélecteur pour pouvoir jouer
     if (!c.partants || !c.partants.length) {
       html += `<p class="text-sm" style="text-align:center;padding:18px;opacity:.65;" id="partants-loading-${idx}">⏳ Chargement des partants…</p>`;
