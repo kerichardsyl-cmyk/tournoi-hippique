@@ -235,6 +235,7 @@
 
     /* ── CHAT ── */
     .chat-box { display:flex; flex-direction:column; height:290px; }
+    .chat-box-tall { height:700px; }
     .chat-messages { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column-reverse; gap:5px; scroll-behavior:smooth; }
     .chat-msg { max-width:75%; padding:6px 11px; border-radius:14px; font-size:.83rem; line-height:1.45; word-break:break-word; }
     .chat-msg.moi   { align-self:flex-end; background:var(--gold); color:var(--ink); border-bottom-right-radius:3px; }
@@ -337,8 +338,8 @@
     .reunion-v2-card { background:white; border-radius:8px; border:1px solid var(--cream2); margin-bottom:.6rem; overflow:hidden; transition:box-shadow .15s; }
     .reunion-v2-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.07); }
     .reunion-v2-card.inscrit { border-left:3px solid var(--green); }
-    .reunion-v2-card.principale { background:linear-gradient(135deg,rgba(200,168,75,.08) 0%,rgba(255,255,255,1) 60%); border-color:rgba(200,168,75,.45); }
-    .reunion-v2-card.principale:hover { box-shadow:0 2px 12px rgba(200,168,75,.2); }
+    .reunion-v2-card.principale { background:linear-gradient(135deg,rgba(200,168,75,.22) 0%,rgba(200,168,75,.06) 55%,rgba(255,255,255,1) 100%); border-color:rgba(200,168,75,.7); border-width:1.5px; }
+    .reunion-v2-card.principale:hover { box-shadow:0 3px 16px rgba(200,168,75,.35); }
     .badge-arene-elo { display:inline-flex; align-items:center; font-size:.63rem; font-weight:700; padding:.1rem .42rem; border-radius:100px; background:linear-gradient(90deg,var(--gold),var(--gold2)); color:var(--ink); white-space:nowrap; letter-spacing:.02em; }
     .badge-elo-only { display:inline-flex; align-items:center; font-size:.63rem; font-weight:600; padding:.1rem .42rem; border-radius:100px; background:var(--cream2); color:var(--muted); white-space:nowrap; letter-spacing:.02em; }
     .reunion-v2-head { padding:.55rem .9rem; border-bottom:1px solid var(--cream2); display:flex; align-items:center; justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
@@ -950,7 +951,7 @@
 
         <div class="card">
           <div class="card-head" style="padding-bottom:.45rem;">
-            <h3>⚔️ Matchs Arène</h3>
+            <h3>⚔️ Matchs du jour</h3>
           </div>
           <div style="padding:.35rem .9rem 0;border-bottom:1px solid var(--cream2);">
             <div class="arene-section-tabs" id="arene-matchs-tabs" style="border-bottom:none;margin-bottom:0;">
@@ -1018,7 +1019,7 @@
         <div class="card" style="height:100%;">
           <div class="card-head"><h3>💬 Chat Arène <span style="font-size:.72rem;color:var(--muted);font-weight:400;">(messages conservés 48h)</span></h3></div>
           <div class="card-body" style="padding:0;">
-            <div class="chat-box" id="arene-chat-box">
+            <div class="chat-box chat-box-tall" id="arene-chat-box">
               <div class="chat-messages" id="arene-chat-messages"><p class="chat-vide">Aucun message récent.</p></div>
               <div class="chat-input-zone">
                 <input type="text" id="arene-chat-input" placeholder="Votre message…" onkeydown="if(event.key==='Enter')envoyerChatArene()" maxlength="200"/>
@@ -2298,7 +2299,8 @@ function _chargerChatArene() {
       </div>`;
     });
     msgsEl.innerHTML = html || '<p class="chat-vide">Aucun message récent.</p>';
-    msgsEl.scrollTop = 0; // column-reverse : s'assurer qu'on est en haut (messages récents)
+    // column-reverse : forcer position en haut après rendu DOM
+    requestAnimationFrame(() => { msgsEl.scrollTop = 0; });
   });
 }
 
@@ -2422,7 +2424,7 @@ async function adminPreviewReunions() {
       const _badgeAdmin = _estPrincipaleAdmin
         ? `<span class="badge-arene-elo" style="margin-left:.4rem;">⚔️ Arène &amp; ELO</span>`
         : `<span class="badge-elo-only" style="margin-left:.4rem;">📈 ELO</span>`;
-      html += `<div style="background:${_estPrincipaleAdmin?'linear-gradient(135deg,rgba(200,168,75,.12),rgba(255,255,255,.98))':'rgba(200,168,75,.06)'};border:1px solid ${_estPrincipaleAdmin?'rgba(200,168,75,.45)':'rgba(200,168,75,.15)'};border-radius:8px;padding:.6rem .85rem;font-size:.8rem;">
+      html += `<div style="background:${_estPrincipaleAdmin?'linear-gradient(135deg,rgba(200,168,75,.22),rgba(200,168,75,.06) 60%,rgba(255,255,255,.98))':'rgba(200,168,75,.06)'};border:1.5px solid ${_estPrincipaleAdmin?'rgba(200,168,75,.7)':'rgba(200,168,75,.15)'};border-radius:8px;padding:.6rem .85rem;font-size:.8rem;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;flex-wrap:wrap;">
           <div>
             <div style="font-weight:700;color:${discColor};display:flex;align-items:center;flex-wrap:wrap;gap:.3rem;">${discIcon} ${disc==='TROT'?'Trot':'Galop'} · R${numR} · ${hippo} ${_badgeAdmin}</div>
@@ -4928,7 +4930,8 @@ function _startChat(key, ref) {
   ref.on('child_added', handler);
   _chatListeners[key] = {ref, handler};
   // Après chargement initial, positionner en haut (messages récents avec column-reverse)
-  setTimeout(() => { const e = document.getElementById(containerId); if(e) e.scrollTop = 0; }, 300);
+  // column-reverse : forcer position en haut après rendu DOM
+  setTimeout(() => { const e = document.getElementById(containerId); if(e) { e.scrollTop = 0; requestAnimationFrame(() => { e.scrollTop = 0; }); } }, 150);
 }
 
 // ── CHAT ACCUEIL (durée de vie 2h) ──────────────────
