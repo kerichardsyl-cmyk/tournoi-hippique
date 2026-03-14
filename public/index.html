@@ -2740,25 +2740,29 @@ function chargerAreneElo() {
 }
 
 // Calcule V/N/D depuis tous les matchs arène terminés, filtrés par discipline
-async function _buildStatsDisc(disc) {
+async function _buildStatsDisc(disc, filtrerPrincipale = false) {
   const [matchsSnap, classSnap] = await Promise.all([
     db.ref('matchs').once('value'),
     db.ref('arene_classements').once('value')
   ]);
-  // Lecture arene_meta séparée et protégée (nœud peut ne pas exister/être autorisé)
+  // Lecture arene_meta uniquement si on filtre par réunion principale (classements Arène)
   let metaData = {};
-  try { const ms = await db.ref('arene_meta').once('value'); metaData = ms.val() || {}; } catch(e) {}
+  if (filtrerPrincipale) {
+    try { const ms = await db.ref('arene_meta').once('value'); metaData = ms.val() || {}; } catch(e) {}
+  }
   const stats = {}; // uid → {v,n,d,m,pts,e}
   const _g = uid => stats[uid] || (stats[uid] = {v:0, n:0, d:0, m:0, pts:0, e:0});
 
-  // Cache estPrincipale : arene_meta/{isoDate}/reunions/{numR}/estPrincipale
-  // Si arene_meta vide ou absent → tout est principal (fallback true)
+  // Cache estPrincipale — ignoré si filtrerPrincipale=false (classement ELO = tous les matchs)
   const _estPrincipale = (isoDate, numR) => {
+    if (!filtrerPrincipale) return true; // ELO : tous les matchs Arène comptent
     const val = metaData[isoDate]?.reunions?.[String(numR)]?.estPrincipale;
-    return val === undefined || val === null ? true : !!val; // fallback true si absent
+    return val === undefined || val === null ? true : !!val;
   };
 
-  // 1. Matchs terminés — stats Arène uniquement si réunion principale
+  // 1. Matchs terminés
+  // ELO (filtrerPrincipale=false) : tous les matchs Arène comptent dans les stats V/N/D/MJ
+  // Classements Arène (filtrerPrincipale=true) : uniquement réunions principales
   matchsSnap.forEach(child => {
     const m = child.val();
     if (!m.arene || m.statut !== 'termine') return;
@@ -2767,7 +2771,7 @@ async function _buildStatsDisc(disc) {
     if (disc === 'galop' && mDisc !== 'GALOP') return;
     const isoDate = m.reunion?.isoDate || '';
     const numR = String(m.reunion?.numReunion || m.reunion?.numR || '');
-    if (!_estPrincipale(isoDate, numR)) return; // réunion secondaire → pas de stats Arène
+    if (!_estPrincipale(isoDate, numR)) return;
     _g(m.uidJ1).m++; _g(m.uidJ2).m++;
     if (m.vainqueur === 'j1')        { _g(m.uidJ1).v++; _g(m.uidJ2).d++; _g(m.uidJ1).pts+=2; }
     else if (m.vainqueur === 'j2')   { _g(m.uidJ2).v++; _g(m.uidJ1).d++; _g(m.uidJ2).pts+=2; }
