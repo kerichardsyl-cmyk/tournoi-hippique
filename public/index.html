@@ -2534,11 +2534,9 @@ async function chargerAreneClassementMensuel(disc) {
   const scores = {};
   const _get = uid => scores[uid] || (scores[uid] = {pts:0, victoires:0, nuls:0, defaites:0, matchsJoues:0, manchesGagnees:0, ptsTotal:0, exempts:0, nom:prenoms[uid]||'?'});
   // Points exempts
-  const [areneSnap, mensuelMetaSnap] = await Promise.all([
-    db.ref('arene').once('value'),
-    db.ref('arene_meta').once('value')
-  ]);
-  const mensuelMeta = mensuelMetaSnap.val() || {};
+  const areneSnap = await db.ref('arene').once('value');
+  let mensuelMeta = {};
+  try { const ms = await db.ref('arene_meta').once('value'); mensuelMeta = ms.val() || {}; } catch(e) {}
   const _estPrincipaleMensuel = (isoDate, numR) => {
     const val = mensuelMeta[isoDate]?.reunions?.[String(numR)]?.estPrincipale;
     return val === undefined || val === null ? true : !!val;
@@ -2665,21 +2663,23 @@ function chargerAreneElo() {
       });
     });
     _afficherAreneElo();
-  });
+  }).catch(e => { console.error('chargerAreneElo:', e); _afficherAreneElo(); });
 }
 
 // Calcule V/N/D depuis tous les matchs arène terminés, filtrés par discipline
 async function _buildStatsDisc(disc) {
-  const [matchsSnap, classSnap, metaSnap] = await Promise.all([
+  const [matchsSnap, classSnap] = await Promise.all([
     db.ref('matchs').once('value'),
-    db.ref('arene_classements').once('value'),
-    db.ref('arene_meta').once('value')
+    db.ref('arene_classements').once('value')
   ]);
+  // Lecture arene_meta séparée et protégée (nœud peut ne pas exister/être autorisé)
+  let metaData = {};
+  try { const ms = await db.ref('arene_meta').once('value'); metaData = ms.val() || {}; } catch(e) {}
   const stats = {}; // uid → {v,n,d,m,pts,e}
   const _g = uid => stats[uid] || (stats[uid] = {v:0, n:0, d:0, m:0, pts:0, e:0});
 
   // Cache estPrincipale : arene_meta/{isoDate}/reunions/{numR}/estPrincipale
-  const metaData = metaSnap.val() || {};
+  // Si arene_meta vide ou absent → tout est principal (fallback true)
   const _estPrincipale = (isoDate, numR) => {
     const val = metaData[isoDate]?.reunions?.[String(numR)]?.estPrincipale;
     return val === undefined || val === null ? true : !!val; // fallback true si absent
@@ -2888,11 +2888,9 @@ async function chargerClassementDetail(type) {
     const sc = {};
     const _g = uid => sc[uid]||(sc[uid]={uid, prenom:users[uid]?.prenom||'?', pts:0, victoires:0, nuls:0, defaites:0, manchesGagnees:0, ptsTotal:0, exempts:0, elo:users[uid]?.elo?.general||1200, trot:!!(users[uid]?.elo?.trot&&users[uid].elo.trot!==1200), galop:!!(users[uid]?.elo?.galop&&users[uid].elo.galop!==1200)});
     // Points exempts du mois
-    const [areneSnap2, detailMetaSnap] = await Promise.all([
-      db.ref('arene').once('value'),
-      db.ref('arene_meta').once('value')
-    ]);
-    const detailMeta = detailMetaSnap.val() || {};
+    const areneSnap2 = await db.ref('arene').once('value');
+    let detailMeta = {};
+    try { const ms = await db.ref('arene_meta').once('value'); detailMeta = ms.val() || {}; } catch(e) {}
     const _estPrincipaleDetail = (isoDate, numR) => {
       const val = detailMeta[isoDate]?.reunions?.[String(numR)]?.estPrincipale;
       return val === undefined || val === null ? true : !!val;
