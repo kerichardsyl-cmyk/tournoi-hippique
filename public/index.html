@@ -2524,7 +2524,7 @@ async function genererAreneReunion(pmuDate, isoDate, numR, disc, btn) {
     for (const co of areneCoursesFiltered) {
       try {
         const pData = await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${co.numOrdre}/participants`);
-        const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0}));
+        const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur?.nom||p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0}));
         serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants,choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
       } catch(e) {
         serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants:[],choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
@@ -4183,7 +4183,7 @@ async function creerMatchAvecReunion(reunion, pmuDate, disc) {
     container.innerHTML = `<span class="spinner"></span> Partants ${i+1}/${courses.length}…`;
     try {
       const pData = await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${co.numOrdre}/participants`);
-      const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0,urlCasaque:p.urlCasaque||''}));
+      const partants = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur?.nom||p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE',gainsCarriere:p.gainsParticipant?.gainsCarriere||0,nombreVictoires:p.nombreVictoires||0,nombreCourses:p.nombreCourses||0,urlCasaque:p.urlCasaque||''}));
       serieCourses.push({numOrdre:co.numOrdre,libelle:co.libelle||'Course '+co.numOrdre,heureDepart:co.heureDepart||null,numReunion:reunion.numOfficiel,pmuDate,statut:'ouverte',partants,choixJ1:[],choixJ2:[],choixFinalJ1:[],choixFinalJ2:[],arrivee:[],rapports:{},pointsJ1:0,pointsJ2:0,mancheGagnant:null});
     } catch(e) {
       errs.push(`C${co.numOrdre}`);
@@ -4665,7 +4665,7 @@ async function selectionnerReunion(reunion, pmuDate) {
     container.innerHTML=`<span class="spinner"></span> Chargement partants… ${i+1}/${courses.length}`;
     try {
       const pData=await pmuGet(`programme/${pmuDate}/R${reunion.numOfficiel}/C${c.numOrdre}/participants`);
-      const partants=(pData.participants||[]).map(p=>({ numero:p.numPmu, nom:p.nom||`Cheval ${p.numPmu}`, driver:p.driver||p.jockey||"", entraineur:p.entraineur||"", age:p.age||"", sexe:p.sexe||"", robe:p.robe?.libelleCourt||"", musique:p.musique||"", avis:p.avisEntraineur||"NEUTRE", gainsCarriere:p.gainsParticipant?.gainsCarriere||0, nombreVictoires:p.nombreVictoires||0, nombreCourses:p.nombreCourses||0, urlCasaque:p.urlCasaque||"" }));
+      const partants=(pData.participants||[]).map(p=>({ numero:p.numPmu, nom:p.nom||`Cheval ${p.numPmu}`, driver:p.driver||p.jockey||"", entraineur:p.entraineur?.nom||p.entraineur||"", age:p.age||"", sexe:p.sexe||"", robe:p.robe?.libelleCourt||"", musique:p.musique||"", avis:p.avisEntraineur||"NEUTRE", gainsCarriere:p.gainsParticipant?.gainsCarriere||0, nombreVictoires:p.nombreVictoires||0, nombreCourses:p.nombreCourses||0, urlCasaque:p.urlCasaque||"" }));
       if(!partants.length) erreurs.push(`C${c.numOrdre} : aucun partant`);
       coursesSerialisees.push({ numOrdre:c.numOrdre, libelle:c.libelle||`Course ${c.numOrdre}`, heureDepart:c.heureDepart||null, numReunion:reunion.numOfficiel, pmuDate, statut:'ouverte', partants, choixJ1:[], choixJ2:[], choixFinalJ1:[], choixFinalJ2:[], arrivee:[], rapports:{}, pointsJ1:0, pointsJ2:0, mancheGagnant:null });
     } catch(e) {
@@ -5628,7 +5628,7 @@ function rendreZoneJeu(data,idx) {
       const _reuN = c.numReunion || data.reunion?.numReunion || '';
       if (_pmuD && _reuN) {
         pmuGet('programme/'+_pmuD+'/R'+_reuN+'/C'+c.numOrdre+'/participants').then(pData => {
-          const pts = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE'}));
+          const pts = (pData.participants||[]).map(p=>({numero:p.numPmu,nom:p.nom||'Cheval '+p.numPmu,driver:p.driver||p.jockey||'',entraineur:p.entraineur?.nom||p.entraineur||'',age:p.age||'',sexe:p.sexe||'',robe:p.robe?.libelleCourt||'',musique:p.musique||'',avis:p.avisEntraineur||'NEUTRE'}));
           if (pts.length && etat.matchData?.courses?.[idx]) {
             etat.matchData.courses[idx].partants = pts;
             if (etat.matchId) db.ref('matchs/'+etat.matchId+'/courses/'+idx+'/partants').set(pts).catch(()=>{});
