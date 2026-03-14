@@ -2806,7 +2806,7 @@ async function _buildStatsDisc(disc, filtrerPrincipale = false) {
         // Un exempté a pts=1, victoires=0, nuls=0, defaites=0
         const estExempt = (d.pts > 0) && !(d.victoires > 0) && !(d.nuls > 0) && !(d.defaites > 0);
         if (estExempt) {
-          _g(uid).m += 1;   // compte comme 1 match joué
+          // Ne pas incrémenter m (MJ) — une exemption n'est pas un match joué pour l'ELO
           _g(uid).pts += d.pts;
           _g(uid).e += 1;   // nb d'exemptions
         }
