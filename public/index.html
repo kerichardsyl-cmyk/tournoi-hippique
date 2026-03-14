@@ -1301,20 +1301,11 @@
     <div class="arene-alert arene-alert-info" style="margin-bottom:.85rem;">
       ⭐ Le <strong>Top Choix</strong> calcule vos points en ne tenant compte que de vos <strong>2 premiers choix</strong> par course, indépendamment de tout match. Tous les inscrits (y compris exemptés) participent.
     </div>
-    <!-- Sélecteur de réunion -->
-    <div class="card">
-      <div class="card-head"><h3>📅 Choisir une réunion</h3></div>
-      <div class="card-body" style="padding:.65rem .9rem;">
-        <div class="day-tabs" id="tc-day-tabs"></div>
-        <div id="tc-day-panels"></div>
-      </div>
-    </div>
-
     <!-- Classements permanents Top Choix — toujours visibles -->
     <div class="card">
       <div class="card-head" style="padding-bottom:.4rem;">
         <h3>🏅 Classement Top Choix cumulé</h3>
-        <span class="text-sm" style="color:var(--muted);">Cumul des points PMU obtenus sur toutes les réunions</span>
+        <span class="text-sm" style="color:var(--muted);">Cumul des points obtenus sur toutes les réunions</span>
       </div>
       <div style="padding:.35rem .9rem 0;border-bottom:1px solid var(--cream2);">
         <div class="arene-section-tabs" id="tc-perma-tabs" style="border-bottom:none;margin-bottom:0;">
@@ -1336,6 +1327,15 @@
             <div style="font-size:.74rem;line-height:1.5;">Les points Top Choix sont attribués au fur et à mesure des réunions. Revenez après la première réunion pour voir le classement !</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Sélecteur de réunion -->
+    <div class="card">
+      <div class="card-head"><h3>📅 Choisir une réunion</h3></div>
+      <div class="card-body" style="padding:.65rem .9rem;">
+        <div class="day-tabs" id="tc-day-tabs"></div>
+        <div id="tc-day-panels"></div>
       </div>
     </div>
 
@@ -5892,7 +5892,7 @@ async function _chargerTcClassementPerma() {
         <span style="width:1.6rem;text-align:center;font-size:.88rem;">${rang}</span>
         <div class="joueur-avatar" style="width:24px;height:24px;font-size:.7rem;">${(j.prenom||'?').charAt(0)}</div>
         <span style="flex:1;font-weight:${isMe?700:500};font-size:.82rem;">${isMe?'<strong>Vous</strong>':j.prenom}</span>
-        <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700;color:var(--gold);">${j.pts} pts PMU</span>
+        <strong style="font-size:1rem;font-weight:700;color:var(--text);">${j.pts} pts</strong>
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML='<p class="text-sm">Erreur chargement.</p>'; }
