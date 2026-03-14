@@ -5981,7 +5981,7 @@ async function _calculerTcReunion() {
   const hasFinalScores = nbCoursesAvecRapports > 0;
   let html = '';
   if (!hasFinalScores) {
-    html = '<div class="arene-alert" style="margin-bottom:.5rem;font-size:.74rem;">⏳ Aucun résultat disponible pour l'instant — revenez après le départ des courses.</div>';
+    html = '<div class="arene-alert" style="margin-bottom:.5rem;font-size:.74rem;">⏳ Aucun résultat disponible pour l\'instant — revenez après le départ des courses.</div>';
   } else if (nbCoursesAvecRapports < nbCoursesTotal) {
     html = `<div style="background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.25);border-radius:6px;padding:.4rem .75rem;margin-bottom:.5rem;font-size:.74rem;color:#7a5c10;">⏳ Résultats partiels — ${nbCoursesAvecRapports}/${nbCoursesTotal} courses terminées</div>`;
   }
