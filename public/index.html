@@ -319,8 +319,9 @@
     /* ══ V2 : ARÈNE ══════════════════════════════════════════════════ */
 
     /* Grille 2 colonnes */
-    .arene-v2-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; align-items:start; }
-    @media(max-width:780px){ .arene-v2-grid { grid-template-columns:1fr; } }
+    .arene-v2-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.25rem; align-items:start; }
+    @media(max-width:1024px){ .arene-v2-grid { grid-template-columns:1fr 1fr; } }
+    @media(max-width:680px){ .arene-v2-grid { grid-template-columns:1fr; } }
 
     /* Onglets jours */
     .day-tabs { display:flex; gap:0; margin-bottom:.75rem; border-bottom:2px solid var(--cream2); overflow-x:auto; }
@@ -443,7 +444,7 @@
 <header>
   <div onclick="navHome()" style="cursor:pointer;line-height:1.2;">
     <div style="font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:700;color:var(--gold);letter-spacing:.02em;">TH – Les joutes hippiques</div>
-    <div style="font-size:.82rem;font-weight:400;color:rgba(255,255,255,.7);font-style:italic;letter-spacing:.01em;">Vivez les courses autrement et intensément !</div>
+    <div style="font-size:.82rem;font-weight:400;color:rgba(255,255,255,.7);font-style:italic;letter-spacing:.01em;">Grimpez au classement ELO, remportez les Arènes, brillez au Top Choix !</div>
   </div>
   <div id="header-right" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
     <div id="header-nav" style="display:none;gap:4px;">
@@ -1012,21 +1013,23 @@
         </div>
       </div>
 
-    </div><!-- /arene-v2-grid -->
-
-    <!-- Chat pleine largeur -->
-    <div class="card" style="margin-top:.25rem;">
-      <div class="card-head"><h3>💬 Chat Arène <span style="font-size:.72rem;color:var(--muted);font-weight:400;">(messages conservés 48h)</span></h3></div>
-      <div class="card-body" style="padding:0;">
-        <div class="chat-box" id="arene-chat-box">
-          <div class="chat-messages" id="arene-chat-messages"><p class="chat-vide">Aucun message récent.</p></div>
-          <div class="chat-input-zone">
-            <input type="text" id="arene-chat-input" placeholder="Votre message…" onkeydown="if(event.key==='Enter')envoyerChatArene()" maxlength="200"/>
-            <button type="button" class="btn btn-vert btn-sm" onclick="envoyerChatArene()">Envoyer</button>
+      <!-- ══ COL 3 : Chat Arène ══ -->
+      <div>
+        <div class="card" style="height:100%;">
+          <div class="card-head"><h3>💬 Chat Arène <span style="font-size:.72rem;color:var(--muted);font-weight:400;">(messages conservés 48h)</span></h3></div>
+          <div class="card-body" style="padding:0;">
+            <div class="chat-box" id="arene-chat-box">
+              <div class="chat-messages" id="arene-chat-messages"><p class="chat-vide">Aucun message récent.</p></div>
+              <div class="chat-input-zone">
+                <input type="text" id="arene-chat-input" placeholder="Votre message…" onkeydown="if(event.key==='Enter')envoyerChatArene()" maxlength="200"/>
+                <button type="button" class="btn btn-vert btn-sm" onclick="envoyerChatArene()">Envoyer</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+    </div><!-- /arene-v2-grid -->
 
   </div>
 </div>
@@ -2295,7 +2298,7 @@ function _chargerChatArene() {
       </div>`;
     });
     msgsEl.innerHTML = html || '<p class="chat-vide">Aucun message récent.</p>';
-    // column-reverse : le plus récent apparaît automatiquement en haut
+    msgsEl.scrollTop = 0; // column-reverse : s'assurer qu'on est en haut (messages récents)
   });
 }
 
@@ -4924,6 +4927,8 @@ function _startChat(key, ref) {
   const handler = snap => _ajouterBulle(containerId, snap.val());
   ref.on('child_added', handler);
   _chatListeners[key] = {ref, handler};
+  // Après chargement initial, positionner en haut (messages récents avec column-reverse)
+  setTimeout(() => { const e = document.getElementById(containerId); if(e) e.scrollTop = 0; }, 300);
 }
 
 // ── CHAT ACCUEIL (durée de vie 2h) ──────────────────
