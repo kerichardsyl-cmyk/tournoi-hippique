@@ -336,6 +336,10 @@
     .reunion-v2-card { background:white; border-radius:8px; border:1px solid var(--cream2); margin-bottom:.6rem; overflow:hidden; transition:box-shadow .15s; }
     .reunion-v2-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.07); }
     .reunion-v2-card.inscrit { border-left:3px solid var(--green); }
+    .reunion-v2-card.principale { background:linear-gradient(135deg,rgba(200,168,75,.08) 0%,rgba(255,255,255,1) 60%); border-color:rgba(200,168,75,.45); }
+    .reunion-v2-card.principale:hover { box-shadow:0 2px 12px rgba(200,168,75,.2); }
+    .badge-arene-elo { display:inline-flex; align-items:center; font-size:.63rem; font-weight:700; padding:.1rem .42rem; border-radius:100px; background:linear-gradient(90deg,var(--gold),var(--gold2)); color:var(--ink); white-space:nowrap; letter-spacing:.02em; }
+    .badge-elo-only { display:inline-flex; align-items:center; font-size:.63rem; font-weight:600; padding:.1rem .42rem; border-radius:100px; background:var(--cream2); color:var(--muted); white-space:nowrap; letter-spacing:.02em; }
     .reunion-v2-head { padding:.55rem .9rem; border-bottom:1px solid var(--cream2); display:flex; align-items:center; justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
     .reunion-v2-body { padding:.5rem .9rem; display:grid; grid-template-columns:auto 1fr auto; gap:.5rem; align-items:center; min-width:0; overflow:hidden; }
     .reunion-v2-limite { font-size:.73rem; color:var(--muted); }
@@ -1517,6 +1521,69 @@ function _pmuDateFromOffset(offset) {
 }
 
 // ── charger la page arène principale ──
+// ── DÉFINITION AUTOMATIQUE DES RÉUNIONS PRINCIPALES ─────────────────────────
+// Déclenchée au chargement de la page Arène pour chaque jour affiché
+// Condition : Date.now() >= (dateDesCourses - 2j) à 17h ET flag absent dans arene_meta
+async function _definirPrincipalesAutoSiNecessaire(pmuDate, isoDate) {
+  try {
+    // Condition temporelle : J-2 à 17h
+    const [y,m,d] = isoDate.split('-').map(Number);
+    const dateJeu = new Date(y, m-1, d, 17, 0, 0).getTime();
+    const seuilTs = dateJeu - 2 * 24 * 60 * 60 * 1000; // J-2 à 17h
+    if (Date.now() < seuilTs) return; // trop tôt
+
+    // Vérifier si déjà fait (arene_meta)
+    const metaSnap = await db.ref('arene_meta/'+isoDate+'/principalesDefiniesAt').once('value');
+    if (metaSnap.val()) return; // déjà calculé
+
+    // Charger programme PMU
+    const prog = await pmuGet('programme/'+pmuDate);
+    const toutesReunions = (prog.programme?.reunions || prog.reunions || prog || [])
+      .filter(r => r.audience==='NATIONAL' && r.pays?.code==='FRA'
+        && !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'')
+        && ['TROT','GALOP'].includes(detecterDiscipline(r)));
+
+    if (!toutesReunions.length) return;
+
+    const _somme = r => filtrerCoursesPaires(r.courses||[]).reduce((s,co)=>s+(co.montantPrix||0),0);
+
+    // Grouper par discipline, trouver la principale (max alloc, départage = plus petit numR)
+    const parDisc = {};
+    for (const r of toutesReunions) {
+      const disc = detecterDiscipline(r);
+      const numR = String(r.numOfficiel||r.numReunion);
+      const alloc = _somme(r);
+      if (!parDisc[disc] || alloc > parDisc[disc].alloc ||
+         (alloc === parDisc[disc].alloc && parseInt(numR) < parseInt(parDisc[disc].numR))) {
+        parDisc[disc] = { numR, alloc };
+      }
+    }
+
+    // Écrire estPrincipale dans arene_meta pour chaque réunion
+    const updates = {};
+    for (const r of toutesReunions) {
+      const disc = detecterDiscipline(r);
+      const numR = String(r.numOfficiel||r.numReunion);
+      const estPrincipale = parDisc[disc]?.numR === numR;
+      updates['arene_meta/'+isoDate+'/reunions/'+numR+'/estPrincipale'] = estPrincipale;
+      updates['arene_meta/'+isoDate+'/reunions/'+numR+'/discipline'] = disc;
+      updates['arene_meta/'+isoDate+'/reunions/'+numR+'/alloc'] = parDisc[disc]?.alloc || 0;
+    }
+    updates['arene_meta/'+isoDate+'/principalesDefiniesAt'] = Date.now();
+    await db.ref().update(updates);
+  } catch(e) {
+    // Silencieux — pas bloquant
+  }
+}
+
+// Lit le flag estPrincipale depuis arene_meta (avec fallback true si absent)
+async function _getMetaReunions(isoDate) {
+  try {
+    const snap = await db.ref('arene_meta/'+isoDate+'/reunions').once('value');
+    return snap.val() || {};
+  } catch(e) { return {}; }
+}
+
 async function chargerArene() {
   _buidAreneAlerts();
   await _chargerProgrammeMultiJours();
@@ -1621,17 +1688,23 @@ async function _chargerProgrammeMultiJours() {
         return d === 'TROT' || d === 'GALOP';
       });
     } catch(e) {}
+    // Définir automatiquement les principales si conditions remplies
+    const { pmuDate: _pd, isoDate: _id } = jours[i];
+    await _definirPrincipalesAutoSiNecessaire(_pd, _id);
 
     // Lire inscriptions : les miennes + toutes pour compter les inscrits par réunion
     let inscs = {};
     let allInscsDay = {};
+    let metaReunions = {};
     try {
-      const [mySnap, allSnap] = await Promise.all([
+      const [mySnap, allSnap, metaSnap] = await Promise.all([
         db.ref('arene_inscriptions/'+pmuDate+'/'+uid).once('value'),
-        db.ref('arene_inscriptions/'+pmuDate).once('value')
+        db.ref('arene_inscriptions/'+pmuDate).once('value'),
+        db.ref('arene_meta/'+jours[i].isoDate+'/reunions').once('value')
       ]);
       inscs = mySnap.val() || {};
       allInscsDay = allSnap.val() || {};
+      metaReunions = metaSnap.val() || {};
     } catch(e) {}
 
     const count = reunions.length;
@@ -1686,7 +1759,15 @@ async function _chargerProgrammeMultiJours() {
             choixBtnHtml = `<button class="btn-choix-v2 btn-choix-new" data-ouvrir-choix data-pmu="${pmuDate}" data-numr="${numR}" data-hippo="${encodeURIComponent(hippo)}" data-disc="${disc}">📋 Faire mes choix</button>`;
           }
         }
-        const inscritCls = inscrit ? ' inscrit' : '';
+        const metaR = metaReunions[numR];
+        const estPrincipale = metaR ? !!metaR.estPrincipale : false;
+        const principaleDefined = Object.keys(metaReunions).length > 0;
+        const badgeArene = principaleDefined
+          ? (estPrincipale
+            ? `<span class="badge-arene-elo">⚔️ Arène &amp; ELO</span>`
+            : `<span class="badge-elo-only">📈 ELO</span>`)
+          : '';
+        const inscritCls = (inscrit ? ' inscrit' : '') + (estPrincipale ? ' principale' : '');
         const inscritStatus = inscrit ? `<div class="check-sub-v2" style="color:var(--green);">✓ Inscrit</div>` : '';
         panelContent += `
           <div class="reunion-v2-card${inscritCls}">
@@ -1695,6 +1776,7 @@ async function _chargerProgrammeMultiJours() {
                 <span class="reunion-disc ${discCls}" style="font-size:.72rem;padding:.12rem .45rem;border-radius:100px;">${discIcon}</span>
                 <span class="reunion-hippo">${hippo}</span>
                 <span class="reunion-meta">${nbCourses} courses · 1ère à ${h1}</span>
+                ${badgeArene}
                 ${inscritsBadgeHtml}
               </div>
               <div class="reunion-tirage-v2"><div class="reunion-tirage-v2-label">Tirage à partir de</div><div class="reunion-tirage-v2-val">${tirageStr}</div></div>
@@ -2234,6 +2316,18 @@ async function adminPreviewReunions() {
         && ['TROT','GALOP'].includes(detecterDiscipline(r)));
     const _somme = r => filtrerCoursesPaires(r.courses||[]).reduce((s,co)=>s+(co.montantPrix||0),0);
 
+    // Calculer les principales par discipline (même algo que _definirPrincipalesAutoSiNecessaire)
+    const _parDisc = {};
+    for (const r of toutesReunions) {
+      const disc = detecterDiscipline(r);
+      const numR = String(r.numOfficiel||r.numReunion);
+      const alloc = _somme(r);
+      if (!_parDisc[disc] || alloc > _parDisc[disc].alloc ||
+         (alloc === _parDisc[disc].alloc && parseInt(numR) < parseInt(_parDisc[disc].numR))) {
+        _parDisc[disc] = { numR, alloc };
+      }
+    }
+
     const insSnap = await db.ref('arene_inscriptions/'+pmuDate).once('value');
     const insData = insSnap.val() || {};
     const usersSnap = await db.ref('utilisateurs').once('value');
@@ -2264,10 +2358,14 @@ async function adminPreviewReunions() {
         if (reunions[numR]) joueursInscrits.push(prenoms[uid]||uid);
       });
       const dejaTire = areneData[numR] != null;
-      html += `<div style="background:rgba(200,168,75,.06);border:1px solid rgba(200,168,75,.15);border-radius:8px;padding:.6rem .85rem;font-size:.8rem;">
+      const _estPrincipaleAdmin = _parDisc[disc]?.numR === numR;
+      const _badgeAdmin = _estPrincipaleAdmin
+        ? `<span class="badge-arene-elo" style="margin-left:.4rem;">⚔️ Arène &amp; ELO</span>`
+        : `<span class="badge-elo-only" style="margin-left:.4rem;">📈 ELO</span>`;
+      html += `<div style="background:${_estPrincipaleAdmin?'linear-gradient(135deg,rgba(200,168,75,.12),rgba(255,255,255,.98))':'rgba(200,168,75,.06)'};border:1px solid ${_estPrincipaleAdmin?'rgba(200,168,75,.45)':'rgba(200,168,75,.15)'};border-radius:8px;padding:.6rem .85rem;font-size:.8rem;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;flex-wrap:wrap;">
           <div>
-            <div style="font-weight:700;color:${discColor};">${discIcon} ${disc==='TROT'?'Trot':'Galop'} · R${numR} · ${hippo}</div>
+            <div style="font-weight:700;color:${discColor};display:flex;align-items:center;flex-wrap:wrap;gap:.3rem;">${discIcon} ${disc==='TROT'?'Trot':'Galop'} · R${numR} · ${hippo} ${_badgeAdmin}</div>
             <div style="color:var(--muted);font-size:.74rem;margin-top:.1rem;">${nbCourses} courses · 1ère à ${h1} · ${dotation} €</div>
             <div style="margin-top:.25rem;font-size:.76rem;">
               <strong>${joueursInscrits.length} inscrit${joueursInscrits.length!==1?'s':''} :</strong>
@@ -2433,13 +2531,19 @@ async function chargerAreneClassementMensuel(disc) {
   const scores = {};
   const _get = uid => scores[uid] || (scores[uid] = {pts:0, victoires:0, nuls:0, defaites:0, matchsJoues:0, manchesGagnees:0, ptsTotal:0, exempts:0, nom:prenoms[uid]||'?'});
   // Points exempts
-  const areneSnap = await db.ref('arene').once('value');
+  const [areneSnap, mensuelMetaSnap] = await Promise.all([
+    db.ref('arene').once('value'),
+    db.ref('arene_meta').once('value')
+  ]);
+  const mensuelMeta = mensuelMetaSnap.val() || {};
+  const _estPrincipaleMensuel = (isoDate, numR) => {
+    const val = mensuelMeta[isoDate]?.reunions?.[String(numR)]?.estPrincipale;
+    return val === undefined || val === null ? true : !!val;
+  };
   if(areneSnap.val()) {
     Object.entries(areneSnap.val()).forEach(([dayKey, dayData]) => {
       if(!dayKey.startsWith(isoMois)) return;
-      // Nouvelle structure : exempts_uids par réunion
       if (dayData.exempts_uids) {
-        // ancienne structure plate (pas de discipline stockée — on inclut dans general seulement)
         if (disc === 'general') {
           Object.keys(dayData.exempts_uids).forEach(uid => { _get(uid).pts += 1; _get(uid).exempts += 1; });
         }
@@ -2447,7 +2551,8 @@ async function chargerAreneClassementMensuel(disc) {
         Object.values(dayData).forEach(rd => {
           if (rd && typeof rd === 'object' && rd.exempts_uids) {
             const rdDisc = (rd.discipline || '').toUpperCase();
-            // Filtre discipline : general = tout, trot = TROT seulement, galop = GALOP seulement
+            const rdNumR = String(rd.numReunion || '');
+            if (!_estPrincipaleMensuel(dayKey, rdNumR)) return;
             if (disc === 'general' || (disc === 'trot' && rdDisc === 'TROT') || (disc === 'galop' && rdDisc === 'GALOP')) {
               Object.keys(rd.exempts_uids).forEach(uid => { _get(uid).pts += 1; _get(uid).exempts += 1; });
             }
@@ -2464,10 +2569,12 @@ async function chargerAreneClassementMensuel(disc) {
     const m = child.val();
     if(!m.arene || m.statut!=='termine') return;
     if(m.createdAt<debut || m.createdAt>fin) return;
-    // Filtre discipline
     const mDisc = (m.reunion?.discipline || m.discipline || '').toUpperCase();
     if(disc==='trot'  && mDisc!=='TROT')  return;
     if(disc==='galop' && mDisc!=='GALOP') return;
+    const _isoM = m.reunion?.isoDate || '';
+    const _numRM = String(m.reunion?.numReunion || m.reunion?.numR || '');
+    if (!_estPrincipaleMensuel(_isoM, _numRM)) return;
     const courses = normCourses(m.courses);
     const mJ1=courses.filter(c=>c.mancheGagnant==='j1').length, mJ2=courses.filter(c=>c.mancheGagnant==='j2').length;
     const pJ1=courses.reduce((s,c)=>s+(c.pointsJ1||0),0), pJ2=courses.reduce((s,c)=>s+(c.pointsJ2||0),0);
@@ -2560,20 +2667,31 @@ function chargerAreneElo() {
 
 // Calcule V/N/D depuis tous les matchs arène terminés, filtrés par discipline
 async function _buildStatsDisc(disc) {
-  const [matchsSnap, classSnap] = await Promise.all([
+  const [matchsSnap, classSnap, metaSnap] = await Promise.all([
     db.ref('matchs').once('value'),
-    db.ref('arene_classements').once('value')
+    db.ref('arene_classements').once('value'),
+    db.ref('arene_meta').once('value')
   ]);
   const stats = {}; // uid → {v,n,d,m,pts,e}
   const _g = uid => stats[uid] || (stats[uid] = {v:0, n:0, d:0, m:0, pts:0, e:0});
 
-  // 1. Matchs terminés (victoires, nuls, défaites)
+  // Cache estPrincipale : arene_meta/{isoDate}/reunions/{numR}/estPrincipale
+  const metaData = metaSnap.val() || {};
+  const _estPrincipale = (isoDate, numR) => {
+    const val = metaData[isoDate]?.reunions?.[String(numR)]?.estPrincipale;
+    return val === undefined || val === null ? true : !!val; // fallback true si absent
+  };
+
+  // 1. Matchs terminés — stats Arène uniquement si réunion principale
   matchsSnap.forEach(child => {
     const m = child.val();
     if (!m.arene || m.statut !== 'termine') return;
     const mDisc = (m.reunion?.discipline || m.discipline || '').toUpperCase();
     if (disc === 'trot'  && mDisc !== 'TROT')  return;
     if (disc === 'galop' && mDisc !== 'GALOP') return;
+    const isoDate = m.reunion?.isoDate || '';
+    const numR = String(m.reunion?.numReunion || m.reunion?.numR || '');
+    if (!_estPrincipale(isoDate, numR)) return; // réunion secondaire → pas de stats Arène
     _g(m.uidJ1).m++; _g(m.uidJ2).m++;
     if (m.vainqueur === 'j1')        { _g(m.uidJ1).v++; _g(m.uidJ2).d++; _g(m.uidJ1).pts+=2; }
     else if (m.vainqueur === 'j2')   { _g(m.uidJ2).v++; _g(m.uidJ1).d++; _g(m.uidJ2).pts+=2; }
@@ -2767,17 +2885,26 @@ async function chargerClassementDetail(type) {
     const sc = {};
     const _g = uid => sc[uid]||(sc[uid]={uid, prenom:users[uid]?.prenom||'?', pts:0, victoires:0, nuls:0, defaites:0, manchesGagnees:0, ptsTotal:0, exempts:0, elo:users[uid]?.elo?.general||1200, trot:!!(users[uid]?.elo?.trot&&users[uid].elo.trot!==1200), galop:!!(users[uid]?.elo?.galop&&users[uid].elo.galop!==1200)});
     // Points exempts du mois
-    const areneSnap2 = await db.ref('arene').once('value');
+    const [areneSnap2, detailMetaSnap] = await Promise.all([
+      db.ref('arene').once('value'),
+      db.ref('arene_meta').once('value')
+    ]);
+    const detailMeta = detailMetaSnap.val() || {};
+    const _estPrincipaleDetail = (isoDate, numR) => {
+      const val = detailMeta[isoDate]?.reunions?.[String(numR)]?.estPrincipale;
+      return val === undefined || val === null ? true : !!val;
+    };
     if(areneSnap2.val()) {
       Object.entries(areneSnap2.val()).forEach(([dayKey, dayData]) => {
         if(!dayKey.startsWith(moisKey)) return;
         if(dayData.exempts_uids) {
-          // ancienne structure plate sans discipline — general seulement
           if(disc === 'general') Object.keys(dayData.exempts_uids).forEach(uid => { _g(uid).exempts += 1; _g(uid).pts += 1; });
         } else {
           Object.values(dayData).forEach(rd => {
             if(rd && typeof rd === 'object' && rd.exempts_uids) {
               const rdDisc = (rd.discipline || '').toUpperCase();
+              const rdNumR = String(rd.numReunion || '');
+              if (!_estPrincipaleDetail(dayKey, rdNumR)) return;
               if(disc === 'general' || (disc === 'trot' && rdDisc === 'TROT') || (disc === 'galop' && rdDisc === 'GALOP'))
                 Object.keys(rd.exempts_uids).forEach(uid => { _g(uid).exempts += 1; _g(uid).pts += 1; });
             }
@@ -2792,6 +2919,9 @@ async function chargerClassementDetail(type) {
       const mDisc = (m.reunion?.discipline||m.discipline||'').toUpperCase();
       if(disc==='trot'  && mDisc!=='TROT')  return;
       if(disc==='galop' && mDisc!=='GALOP') return;
+      const _isoD = m.reunion?.isoDate || '';
+      const _numRD = String(m.reunion?.numReunion || m.reunion?.numR || '');
+      if (!_estPrincipaleDetail(_isoD, _numRD)) return; // réunion secondaire
       const cs = normCourses(m.courses);
       const mJ1=cs.filter(c=>c.mancheGagnant==='j1').length, mJ2=cs.filter(c=>c.mancheGagnant==='j2').length;
       _g(m.uidJ1).manchesGagnees+=mJ1; _g(m.uidJ1).ptsTotal+=cs.reduce((s,c)=>s+(c.pointsJ1||0),0);
@@ -5081,9 +5211,25 @@ async function cloturerMatch(matchId) {
     else ns.defaites = (ns.defaites||0)+1;
     return ns;
   };
-  // Stats et ELO uniquement pour les matchs Arène
-  const newStatsJ1 = (uidJ1 && isAreneMatch) ? appliquerStats(statsJ1Raw,'j1') : null;
-  const newStatsJ2 = (uidJ2 && isAreneMatch) ? appliquerStats(statsJ2Raw,'j2') : null;
+  // Stats Arène uniquement si réunion principale (estPrincipale dans arene_meta)
+  // ELO : toujours pour les matchs Arène, quelle que soit la réunion
+  let isArenePrincipale = false;
+  if (isAreneMatch) {
+    try {
+      const pmuDateMatch = data.reunion?.pmuDate;
+      const isoDateMatch = data.reunion?.isoDate;
+      const numRMatch = String(data.reunion?.numReunion || data.reunion?.numR || '');
+      if (pmuDateMatch && isoDateMatch && numRMatch) {
+        const metaSnap = await db.ref('arene_meta/'+isoDateMatch+'/reunions/'+numRMatch+'/estPrincipale').once('value');
+        // Si flag absent (rétrocompat) → on considère principale
+        isArenePrincipale = metaSnap.val() === null ? true : !!metaSnap.val();
+      } else {
+        isArenePrincipale = true; // fallback si données reunion manquantes
+      }
+    } catch(e) { isArenePrincipale = true; }
+  }
+  const newStatsJ1 = (uidJ1 && isAreneMatch && isArenePrincipale) ? appliquerStats(statsJ1Raw,'j1') : null;
+  const newStatsJ2 = (uidJ2 && isAreneMatch && isArenePrincipale) ? appliquerStats(statsJ2Raw,'j2') : null;
 
   // ── Snapshot pour pouvoir annuler si on re-clôture ──
   // statsBefore uniquement si arène (seuls les matchs arène modifient les stats)
