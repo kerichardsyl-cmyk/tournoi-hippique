@@ -6036,6 +6036,7 @@ async function _calculerTcReunion() {
   const areneData = areneSnap.val();
   // Charger rapports : d'abord depuis les matchs Firebase, puis compléter depuis PMU API
   const rapportsData = {};
+  const statutsCourses = {}; // déclaré ici pour être accessible hors du bloc if(areneData)
   if (areneData) {
     const matchIds = [];
     if (areneData.matchs) {
@@ -6049,7 +6050,6 @@ async function _calculerTcReunion() {
         matchIds.push(...Object.keys(reunionData.matchs));
       }
     }
-    const statutsCourses = {}; // numOrdre → statut
     for (const mid of matchIds.slice(0, 3)) {
       try {
         const mSnap = await db.ref('matchs/'+mid+'/courses').once('value');
