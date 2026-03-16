@@ -2309,7 +2309,7 @@ async function _buildAreneMatchCard(m, uid, key, today, yesterday, showAll) {
   }
   const matchId = m.matchId || m.code;
   const hippodrome = m.hippodrome || m.reunion?.hippodrome || m.reunion?.disc || '?';
-  const click = (isParticipant && matchId) ? `onclick="ouvrirMatch('${matchId}')" style="cursor:pointer;"` : '';
+  const click = matchId ? `onclick="ouvrirMatch('${matchId}')" style="cursor:pointer;"` : '';
   return `<div class="${cardCls}" ${click}>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
       <div>
@@ -3825,7 +3825,9 @@ async function ouvrirMatch(matchId) {
   const uid = utilisateur.uid;
   const isAdmin = uid === ADMIN_UID;
   etat.matchId = matchId;
+  const isNonParticipant = data.uidJ1!==uid && data.uidJ2!==uid;
   if(!isAdmin) etat._adminView = false;
+  etat._spectateur = false;
   if(data.uidJ1 === uid) etat.joueurId = 'j1';
   else if(data.uidJ2 === uid) etat.joueurId = 'j2';
   else etat.joueurId = 'j1';
@@ -3834,9 +3836,15 @@ async function ouvrirMatch(matchId) {
   // Bandeau admin fixe
   const adminBand = document.getElementById('match-admin-band');
   if(adminBand) adminBand.style.display = isAdmin ? 'flex' : 'none';
-  // Si admin ouvre un match arène depuis admin page, forcer vue admin
-  if(isAdmin && data.arene && data.uidJ1!==uid && data.uidJ2!==uid) {
+  // Si admin ouvre un match arène : vue admin
+  if(isAdmin && data.arene && isNonParticipant) {
     etat._adminView = true;
+    etat.joueurId = 'j1';
+  }
+  // Si joueur non-participant : mode spectateur (lecture seule, affiche les deux côtés)
+  if(!isAdmin && isNonParticipant) {
+    etat._adminView = true;
+    etat._spectateur = true;
     etat.joueurId = 'j1';
   }
   // Match arène : injecter les choix depuis arene_choix puis démarrer directement
@@ -5416,13 +5424,18 @@ function afficherBoutonsFin(data) {
   const adminView = etat._adminView;
   let html = '';
   if(adminView) {
-    // Vue admin : boutons admin uniquement
-    if(statut !== 'termine') {
-      html += `<button class="btn btn-nav" onclick="cloturerMatch('${etat.matchId}')">🏁 Clôturer ce match</button>`;
+    if(etat._spectateur) {
+      // Mode spectateur : bouton retour uniquement
+      html += `<button class="btn btn-gris" onclick="showPage('arene');setNavActive('arene');chargerArene()">← Retour Arène</button>`;
     } else {
-      html += `<button class="btn btn-gris" onclick="rouvrirMatch('${etat.matchId}')">🔓 Rouvrir</button>`;
+      // Vue admin : boutons admin uniquement
+      if(statut !== 'termine') {
+        html += `<button class="btn btn-nav" onclick="cloturerMatch('${etat.matchId}')">🏁 Clôturer ce match</button>`;
+      } else {
+        html += `<button class="btn btn-gris" onclick="rouvrirMatch('${etat.matchId}')">🔓 Rouvrir</button>`;
+      }
+      html += `<button class="btn btn-gris" onclick="showPage('admin');chargerAdmin()">← Retour admin</button>`;
     }
-    html += `<button class="btn btn-gris" onclick="showPage('admin');chargerAdmin()">← Retour admin</button>`;
   } else {
     if(statut==='pret_cloture') {
       html += `<button class="btn btn-or" onclick="cloturerMatch()">🏁 Clôturer le match</button>`;
@@ -5585,8 +5598,9 @@ function rendreZoneJeu(data,idx) {
   const c=courses[idx]; if(!c) return;
   const mr=getMainPourCourse(idx),estMain=etat.joueurId===mr;
   const isAdmin = etat._adminView;
-  // Bandeau : version admin ou version joueur
-  const bandeauAdmin = isAdmin ? `
+  const isSpectateur = etat._spectateur || false;
+  // Bandeau : admin, spectateur ou joueur
+  const bandeauAdmin = (isAdmin && !isSpectateur) ? `
     <div style="background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.3);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:.82rem;">
       <strong style="color:var(--or);">👁 Vue admin</strong>
       <span style="margin-left:10px;opacity:.7;">Statut : <strong>${c.statut}</strong></span>
@@ -5595,9 +5609,13 @@ function rendreZoneJeu(data,idx) {
         <span>${data.j2?.nom||'J2'}${mr==='j2'?' ⭐':''} : ${(c.choixFinalJ2||[]).join(', ')||'—'}</span>
       </div>` : ''}
     </div>` : '';
+  const bandeauSpectateur = isSpectateur ? `
+    <div style="background:rgba(100,100,100,.07);border:1px solid rgba(100,100,100,.18);border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:.78rem;color:var(--muted);">
+      👁 Mode spectateur — ${data.j1?.nom||'J1'} vs ${data.j2?.nom||'J2'}
+    </div>` : '';
   let html=`<div class="card"><h2>C${c.numOrdre} — ${c.libelle}</h2>
-    ${bandeauAdmin}
-    ${!isAdmin ? `<div class="bandeau-joueur ${estMain?'bandeau-main':'bandeau-second'}">
+    ${bandeauAdmin}${bandeauSpectateur}
+    ${(!isAdmin && !isSpectateur) ? `<div class="bandeau-joueur ${estMain?'bandeau-main':'bandeau-second'}">
       <span class="role-badge ${estMain?'role-main':'role-second'}">${estMain?'⭐ Vous avez la main':'2ème joueur'}</span>
       <span style="font-size:.85rem;">${estMain?'Choisissez <strong>2 chevaux</strong> (fermeture à -10 min)':'Choisissez <strong>4 chevaux</strong> en ordre (fermeture à -5 min)'}</span>
     </div>` : ''}`;
@@ -5625,7 +5643,7 @@ function rendreZoneJeu(data,idx) {
   }
   else if(c.statut==='bloquee') {
     html+=rendreChoixValides(c,etat.joueurId);
-    if(etat._adminView) {
+    if(etat._adminView && !etat._spectateur) {
       html+=`<div style="margin-top:12px;text-align:center;">
         <button class="btn btn-or btn-sm" onclick="forceTraiterCourse(${idx})">⚡ Forcer le traitement</button>
       </div>`;
