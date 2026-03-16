@@ -1414,6 +1414,8 @@ const BADGES_DEF = [
   { id:'bivalent',      icone:'🔵🟡', nom:'Bivalent',      desc:'Au moins 1 victoire en Trot ET en Galop (Arène)' },
   { id:'fairplay',      icone:'🤝', nom:'Fair-Play',       desc:'5 matchs amicaux terminés' },
   { id:'killer_tc',     icone:'⭐', nom:'Killer Top Choix', desc:'750+ points sur une réunion Top Choix' },
+  { id:'dominant_trot',  icone:'🔵', nom:'Dominant Trot',    desc:'Atteindre 1400 ELO Trot' },
+  { id:'dominant_galop', icone:'🟡', nom:'Dominant Galop',   desc:'Atteindre 1400 ELO Galop' },
 ];
 function nH(s) { return (s||'').replace(/HIPPODROME (DE |D'|DU |DE L'|DES )/gi,'').replace(/HIPPODROME /gi,'').trim(); }
 function normCourses(courses) { if(!courses) return []; if(Array.isArray(courses)) return courses; return Object.values(courses); }
@@ -3023,7 +3025,7 @@ async function chargerClassementDetail(type) {
     const fin   = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59).getTime();
     const matchsSnap2 = await db.ref('matchs').once('value');
     const sc = {};
-    const _g = uid => sc[uid]||(sc[uid]={uid, prenom:users[uid]?.prenom||'?', pts:0, victoires:0, nuls:0, defaites:0, manchesGagnees:0, ptsTotal:0, exempts:0, elo:users[uid]?.elo?.general||1200, trot:!!(users[uid]?.elo?.trot&&users[uid].elo.trot!==1200), galop:!!(users[uid]?.elo?.galop&&users[uid].elo.galop!==1200)});
+    const _g = uid => sc[uid]||(sc[uid]={uid, prenom:users[uid]?.prenom||'?', pts:0, victoires:0, nuls:0, defaites:0, manchesGagnees:0, ptsTotal:0, exempts:0, elo:users[uid]?.elo?.general||1200, trot:!!(users[uid]?.elo?.trot&&users[uid].elo.trot!==1200), galop:!!(users[uid]?.elo?.galop&&users[uid].elo.galop!==1200), badges:users[uid]?.badges||{}});
     // Points exempts du mois
     const areneSnap2 = await db.ref('arene').once('value');
     let detailMeta = {};
@@ -3429,7 +3431,7 @@ function ligneClassement(j, i, uid, key) {
     <span style="display:flex;align-items:center;gap:6px;">
       ${rankHtml}
       <strong>${j.prenom||'?'}</strong>
-      ${(()=>{ const b=j.badges||{}; const icons=[]; if(b.serie10)icons.push('🔥'); else if(b.serie5)icons.push('🔥'); if(b.bivalent)icons.push('🔵🟡'); if(b.killer_tc)icons.push('⭐'); if(b.veteran)icons.push('🏇'); return icons.slice(0,2).map(i=>`<span class="badge-mini" title="">${i}</span>`).join(''); })()}
+      ${(()=>{ const b=j.badges||{}; const icons=[]; if(b.serie10)icons.push('🔥'); else if(b.serie5)icons.push('🔥'); if(b.dominant_trot)icons.push('🔵'); if(b.dominant_galop)icons.push('🟡'); if(b.bivalent)icons.push('🔵🟡'); if(b.killer_tc)icons.push('⭐'); if(b.veteran)icons.push('🏇'); return icons.slice(0,2).map(i=>`<span class="badge-mini" title="">${i}</span>`).join(''); })()}
       ${isMe?'<span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}
     </span>
     <span style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">
@@ -5498,6 +5500,16 @@ async function _calculerBadges(uid) {
     if (nbAmicaux >= 5) nouveaux.fairplay = true;
   }
 
+  // ── Dominant Trot : ELO Trot ≥ 1400 ──
+  if (!badgesActuels.dominant_trot) {
+    const eloTrot = uSnap.val()?.elo?.trot || 1200;
+    if (eloTrot >= 1400) nouveaux.dominant_trot = true;
+  }
+  // ── Dominant Galop : ELO Galop ≥ 1400 ──
+  if (!badgesActuels.dominant_galop) {
+    const eloGalop = uSnap.val()?.elo?.galop || 1200;
+    if (eloGalop >= 1400) nouveaux.dominant_galop = true;
+  }
   // Killer Top Choix : calculé séparément dans _verifierKillerTc
   return nouveaux;
 }
@@ -5792,6 +5804,10 @@ function rendreZoneJeu(data,idx) {
     }
   }
   else if(c.statut==='ouverte') {
+    // Spectateur : course ouverte = message d'attente uniquement
+    if(isSpectateur) {
+      html+=`<div style="padding:1.2rem;text-align:center;color:var(--muted);font-size:.82rem;">⏳ Course en attente de départ — les choix ne sont pas encore visibles.</div>`;
+    } else {
     // Bouton admin si course ouverte mais départ déjà passé
     if(etat._adminView && c.heureDepart && c.heureDepart < Date.now()) {
       html+=`<div style="margin-bottom:10px;padding:10px;background:rgba(204,34,0,.12);border:1px solid rgba(204,34,0,.35);border-radius:8px;">
@@ -5830,6 +5846,7 @@ function rendreZoneJeu(data,idx) {
         <div><strong>${data.j2?.nom||'J2'} :</strong> ${choixJ2.length?choixJ2.join(', '):'<span style="opacity:.4;">—</span>'}</div>
       </div>`;
     }
+    } // fin else !isSpectateur
   }
   html+='</div>';
   document.getElementById('zone-jeu').innerHTML=html;
