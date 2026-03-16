@@ -6006,6 +6006,11 @@ async function ouvrirTcReunion(pmuDate, numR, hippo, disc) {
   document.getElementById('tc-results').style.display = '';
   document.getElementById('tc-classement-total').innerHTML = '<p class="text-sm">⏳ Calcul en cours…</p>';
   document.getElementById('tc-classement-courses').innerHTML = '';
+  // Toujours revenir sur l'onglet "Classement total" à chaque ouverture
+  _tcView = 'total';
+  document.querySelectorAll('#tc-view-tabs .arene-stab').forEach((t,i) => t.classList.toggle('active', i===0));
+  document.getElementById('tc-classement-total').style.display = '';
+  document.getElementById('tc-classement-courses').style.display = 'none';
   document.getElementById('tc-results').scrollIntoView({behavior:'smooth'});
   await _calculerTcReunion();
 }
