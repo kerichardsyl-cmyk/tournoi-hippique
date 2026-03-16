@@ -5915,6 +5915,15 @@ async function _chargerTcProgramme() {
     }
     panelsHtml += `<div class="day-panel${i===0?' active':''}" id="tc-daypanel-${i}">${panelContent}</div>`;
   }
+  // Onglet "Autre date" pour les réunions passées
+  tabsHtml += `<div class="day-tab" id="tc-daytab-past" onclick="switchTcDayPast()">📅 Autre date</div>`;
+  panelsHtml += `<div class="day-panel" id="tc-daypanel-past">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:.3rem 0;">
+      <input type="date" id="tc-date-picker" style="font-size:.82rem;padding:.3rem .55rem;border:1px solid var(--cream2);border-radius:5px;margin-bottom:0;" max="${new Date().toISOString().slice(0,10)}" onchange="chargerTcProgrammePasse(this.value)"/>
+    </div>
+    <div id="tc-past-reunions"></div>
+  </div>`;
+
   tabsEl.innerHTML = tabsHtml;
   panelsEl.innerHTML = panelsHtml;
 }
@@ -5922,6 +5931,54 @@ async function _chargerTcProgramme() {
 function switchTcDay(idx) {
   document.querySelectorAll('[id^="tc-daytab-"]').forEach((t,i) => t.classList.toggle('active', i===idx));
   document.querySelectorAll('[id^="tc-daypanel-"]').forEach((p,i) => p.classList.toggle('active', i===idx));
+  document.getElementById('tc-daytab-past')?.classList.remove('active');
+  document.getElementById('tc-daypanel-past').style.display = 'none';
+}
+
+function switchTcDayPast() {
+  document.querySelectorAll('[id^="tc-daytab-"]').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('[id^="tc-daypanel-"]').forEach(p => p.classList.toggle('active', false));
+  document.getElementById('tc-daytab-past').classList.add('active');
+  document.getElementById('tc-daypanel-past').style.display = 'block';
+}
+
+async function chargerTcProgrammePasse(isoDate) {
+  const el = document.getElementById('tc-past-reunions');
+  if (!el || !isoDate) return;
+  el.innerHTML = '<span class="spinner"></span>';
+  // Convertir isoDate (YYYY-MM-DD) → pmuDate (DDMMYYYY)
+  const [yyyy, mm, dd] = isoDate.split('-');
+  const pmuDate = dd + mm + yyyy;
+  try {
+    const data = await pmuGet('programme/'+pmuDate);
+    const all = data.programme?.reunions || data.reunions || data || [];
+    const reunions = all.filter(r =>
+      r.audience === 'NATIONAL' && r.pays?.code === 'FRA' &&
+      !/martinique/i.test(r.hippodrome?.libelleLong||r.hippodrome?.libelleCourt||'') &&
+      ['TROT','GALOP'].includes(detecterDiscipline(r))
+    );
+    if (!reunions.length) { el.innerHTML = '<p class="text-sm">Aucune réunion PMU nationale ce jour.</p>'; return; }
+    let html = '';
+    for (const r of reunions) {
+      const numR = String(r.numOfficiel || r.numReunion || '?');
+      const hippo = nH(r.hippodrome?.libelleLong || r.hippodrome?.libelleCourt || '?');
+      const disc = detecterDiscipline(r);
+      const discIcon = disc==='TROT'?'🔵':'🟡';
+      const courses = filtrerCoursesPaires(r.courses || []);
+      const h1 = courses[0]?.heureDepart ? formatHeure(courses[0].heureDepart) : '--:--';
+      html += `<div class="reunion-v2-card" style="cursor:pointer;" onclick="ouvrirTcReunion('${pmuDate}','${numR}','${nHJS(hippo)}','${disc}')">
+        <div class="reunion-v2-head">
+          <div style="display:flex;align-items:center;gap:.4rem;">
+            <span class="reunion-disc ${disc==='TROT'?'disc-trot':'disc-galop'}" style="font-size:.72rem;padding:.12rem .45rem;border-radius:100px;">${discIcon} ${disc==='TROT'?'Trot':'Galop'}</span>
+            <span class="reunion-hippo">${hippo}</span>
+            <span class="reunion-meta">${courses.length} courses · 1ère à ${h1}</span>
+          </div>
+          <span class="btn-choix-v2 btn-choix-new">Voir classement →</span>
+        </div>
+      </div>`;
+    }
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = '<p class="text-sm">Erreur chargement.</p>'; }
 }
 
 async function ouvrirTcReunion(pmuDate, numR, hippo, disc) {
