@@ -1431,6 +1431,7 @@ try {
 // ── ÉTAT ──────────────────────────────────────────
 let utilisateur = null; // Firebase Auth user
 let etat = { matchId:null, joueurId:null, matchData:null, timerInterval:null, timersInitialises:false, courseAffichee:null };
+let _areneMatchsRefreshInterval = null;
 
 // ── PMU ────────────────────────────────────────────
 const PMU_WORKER = 'https://pmu-proxy.kerichardsyl.workers.dev';
@@ -1627,6 +1628,13 @@ async function chargerArene() {
   _chargerAreneMatchsV2();
   chargerAreneClassements();
   _chargerChatArene();
+  // Rafraîchissement auto des scores toutes les 30s
+  if (_areneMatchsRefreshInterval) clearInterval(_areneMatchsRefreshInterval);
+  _areneMatchsRefreshInterval = setInterval(() => {
+    const tab = document.querySelector('#arene-matchs-tabs .arene-stab.active');
+    if (tab?.textContent?.includes('Tous')) _chargerTousMatchsArene();
+    else _chargerMesMatchsArene();
+  }, 30000);
 }
 
 // ── Tirage automatique : déclenché si on est à moins de 15 min du départ ──
@@ -2241,7 +2249,7 @@ async function _buildAreneMatchCard(m, uid, key, today, yesterday, showAll) {
         </div>`;
       }
     } catch(e) { statutBadge = '<span class="badge badge-gray">Terminé</span>'; }
-  } else if (statut === 'en_cours' || statut === 'pret') {
+  } else if (statut === 'en_cours' || statut === 'pret' || statut === 'attente') {
     if (isParticipant) cardCls += ' en-cours';
     // Score live depuis les données du match
     try {
@@ -6144,7 +6152,6 @@ async function _chargerTcClassementPerma() {
   const el = document.getElementById('tc-classement-perma');
   if (!el) return;
   el.innerHTML = '<span class="spinner"></span>';
-  // Bornes de période
   const now = new Date();
   let debut, fin;
   if (_tcPeriode === 'semaine') {
@@ -6164,28 +6171,24 @@ async function _chargerTcClassementPerma() {
     ]);
     const prenoms={};
     usersSnap.forEach(c => { prenoms[c.key]=c.val()?.prenom||'?'; });
-    const scores={}; // uid → pts
+    const scores={};
     const _g=uid=>scores[uid]||(scores[uid]={pts:0, prenom:prenoms[uid]||'?'});
     const areneData = areneSnap.val() || {};
 
-    // Parcourir toutes les réunions arène de la période
     for (const [isoDate, dayData] of Object.entries(areneData)) {
       if (!isoDate.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
       const dateTs = new Date(isoDate).getTime();
       if (dateTs < debut || dateTs > fin) continue;
-      // Convertir isoDate → pmuDate (DDMMYYYY)
       const [yyyy,mm,dd] = isoDate.split('-');
       const pmuDate = dd+mm+yyyy;
 
-      // Parcourir les réunions du jour
       for (const [numR, reunionData] of Object.entries(dayData)) {
         if (!reunionData || typeof reunionData !== 'object' || !reunionData.generatedAt) continue;
         const disc = (reunionData.discipline||'').toUpperCase();
         if (_tcDisc==='trot'  && disc!=='TROT')  continue;
         if (_tcDisc==='galop' && disc!=='GALOP') continue;
 
-        // Récupérer les rapports depuis les matchs Firebase de cette réunion
-        const rapportsParCourse = {}; // numOrdre → {rapports, arrivee}
+        const rapportsParCourse = {};
         const matchIds = reunionData.matchs ? Object.keys(reunionData.matchs) : [];
         for (const mid of matchIds.slice(0,3)) {
           try {
@@ -6197,16 +6200,14 @@ async function _chargerTcClassementPerma() {
             });
           } catch(e) {}
         }
-        if (!Object.keys(rapportsParCourse).length) continue; // pas encore de résultats
+        if (!Object.keys(rapportsParCourse).length) continue;
 
-        // Récupérer les choix de tous les inscrits sur cette réunion
         let choixReunion = {};
         try {
           const choixSnap = await db.ref('arene_choix/'+pmuDate+'/'+numR).once('value');
           choixReunion = choixSnap.val() || {};
         } catch(e) { continue; }
 
-        // Calculer les points Top Choix (2 premiers choix bruts) pour chaque joueur
         for (const [uid, choixJoueur] of Object.entries(choixReunion)) {
           const coursesChoix = choixJoueur.courses || {};
           let total = 0;
