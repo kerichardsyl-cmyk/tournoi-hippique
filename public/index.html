@@ -449,6 +449,10 @@
     .badge-item .badge-tooltip { display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:var(--turf); color:#fff; font-size:.72rem; padding:.35rem .6rem; border-radius:5px; white-space:nowrap; z-index:100; pointer-events:none; box-shadow:0 2px 8px rgba(0,0,0,.25); }
     .badge-item:hover .badge-tooltip { display:block; }
     .badge-mini { font-size:.95rem; line-height:1; cursor:default; }
+    /* Dominant custom : couronne sur fond coloré */
+    .badge-dominant-trot, .badge-dominant-galop { display:inline-flex; align-items:center; justify-content:center; width:1.4rem; height:1.4rem; border-radius:50%; font-size:.8rem; line-height:1; vertical-align:middle; cursor:default; }
+    .badge-dominant-trot  { background:rgba(37,99,168,.18); border:1px solid rgba(37,99,168,.35); }
+    .badge-dominant-galop { background:rgba(200,168,75,.18); border:1px solid rgba(200,168,75,.35); }
 
   </style>
 </head>
@@ -1131,6 +1135,7 @@
       <a href="#regl-tcchoix" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">⭐ Top Choix</a>
       <a href="#regl-classements" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">📊 Classements</a>
       <a href="#regl-elo" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">📈 ELO</a>
+      <a href="#regl-badges" style="background:rgba(200,168,75,.12);color:var(--gold);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;text-decoration:none;">🏅 Badges</a>
     </div>
   </div>
 
@@ -1407,15 +1412,20 @@ const ADMIN_UID = 'NyXlWdthrFVUhkGjriC66ATiBIy2';
 
 // ── DÉFINITION DES BADGES ──────────────────────────
 const BADGES_DEF = [
-  { id:'veteran',       icone:'🏇', nom:'Vétéran',        desc:'50 matchs joués (Arène + Amicaux)' },
-  { id:'serie3',        icone:'🔥', nom:'En feu x3',       desc:'3 victoires consécutives' },
-  { id:'serie5',        icone:'🔥', nom:'En feu x5',       desc:'5 victoires consécutives' },
-  { id:'serie10',       icone:'🔥', nom:'En feu x10',      desc:'10 victoires consécutives' },
-  { id:'bivalent',      icone:'🔵🟡', nom:'Bivalent',      desc:'Au moins 1 victoire en Trot ET en Galop (Arène)' },
-  { id:'fairplay',      icone:'🤝', nom:'Fair-Play',       desc:'5 matchs amicaux terminés' },
-  { id:'killer_tc',     icone:'⭐', nom:'Killer Top Choix', desc:'750+ points sur une réunion Top Choix' },
-  { id:'dominant_trot',  icone:'🔵', nom:'Dominant Trot',    desc:'Atteindre 1400 ELO Trot' },
-  { id:'dominant_galop', icone:'🟡', nom:'Dominant Galop',   desc:'Atteindre 1400 ELO Galop' },
+  { id:'veteran',           icone:'🏇',  nom:'Vétéran',             desc:'50 matchs joués (Arène + Amicaux)' },
+  { id:'serie5',            icone:'🔥',  nom:'En feu ×5',           desc:'5 victoires consécutives (Arène)' },
+  { id:'serie10',           icone:'💥',  nom:'En feu ×10',          desc:'10 victoires consécutives (Arène)' },
+  { id:'bivalent',          icone:'🔵🟡',nom:'Bivalent',            desc:'Au moins 1 victoire en Trot ET en Galop (Arène)' },
+  { id:'fairplay',          icone:'🤝',  nom:'Fair-Play',           desc:'5 matchs amicaux terminés' },
+  { id:'sniper',            icone:'🎯',  nom:'Sniper',              desc:'Win% > 60% sur 25+ matchs Arène/ELO' },
+  { id:'killer_tc',         icone:'⭐',  nom:'Killer Top Choix',    desc:'750+ points sur une réunion Top Choix' },
+  { id:'top_choix_1er',     icone:'🥇',  nom:'Top Choix 1er',       desc:'Terminer 1er sur une réunion Top Choix' },
+  { id:'champion',          icone:'🏆',  nom:'Champion',            desc:'Remporter le classement mensuel Arène général' },
+  { id:'champion_trot',     icone:'🏆🔵',nom:'Champion Trot',       desc:'Remporter le classement mensuel Arène Trot' },
+  { id:'champion_galop',    icone:'🏆🟡',nom:'Champion Galop',      desc:'Remporter le classement mensuel Arène Galop' },
+  { id:'dominant',          icone:'👑',  nom:'Dominant',            desc:'Atteindre 1400 ELO Général' },
+  { id:'dominant_trot',     icone:'👑',  nom:'Dominant Trot',       desc:'Atteindre 1400 ELO Trot', custom:'trot' },
+  { id:'dominant_galop',    icone:'👑',  nom:'Dominant Galop',      desc:'Atteindre 1400 ELO Galop', custom:'galop' },
 ];
 function nH(s) { return (s||'').replace(/HIPPODROME (DE |D'|DU |DE L'|DES )/gi,'').replace(/HIPPODROME /gi,'').trim(); }
 function normCourses(courses) { if(!courses) return []; if(Array.isArray(courses)) return courses; return Object.values(courses); }
@@ -1653,6 +1663,7 @@ async function chargerArene() {
   chargerBandeauVersionTest();
   await _chargerProgrammeMultiJours();
   await _tirageAutoSiNecessaire();
+  _archiverMoisAutoSiNecessaire(); // archivage silencieux si mois précédent non archivé
   _chargerAreneMatchsV2();
   chargerAreneClassements();
   _chargerChatArene();
@@ -2945,6 +2956,67 @@ async function cloturerJourneeArene(isoDate) {
   await db.ref('arene/'+isoDate+'/exempts_uids_traites').set(true);
   toast('✅ '+exemptUids.length+' exempt(s) enregistré(s)');
   chargerAreneClassementMensuel();
+}
+
+async function _archiverMoisAutoSiNecessaire() {
+  // Déclenche l'archivage du mois précédent si on est après le 1er du mois et non encore archivé
+  try {
+    const now = new Date();
+    if (now.getDate() < 2) return; // attendre le 2 pour être sûr que tous les matchs sont clos
+    const mp = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const isoMois = mp.getFullYear()+'-'+(mp.getMonth()+1).toString().padStart(2,'0');
+    const snap = await db.ref('arene_palmares/'+isoMois).once('value');
+    if (snap.exists()) return; // déjà archivé
+    // Vérifier qu'il y a des données pour ce mois
+    const debut = mp.getTime(), fin = new Date(mp.getFullYear(),mp.getMonth()+1,0,23,59,59).getTime();
+    const mSnap = await db.ref('matchs').orderByChild('createdAt').startAt(debut).endAt(fin).once('value');
+    let hasArene = false;
+    mSnap.forEach(c => { if (c.val().arene) hasArene = true; });
+    if (!hasArene) return;
+    console.log('[Archivage auto] Archivage de', isoMois);
+    await _archiverMoisAvecChampions(isoMois, mp);
+  } catch(e) { console.warn('[Archivage auto]', e.message); }
+}
+
+async function _archiverMoisAvecChampions(isoMois, mp) {
+  const usersSnap = await db.ref('utilisateurs').once('value');
+  const prenoms = {}, users = {};
+  usersSnap.forEach(c => { prenoms[c.key]=c.val().prenom||'?'; users[c.key]=c.val(); });
+  const debut = mp.getTime(), fin = new Date(mp.getFullYear(),mp.getMonth()+1,0,23,59,59).getTime();
+  const matchsSnap = await db.ref('matchs').once('value');
+
+  // Calculer classements général + trot + galop
+  const sc = { gen:{}, trot:{}, galop:{} };
+  const _g = (map,uid) => map[uid]||(map[uid]={uid,pts:0,victoires:0,manchesGagnees:0,ptsTotal:0});
+  matchsSnap.forEach(child => {
+    const m = child.val();
+    if (!m.arene || m.statut!=='termine' || m.createdAt<debut || m.createdAt>fin) return;
+    const disc = (m.reunion?.discipline||m.discipline||'').toUpperCase();
+    const cs = m.courses||[];
+    const mJ1=cs.filter(c=>c.mancheGagnant==='j1').length, mJ2=cs.filter(c=>c.mancheGagnant==='j2').length;
+    ['gen', ...(disc==='TROT'?['trot']:[]), ...(disc==='GALOP'?['galop']:[])].forEach(k => {
+      _g(sc[k],m.uidJ1).manchesGagnees+=mJ1; _g(sc[k],m.uidJ1).ptsTotal+=cs.reduce((s,c)=>s+(c.pointsJ1||0),0);
+      _g(sc[k],m.uidJ2).manchesGagnees+=mJ2; _g(sc[k],m.uidJ2).ptsTotal+=cs.reduce((s,c)=>s+(c.pointsJ2||0),0);
+      if(m.vainqueur==='j1'){_g(sc[k],m.uidJ1).pts+=2;_g(sc[k],m.uidJ1).victoires+=1;}
+      else if(m.vainqueur==='j2'){_g(sc[k],m.uidJ2).pts+=2;_g(sc[k],m.uidJ2).victoires+=1;}
+      else {_g(sc[k],m.uidJ1).pts+=1; _g(sc[k],m.uidJ2).pts+=1;}
+    });
+  });
+  const sort = map => Object.values(map).sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.manchesGagnees!==a.manchesGagnees?b.manchesGagnees-a.manchesGagnees:b.ptsTotal-a.ptsTotal);
+  const listeGen=sort(sc.gen), listeTrot=sort(sc.trot), listeGalop=sort(sc.galop);
+  if(!listeGen.length) return;
+
+  // Archiver palmarès
+  const v = listeGen[0];
+  await db.ref('arene_palmares/'+isoMois).set({vainqueur:prenoms[v.uid]||'?',uid:v.uid,pts:v.pts,victoires:v.victoires,manchesGagnees:v.manchesGagnees});
+
+  // Attribuer badges Champion
+  const updates = {};
+  if (listeGen[0])   updates['utilisateurs/'+listeGen[0].uid+'/badges/champion']       = true;
+  if (listeTrot[0])  updates['utilisateurs/'+listeTrot[0].uid+'/badges/champion_trot']  = true;
+  if (listeGalop[0]) updates['utilisateurs/'+listeGalop[0].uid+'/badges/champion_galop'] = true;
+  if (Object.keys(updates).length) await db.ref().update(updates);
+  console.log('[Archivage auto] Terminé —', prenoms[v.uid]||'?');
 }
 
 async function archiverMoisArene() {
@@ -5446,82 +5518,89 @@ async function cloturerMatch(matchId) {
 
 // ── BADGES ────────────────────────────────────────────
 async function _calculerBadges(uid) {
-  // Charge tous les matchs pour calculer les badges
   const [matchsSnap, uSnap] = await Promise.all([
     db.ref('matchs').once('value'),
     db.ref('utilisateurs/'+uid).once('value')
   ]);
   const badgesActuels = uSnap.val()?.badges || {};
   const nouveaux = {};
+  const uData = uSnap.val() || {};
 
   const matchs = [];
   matchsSnap.forEach(c => { const m = c.val(); if (m.statut === 'termine') matchs.push(m); });
+  const mesMatchs = matchs.filter(m => m.uidJ1 === uid || m.uidJ2 === uid);
+  const areneMatchs = mesMatchs.filter(m => m.arene);
 
   // ── Vétéran : 50 matchs joués (arène + amicaux) ──
-  const totalMatchs = matchs.filter(m => m.uidJ1 === uid || m.uidJ2 === uid).length;
-  if (!badgesActuels.veteran && totalMatchs >= 50) nouveaux.veteran = true;
+  if (!badgesActuels.veteran && mesMatchs.length >= 50) nouveaux.veteran = true;
 
-  // ── Série (victoires consécutives Arène ou ELO, nul coupe) ──
-  const matchsOrdres = matchs
-    .filter(m => m.arene && (m.uidJ1 === uid || m.uidJ2 === uid))
-    .sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+  // ── Série (victoires consécutives Arène, nul ET défaite coupent) ──
+  const matchsOrdres = areneMatchs.sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
   let serie = 0, maxSerie = 0;
   for (const m of matchsOrdres) {
     const isJ1 = m.uidJ1 === uid;
-    const res = isJ1 ? m.vainqueur === 'j1' : m.vainqueur === 'j2';
-    const nul = m.vainqueur === 'egal';
-    if (res) { serie++; maxSerie = Math.max(maxSerie, serie); }
-    else { serie = 0; } // défaite OU nul remet à zéro
-    if (nul) serie = 0;
+    const gagne = isJ1 ? m.vainqueur === 'j1' : m.vainqueur === 'j2';
+    if (gagne) { serie++; maxSerie = Math.max(maxSerie, serie); }
+    else serie = 0;
   }
-  if (!badgesActuels.serie3  && maxSerie >= 3)  nouveaux.serie3  = true;
   if (!badgesActuels.serie5  && maxSerie >= 5)  nouveaux.serie5  = true;
   if (!badgesActuels.serie10 && maxSerie >= 10) nouveaux.serie10 = true;
 
   // ── Bivalent : victoire en Trot ET en Galop (Arène) ──
   if (!badgesActuels.bivalent) {
-    const areneMatchs = matchs.filter(m => m.arene && (m.uidJ1 === uid || m.uidJ2 === uid));
     const vicTrot  = areneMatchs.some(m => {
       const d = (m.reunion?.discipline||m.discipline||'').toUpperCase();
       const isJ1 = m.uidJ1 === uid;
-      return d === 'TROT' && ((isJ1 && m.vainqueur === 'j1') || (!isJ1 && m.vainqueur === 'j2'));
+      return d === 'TROT' && ((isJ1 && m.vainqueur==='j1') || (!isJ1 && m.vainqueur==='j2'));
     });
     const vicGalop = areneMatchs.some(m => {
       const d = (m.reunion?.discipline||m.discipline||'').toUpperCase();
       const isJ1 = m.uidJ1 === uid;
-      return d === 'GALOP' && ((isJ1 && m.vainqueur === 'j1') || (!isJ1 && m.vainqueur === 'j2'));
+      return d === 'GALOP' && ((isJ1 && m.vainqueur==='j1') || (!isJ1 && m.vainqueur==='j2'));
     });
     if (vicTrot && vicGalop) nouveaux.bivalent = true;
   }
 
   // ── Fair-Play : 5 matchs amicaux terminés ──
   if (!badgesActuels.fairplay) {
-    const nbAmicaux = matchs.filter(m => !m.arene && (m.uidJ1 === uid || m.uidJ2 === uid)).length;
+    const nbAmicaux = mesMatchs.filter(m => !m.arene).length;
     if (nbAmicaux >= 5) nouveaux.fairplay = true;
   }
 
-  // ── Dominant Trot : ELO Trot ≥ 1400 ──
-  if (!badgesActuels.dominant_trot) {
-    const eloTrot = uSnap.val()?.elo?.trot || 1200;
-    if (eloTrot >= 1400) nouveaux.dominant_trot = true;
+  // ── Sniper : Win% > 60% sur 25+ matchs Arène ──
+  if (!badgesActuels.sniper && areneMatchs.length >= 25) {
+    const victoires = areneMatchs.filter(m => {
+      const isJ1 = m.uidJ1 === uid;
+      return (isJ1 && m.vainqueur==='j1') || (!isJ1 && m.vainqueur==='j2');
+    }).length;
+    if (victoires / areneMatchs.length > 0.60) nouveaux.sniper = true;
   }
-  // ── Dominant Galop : ELO Galop ≥ 1400 ──
-  if (!badgesActuels.dominant_galop) {
-    const eloGalop = uSnap.val()?.elo?.galop || 1200;
-    if (eloGalop >= 1400) nouveaux.dominant_galop = true;
-  }
-  // Killer Top Choix : calculé séparément dans _verifierKillerTc
+
+  // ── Dominant : ELO ≥ 1400 ──
+  const eloGen   = uData.elo?.general || 1200;
+  const eloTrot  = uData.elo?.trot    || 1200;
+  const eloGalop = uData.elo?.galop   || 1200;
+  if (!badgesActuels.dominant       && eloGen   >= 1400) nouveaux.dominant       = true;
+  if (!badgesActuels.dominant_trot  && eloTrot  >= 1400) nouveaux.dominant_trot  = true;
+  if (!badgesActuels.dominant_galop && eloGalop >= 1400) nouveaux.dominant_galop = true;
+
+  // Killer TC, Top Choix 1er, Champion : calculés séparément
   return nouveaux;
 }
 
-async function _verifierKillerTc(uid, scoreReunion) {
-  // Appelé après _calculerTcReunion quand le joueur consulte le TC
-  const snap = await db.ref('utilisateurs/'+uid+'/badges/killer_tc').once('value');
-  if (snap.val()) return; // déjà obtenu
-  if (scoreReunion >= 750) {
-    await db.ref('utilisateurs/'+uid+'/badges/killer_tc').set(true);
+async function _verifierKillerTc(uid, scoreReunion, estPremier) {
+  const badgesSnap = await db.ref('utilisateurs/'+uid+'/badges').once('value');
+  const badges = badgesSnap.val() || {};
+  const updates = {};
+  if (!badges.killer_tc && scoreReunion >= 750) {
+    updates['utilisateurs/'+uid+'/badges/killer_tc'] = true;
     _toastBadge('⭐ Killer Top Choix');
   }
+  if (!badges.top_choix_1er && estPremier) {
+    updates['utilisateurs/'+uid+'/badges/top_choix_1er'] = true;
+    _toastBadge('🥇 Top Choix 1er');
+  }
+  if (Object.keys(updates).length) await db.ref().update(updates);
 }
 
 function _toastBadge(nom) {
@@ -5549,17 +5628,23 @@ async function _afficherBadgesProfil(uid) {
   if (!el) return;
   const snap = await db.ref('utilisateurs/'+uid+'/badges').once('value');
   const badges = snap.val() || {};
+  const _iconeHtml = b => {
+    if (b.custom === 'trot')  return `<span class="badge-dominant-trot" title="${b.desc}">👑</span>`;
+    if (b.custom === 'galop') return `<span class="badge-dominant-galop" title="${b.desc}">👑</span>`;
+    return `<span class="badge-icone">${b.icone}</span>`;
+  };
+  const nbObtenus = BADGES_DEF.filter(b => !!badges[b.id]).length;
   const html = `<div class="badges-grille">` +
     BADGES_DEF.map(b => {
       const ok = !!badges[b.id];
       return `<div class="badge-item ${ok?'obtenu':'non-obtenu'}">
-        <span class="badge-icone">${b.icone}</span>
+        ${_iconeHtml(b)}
         <span class="badge-nom">${b.nom}</span>
         <span class="badge-tooltip">${b.desc}</span>
       </div>`;
     }).join('') +
   `</div>
-  <p style="font-size:.68rem;color:var(--muted);margin-top:.6rem;">${Object.keys(badges).length}/${BADGES_DEF.length} badges obtenus</p>`;
+  <p style="font-size:.68rem;color:var(--muted);margin-top:.6rem;">${nbObtenus}/${BADGES_DEF.length} badges obtenus</p>`;
   el.innerHTML = html;
 }
 
@@ -6272,10 +6357,13 @@ async function _calculerTcReunion() {
   const nbCoursesAvecRapports = Object.values(rapportsData).length;
   const nbCoursesTotal = courses.length;
   const hasFinalScores = nbCoursesAvecRapports > 0;
-  // Vérifier Killer Top Choix pour l'utilisateur connecté
+  // Vérifier Killer TC + Top Choix 1er pour l'utilisateur connecté
   if (myUid && hasFinalScores) {
     const myScore = scores[myUid];
-    if (myScore) _verifierKillerTc(myUid, myScore.total).catch(()=>{});
+    if (myScore) {
+      const estPremier = scorelist.length > 0 && scorelist[0].uid === myUid;
+      _verifierKillerTc(myUid, myScore.total, estPremier).catch(()=>{});
+    }
   }
   let html = '';
   if (!hasFinalScores) {
