@@ -438,6 +438,17 @@
     /* ══ V2 : AMICAUX ══ */
     #page-matchs-list .hero-title span { color:var(--gold); }
     .amicaux-note { background:rgba(45,138,85,.07); border:1px solid rgba(45,138,85,.2); border-radius:7px; padding:.55rem .85rem; font-size:.78rem; color:#1a5c35; margin-bottom:.85rem; line-height:1.5; }
+    /* ── BADGES ── */
+    .badges-grille { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.5rem; }
+    .badge-item { position:relative; display:flex; flex-direction:column; align-items:center; gap:.2rem; padding:.45rem .6rem; border-radius:8px; cursor:default; transition:transform .15s; }
+    .badge-item:hover { transform:translateY(-2px); }
+    .badge-item.obtenu { background:rgba(200,168,75,.1); border:1px solid rgba(200,168,75,.3); }
+    .badge-item.non-obtenu { background:rgba(100,100,100,.06); border:1px solid rgba(100,100,100,.12); opacity:.45; filter:grayscale(1); }
+    .badge-item .badge-icone { font-size:1.6rem; line-height:1; }
+    .badge-item .badge-nom { font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); text-align:center; white-space:nowrap; }
+    .badge-item .badge-tooltip { display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:var(--turf); color:#fff; font-size:.72rem; padding:.35rem .6rem; border-radius:5px; white-space:nowrap; z-index:100; pointer-events:none; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+    .badge-item:hover .badge-tooltip { display:block; }
+    .badge-mini { font-size:.95rem; line-height:1; cursor:default; }
 
   </style>
 </head>
@@ -872,6 +883,10 @@
     <div class="card">
       <div class="card-head"><h3>👤 Mon profil</h3></div>
       <div class="card-body" id="profil-info"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>🏅 Mes badges</h3></div>
+      <div class="card-body" id="profil-badges"><p class="text-sm">Chargement…</p></div>
     </div>
     <div class="card">
       <div class="card-head"><h3>⚔️ Mon historique Arène</h3></div>
@@ -1389,6 +1404,17 @@
 <script>
 // ── FIREBASE INIT ──────────────────────────────────
 const ADMIN_UID = 'NyXlWdthrFVUhkGjriC66ATiBIy2';
+
+// ── DÉFINITION DES BADGES ──────────────────────────
+const BADGES_DEF = [
+  { id:'veteran',       icone:'🏇', nom:'Vétéran',        desc:'50 matchs joués (Arène + Amicaux)' },
+  { id:'serie3',        icone:'🔥', nom:'En feu x3',       desc:'3 victoires consécutives' },
+  { id:'serie5',        icone:'🔥', nom:'En feu x5',       desc:'5 victoires consécutives' },
+  { id:'serie10',       icone:'🔥', nom:'En feu x10',      desc:'10 victoires consécutives' },
+  { id:'bivalent',      icone:'🔵🟡', nom:'Bivalent',      desc:'Au moins 1 victoire en Trot ET en Galop (Arène)' },
+  { id:'fairplay',      icone:'🤝', nom:'Fair-Play',       desc:'5 matchs amicaux terminés' },
+  { id:'killer_tc',     icone:'⭐', nom:'Killer Top Choix', desc:'750+ points sur une réunion Top Choix' },
+];
 function nH(s) { return (s||'').replace(/HIPPODROME (DE |D'|DU |DE L'|DES )/gi,'').replace(/HIPPODROME /gi,'').trim(); }
 function normCourses(courses) { if(!courses) return []; if(Array.isArray(courses)) return courses; return Object.values(courses); }
 function nHJS(s) { return nH(s).replace(/'/g,"\\'"); } // version safe pour attributs onclick
@@ -3403,6 +3429,7 @@ function ligneClassement(j, i, uid, key) {
     <span style="display:flex;align-items:center;gap:6px;">
       ${rankHtml}
       <strong>${j.prenom||'?'}</strong>
+      ${(()=>{ const b=j.badges||{}; const icons=[]; if(b.serie10)icons.push('🔥'); else if(b.serie5)icons.push('🔥'); if(b.bivalent)icons.push('🔵🟡'); if(b.killer_tc)icons.push('⭐'); if(b.veteran)icons.push('🏇'); return icons.slice(0,2).map(i=>`<span class="badge-mini" title="">${i}</span>`).join(''); })()}
       ${isMe?'<span style="font-size:.7rem;color:var(--or);">(moi)</span>':''}
     </span>
     <span style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">
@@ -3541,6 +3568,7 @@ async function chargerReunionsAvenir() {
 function navProfil() {
   showPage('profil'); setNavActive('profil');
   _chargerProfilAreneHistorique();
+  _afficherBadgesProfil(utilisateur.uid);
   const uid = utilisateur.uid;
   db.ref('utilisateurs/'+uid).once('value').then(snap => {
     const d = snap.val() || {};
@@ -5400,6 +5428,11 @@ async function cloturerMatch(matchId) {
   }
   await viderChatMatch(matchId);
   arreterChatMatch();
+  // Calcul et attribution des badges
+  try {
+    if (uidJ1) { const nv1 = await _calculerBadges(uidJ1); await _appliquerNouveauxBadges(uidJ1, nv1); }
+    if (uidJ2) { const nv2 = await _calculerBadges(uidJ2); await _appliquerNouveauxBadges(uidJ2, nv2); }
+  } catch(e) { console.warn('badges:', e); }
   toast('✅ Match clôturé !');
   if(matchId===etat.matchId) {
     const fresh=(await db.ref('matchs/'+matchId).once('value')).val();
@@ -5407,6 +5440,115 @@ async function cloturerMatch(matchId) {
   } else {
     chargerAdmin();
   }
+}
+
+// ── BADGES ────────────────────────────────────────────
+async function _calculerBadges(uid) {
+  // Charge tous les matchs pour calculer les badges
+  const [matchsSnap, uSnap] = await Promise.all([
+    db.ref('matchs').once('value'),
+    db.ref('utilisateurs/'+uid).once('value')
+  ]);
+  const badgesActuels = uSnap.val()?.badges || {};
+  const nouveaux = {};
+
+  const matchs = [];
+  matchsSnap.forEach(c => { const m = c.val(); if (m.statut === 'termine') matchs.push(m); });
+
+  // ── Vétéran : 50 matchs joués (arène + amicaux) ──
+  const totalMatchs = matchs.filter(m => m.uidJ1 === uid || m.uidJ2 === uid).length;
+  if (!badgesActuels.veteran && totalMatchs >= 50) nouveaux.veteran = true;
+
+  // ── Série (victoires consécutives Arène ou ELO, nul coupe) ──
+  const matchsOrdres = matchs
+    .filter(m => m.arene && (m.uidJ1 === uid || m.uidJ2 === uid))
+    .sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+  let serie = 0, maxSerie = 0;
+  for (const m of matchsOrdres) {
+    const isJ1 = m.uidJ1 === uid;
+    const res = isJ1 ? m.vainqueur === 'j1' : m.vainqueur === 'j2';
+    const nul = m.vainqueur === 'egal';
+    if (res) { serie++; maxSerie = Math.max(maxSerie, serie); }
+    else { serie = 0; } // défaite OU nul remet à zéro
+    if (nul) serie = 0;
+  }
+  if (!badgesActuels.serie3  && maxSerie >= 3)  nouveaux.serie3  = true;
+  if (!badgesActuels.serie5  && maxSerie >= 5)  nouveaux.serie5  = true;
+  if (!badgesActuels.serie10 && maxSerie >= 10) nouveaux.serie10 = true;
+
+  // ── Bivalent : victoire en Trot ET en Galop (Arène) ──
+  if (!badgesActuels.bivalent) {
+    const areneMatchs = matchs.filter(m => m.arene && (m.uidJ1 === uid || m.uidJ2 === uid));
+    const vicTrot  = areneMatchs.some(m => {
+      const d = (m.reunion?.discipline||m.discipline||'').toUpperCase();
+      const isJ1 = m.uidJ1 === uid;
+      return d === 'TROT' && ((isJ1 && m.vainqueur === 'j1') || (!isJ1 && m.vainqueur === 'j2'));
+    });
+    const vicGalop = areneMatchs.some(m => {
+      const d = (m.reunion?.discipline||m.discipline||'').toUpperCase();
+      const isJ1 = m.uidJ1 === uid;
+      return d === 'GALOP' && ((isJ1 && m.vainqueur === 'j1') || (!isJ1 && m.vainqueur === 'j2'));
+    });
+    if (vicTrot && vicGalop) nouveaux.bivalent = true;
+  }
+
+  // ── Fair-Play : 5 matchs amicaux terminés ──
+  if (!badgesActuels.fairplay) {
+    const nbAmicaux = matchs.filter(m => !m.arene && (m.uidJ1 === uid || m.uidJ2 === uid)).length;
+    if (nbAmicaux >= 5) nouveaux.fairplay = true;
+  }
+
+  // Killer Top Choix : calculé séparément dans _verifierKillerTc
+  return nouveaux;
+}
+
+async function _verifierKillerTc(uid, scoreReunion) {
+  // Appelé après _calculerTcReunion quand le joueur consulte le TC
+  const snap = await db.ref('utilisateurs/'+uid+'/badges/killer_tc').once('value');
+  if (snap.val()) return; // déjà obtenu
+  if (scoreReunion >= 750) {
+    await db.ref('utilisateurs/'+uid+'/badges/killer_tc').set(true);
+    _toastBadge('⭐ Killer Top Choix');
+  }
+}
+
+function _toastBadge(nom) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = '🏅 Nouveau badge : ' + nom + ' !';
+  t.className = 'show badge-toast';
+  setTimeout(() => { t.className = ''; }, 4000);
+}
+
+async function _appliquerNouveauxBadges(uid, nouveaux) {
+  if (!Object.keys(nouveaux).length) return;
+  const updates = {};
+  Object.keys(nouveaux).forEach(k => { updates['utilisateurs/'+uid+'/badges/'+k] = true; });
+  await db.ref().update(updates);
+  // Toast pour chaque nouveau badge
+  for (const k of Object.keys(nouveaux)) {
+    const def = BADGES_DEF.find(b => b.id === k);
+    if (def) { _toastBadge(def.nom); await new Promise(r => setTimeout(r, 1500)); }
+  }
+}
+
+async function _afficherBadgesProfil(uid) {
+  const el = document.getElementById('profil-badges');
+  if (!el) return;
+  const snap = await db.ref('utilisateurs/'+uid+'/badges').once('value');
+  const badges = snap.val() || {};
+  const html = `<div class="badges-grille">` +
+    BADGES_DEF.map(b => {
+      const ok = !!badges[b.id];
+      return `<div class="badge-item ${ok?'obtenu':'non-obtenu'}">
+        <span class="badge-icone">${b.icone}</span>
+        <span class="badge-nom">${b.nom}</span>
+        <span class="badge-tooltip">${b.desc}</span>
+      </div>`;
+    }).join('') +
+  `</div>
+  <p style="font-size:.68rem;color:var(--muted);margin-top:.6rem;">${Object.keys(badges).length}/${BADGES_DEF.length} badges obtenus</p>`;
+  el.innerHTML = html;
 }
 
 async function rouvrirMatch(matchId) {
@@ -6113,6 +6255,11 @@ async function _calculerTcReunion() {
   const nbCoursesAvecRapports = Object.values(rapportsData).length;
   const nbCoursesTotal = courses.length;
   const hasFinalScores = nbCoursesAvecRapports > 0;
+  // Vérifier Killer Top Choix pour l'utilisateur connecté
+  if (myUid && hasFinalScores) {
+    const myScore = scores[myUid];
+    if (myScore) _verifierKillerTc(myUid, myScore.total).catch(()=>{});
+  }
   let html = '';
   if (!hasFinalScores) {
     html = '<div class="arene-alert" style="margin-bottom:.5rem;font-size:.74rem;">⏳ Aucun résultat disponible pour l\'instant — revenez après le départ des courses.</div>';
