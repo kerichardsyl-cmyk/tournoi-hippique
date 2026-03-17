@@ -4933,13 +4933,8 @@ function rendreEtat(data) {
       });
     }
     showPage('match'); rendreMatch(data);
-  } else if(data.statut==='pret_cloture') {
-    showPage('fin'); rendreFin(data);
-    // Clôture automatique : J1 déclenche sans attendre le clic (évite double clôture si J1+J2 connectés)
-    if(etat.joueurId==='j1' && !etat._adminView && !etat._spectateur) {
-      setTimeout(() => cloturerMatch(etat.matchId), 800); // léger délai pour laisser rendreFin s'afficher
-    }
-  } else if(data.statut==='termine') { showPage('fin'); rendreFin(data); }
+  } else if(data.statut==='pret_cloture') { showPage('fin'); rendreFin(data); }
+  else if(data.statut==='termine') { showPage('fin'); rendreFin(data); }
   else if(data.statut==='annule') {
     if(_annulationTimer) { clearTimeout(_annulationTimer); _annulationTimer = null; }
     toast('⏰ Ce match a été annulé — invitation non acceptée à temps.', true);
@@ -4977,19 +4972,11 @@ async function lancerMatch() {
 
 // ── TIMERS ──────────────────────────────────────────
 function reprendreTimers(data) {
-  const courses = normCourses(data.courses);
-  // Si toutes les courses sont déjà terminées, déclencher mettreAJourScores immédiatement
-  // Couvre le cas où les résultats sont arrivés pendant que personne n'était connecté
-  const toutesTerminees = courses.length > 0 && courses.every(c => c.statut === 'terminee');
-  if(toutesTerminees && data.statut === 'en_cours') {
-    mettreAJourScores().catch(e => console.warn('reprendreTimers mettreAJourScores:', e));
-    return; // pas besoin de lancer les pollings
-  }
   // Lancer immédiatement le polling pour les courses déjà bloquées
-  courses.forEach((c,i) => {
+  normCourses(data.courses).forEach((c,i) => {
     if(c.statut==='bloquee') demarrerPollingResultats(i);
   });
-  courses.forEach((c,i)=>{
+  normCourses(data.courses).forEach((c,i)=>{
     if(c.statut==='ouverte') programmerBlocageCourse(i,c);
     else if(c.statut==='bloquee') demarrerPollingResultats(i);
   });
@@ -5046,25 +5033,13 @@ async function bloquerEtValider(idx) {
 async function reimporterTousRapports() {
   const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
   const courses=normCourses(data.courses);
-  // Traiter : terminée sans rapports + bloquée dont le départ est passé
-  const now = Date.now();
-  const aTraiter = courses.filter((c,i) => {
-    if(c.statut==='terminee' && (!c.rapports||!Object.keys(c.rapports).length)) return true;
-    if(c.statut==='bloquee'  && c.heureDepart && now > c.heureDepart) return true;
-    return false;
-  });
+  const aTraiter = courses.filter(c=>c.statut==='terminee'&&(!c.rapports||!Object.keys(c.rapports).length));
   if(!aTraiter.length) { toast('Aucune course avec rapports manquants'); return; }
-  toast(`⏳ Traitement de ${aTraiter.length} course(s)…`);
+  toast(`⏳ Réimport de ${aTraiter.length} course(s)…`);
   for(let i=0;i<courses.length;i++) {
     const co=courses[i];
-    const sanRapports = co.statut==='terminee' && (!co.rapports||!Object.keys(co.rapports).length);
-    const bloqueePassee = co.statut==='bloquee' && co.heureDepart && now > co.heureDepart;
-    if(sanRapports) {
+    if(co.statut==='terminee'&&(!co.rapports||!Object.keys(co.rapports).length)) {
       await reimporterRapports(i);
-      await new Promise(r=>setTimeout(r,500));
-    } else if(bloqueePassee) {
-      // Course bloquée dont le départ est passé : forcer le traitement complet
-      await forceTraiterCourse(i, true); // true = silencieux (pas de confirm)
       await new Promise(r=>setTimeout(r,500));
     }
   }
@@ -5135,11 +5110,11 @@ async function forcerBlocageEtTraiter(idx) {
   }
 }
 
-async function forceTraiterCourse(idx, silencieux = false) {
+async function forceTraiterCourse(idx) {
   const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
   const course = normCourses(data.courses)[idx];
   if(!course) return;
-  if(!silencieux && !confirm('Forcer le traitement de cette course bloquée ?')) return;
+  if(!confirm('Forcer le traitement de cette course bloquée ?')) return;
   // Repasser en bloquee si besoin puis lancer récupération
   await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({statut:'bloquee'});
   // Relancer le polling une seule fois immédiatement
