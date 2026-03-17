@@ -1313,6 +1313,33 @@
     </div>
   </div>
 
+  <!-- BADGES -->
+  <div class="card" id="regl-badges">
+    <div class="card-head"><h3>🏅 Badges de récompenses</h3></div>
+    <div class="card-body" style="font-size:.9rem;line-height:1.75;">
+      <p>Les badges récompensent vos performances et votre régularité. Attribués automatiquement à la clôture de chaque match ou lors de la consultation du Top Choix. Visibles sur votre profil et à côté de votre nom dans les classements.</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:.8rem;font-size:.85rem;">
+        <thead><tr style="border-bottom:2px solid var(--cream2);"><th style="text-align:left;padding:.4rem .6rem;color:var(--muted);font-size:.72rem;text-transform:uppercase;">Badge</th><th style="text-align:left;padding:.4rem .6rem;color:var(--muted);font-size:.72rem;text-transform:uppercase;">Condition</th></tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">🏇 Vétéran</td><td style="padding:.45rem .6rem;">50 matchs joués (Arène + Amicaux)</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">🔥 En feu ×5</td><td style="padding:.45rem .6rem;">5 victoires consécutives en Arène (nul ou défaite coupe la série)</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">💥 En feu ×10</td><td style="padding:.45rem .6rem;">10 victoires consécutives en Arène</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">🔵🟡 Bivalent</td><td style="padding:.45rem .6rem;">Au moins 1 victoire en Trot ET 1 victoire en Galop (Arène)</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">🤝 Fair-Play</td><td style="padding:.45rem .6rem;">5 matchs amicaux terminés</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">🎯 Sniper</td><td style="padding:.45rem .6rem;">Win% &gt; 60% sur 25+ matchs Arène</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">⭐ Killer Top Choix</td><td style="padding:.45rem .6rem;">750+ points sur une seule réunion Top Choix</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">🥇 Top Choix 1er</td><td style="padding:.45rem .6rem;">Terminer 1er du classement d'une réunion Top Choix</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">🏆 Champion</td><td style="padding:.45rem .6rem;">Remporter le classement mensuel Arène Général</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">🏆🔵 Champion Trot</td><td style="padding:.45rem .6rem;">Remporter le classement mensuel Arène Trot</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">🏆🟡 Champion Galop</td><td style="padding:.45rem .6rem;">Remporter le classement mensuel Arène Galop</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;">👑 Dominant</td><td style="padding:.45rem .6rem;">Atteindre 1400 points ELO Général</td></tr>
+          <tr style="border-bottom:1px solid var(--cream2);"><td style="padding:.45rem .6rem;"><span style="display:inline-flex;width:1.2rem;height:1.2rem;font-size:.75rem;border-radius:50%;align-items:center;justify-content:center;background:rgba(37,99,168,.18);border:1px solid rgba(37,99,168,.35);">👑</span> Dominant Trot</td><td style="padding:.45rem .6rem;">Atteindre 1400 points ELO Trot</td></tr>
+          <tr><td style="padding:.45rem .6rem;"><span style="display:inline-flex;width:1.2rem;height:1.2rem;font-size:.75rem;border-radius:50%;align-items:center;justify-content:center;background:rgba(200,168,75,.18);border:1px solid rgba(200,168,75,.35);">👑</span> Dominant Galop</td><td style="padding:.45rem .6rem;">Atteindre 1400 points ELO Galop</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div></div>
 
 <!-- PAGE FIN -->
@@ -2008,6 +2035,25 @@ async function _rendreChoixCourses(courses, pmuDate, numR) {
     const counterTxt = nbSel >= 4 ? '✓ 4/4' : nbSel > 0 ? `⚠️ ${nbSel}/4` : '0/4 — choisissez 4 chevaux';
     const counterCls = nbSel >= 4 ? 'ok' : nbSel > 0 ? 'warn' : '';
     const h1 = co.heureDepart ? formatHeure(co.heureDepart) : '';
+    // Vérifier si la course est déjà passée (départ il y a plus de 2 min)
+    const coursePassee = co.heureDepart && (Date.now() > co.heureDepart + 2*60*1000);
+    if (coursePassee) {
+      // Course passée : afficher les choix déjà saisis en lecture seule, sans pouvoir modifier
+      const choixListe = selectionnes.length
+        ? selectionnes.map(n => '#'+n).join(', ')
+        : 'Aucun choix saisi';
+      html += `<div class="course-choix-card" style="opacity:.6;">
+        <div class="course-choix-head etat-empty" style="background:rgba(100,100,100,.08);">
+          <span class="course-choix-head-name">C${co.numOrdre} — ${co.libelle||'Course '+co.numOrdre}</span>
+          <span class="course-choix-head-time" style="color:var(--red);">🔒 Course passée${h1?' · '+h1:''}</span>
+        </div>
+        <div class="course-choix-body" style="padding:.5rem .75rem;font-size:.78rem;color:var(--muted);">
+          Les choix ne peuvent plus être modifiés après le départ.
+          ${selectionnes.length ? `<div style="margin-top:.3rem;">Vos choix : ${selectionnes.map(n=>'#'+n).join(', ')}</div>` : ''}
+        </div>
+      </div>`;
+      continue;
+    }
     // Charger partants si pas déjà chargés
     let partants = co.partants || [];
     if (!partants.length) {
@@ -2105,12 +2151,21 @@ async function sauvegarderChoix() {
   const ctx = window._choixCtx;
   if (!ctx) return;
   const uid = utilisateur.uid;
-  const { pmuDate, numR } = ctx;
+  const { pmuDate, numR, courses } = ctx;
   const btn = document.querySelector('.choix-save-bar .btn-vert');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Sauvegarde…'; }
   try {
+    // Filtrer les choix : ne sauvegarder que les courses non encore passées
+    const now = Date.now();
+    const choixFiltres = {};
+    const coursesCtx = courses || [];
+    Object.entries(ctx.choixActuels || {}).forEach(([numOrdre, choix]) => {
+      const co = coursesCtx.find(c => String(c.numOrdre) === String(numOrdre));
+      const passee = co?.heureDepart && (now > co.heureDepart + 2*60*1000);
+      if (!passee) choixFiltres[numOrdre] = choix;
+    });
     await db.ref('arene_choix/'+pmuDate+'/'+numR+'/'+uid).set({
-      courses: ctx.choixActuels || {},
+      courses: choixFiltres,
       savedAt: Date.now()
     });
     // Confirmation visuelle dans la barre
