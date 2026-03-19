@@ -4972,13 +4972,24 @@ async function lancerMatch() {
 
 // ── TIMERS ──────────────────────────────────────────
 function reprendreTimers(data) {
+  const now = Date.now();
+  const GRACE = 60*60*1000; // 1h
+  const courses = normCourses(data.courses);
   // Lancer immédiatement le polling pour les courses déjà bloquées
-  normCourses(data.courses).forEach((c,i) => {
+  courses.forEach((c,i) => {
     if(c.statut==='bloquee') demarrerPollingResultats(i);
   });
-  normCourses(data.courses).forEach((c,i)=>{
-    if(c.statut==='ouverte') programmerBlocageCourse(i,c);
-    else if(c.statut==='bloquee') demarrerPollingResultats(i);
+  courses.forEach((c,i) => {
+    if(c.statut==='ouverte') {
+      // Course ouverte dont le départ est passé depuis plus d'1h → bloquer + récupérer résultats
+      if(c.heureDepart && now > c.heureDepart + GRACE) {
+        _forcerBlocageEtTraiterAuto(i, c);
+      } else {
+        programmerBlocageCourse(i, c);
+      }
+    } else if(c.statut==='bloquee') {
+      demarrerPollingResultats(i);
+    }
   });
 }
 
@@ -5080,6 +5091,41 @@ async function reimporterRapports(idx) {
     toast('✅ Rapports réimportés ! Points recalculés.');
   } catch(e) {
     toast('❌ Erreur PMU : '+e.message, true);
+  }
+}
+
+async function _forcerBlocageEtTraiterAuto(idx, course) {
+  // Version automatique (sans confirm) pour les courses ouvertes depuis plus d'1h
+  // Appelée depuis reprendreTimers uniquement
+  try {
+    // 1. Vérifier d'abord que les résultats PMU sont disponibles
+    const res = await pmuGet(`programme/${course.pmuDate}/R${course.numReunion}/C${course.numOrdre}`);
+    const rapsData = await pmuGet(`programme/${course.pmuDate}/R${course.numReunion}/C${course.numOrdre}/rapports-definitifs`).catch(()=>[]);
+    const arrivee = (res.ordreArrivee||[]).flat();
+    const rapports = extraireRapports(rapsData);
+    // Ne traiter que si les données sont complètes — sinon laisser en ouverte
+    if(arrivee.length === 0 || Object.keys(rapports).length === 0) {
+      console.log(`[Auto] C${idx} : résultats PMU pas encore disponibles — ignoré`);
+      return;
+    }
+    // 2. Calculer les choixFinal et passer en bloquee
+    const data = (await db.ref('matchs/'+etat.matchId).once('value')).val();
+    const c = normCourses(data.courses)[idx];
+    if(!c || c.statut !== 'ouverte') return; // re-vérifier statut
+    const mr = getMainPourCourse(idx), sr = mr==='j1'?'j2':'j1';
+    const cm2 = (c['choix'+mr.toUpperCase()]||[]).slice(0,2);
+    const cfs = (c['choix'+sr.toUpperCase()]||[]).filter(n => !cm2.includes(n)).slice(0,2);
+    await db.ref(`matchs/${etat.matchId}/courses/${idx}`).update({
+      statut: 'bloquee',
+      [`choixFinal${mr.toUpperCase()}`]: cm2,
+      [`choixFinal${sr.toUpperCase()}`]: cfs
+    });
+    // 3. Traiter avec les résultats déjà récupérés
+    res._rapportsDefinitifs = rapsData;
+    await traiterResultats(idx, res);
+    console.log(`[Auto] C${idx} : course traitée automatiquement`);
+  } catch(e) {
+    console.warn(`[Auto] C${idx} erreur :`, e.message);
   }
 }
 
@@ -5297,6 +5343,13 @@ async function traiterResultats(idx, pmuData) {
   const c=normCourses(data.courses)[idx];
   const arrivee=(pmuData.ordreArrivee||[]).flat();
   const rapports = extraireRapports(pmuData._rapportsDefinitifs||[]);
+  // Garde absolue : ne jamais écrire terminee sans arrivée ET rapports valides
+  const hasArrivee = arrivee.length > 0;
+  const hasRapports = Object.values(rapports).some(r => r.gagnant > 0);
+  if(!hasArrivee || !hasRapports) {
+    console.warn(`[traiterResultats] C${idx} : données incomplètes (arrivee=${arrivee.length}, rapports gagnant=${hasRapports}) → abandon`);
+    return;
+  }
   const score=choix=>choix.reduce((s,n)=>{
     const r=rapports[n]||{};
     const ptG=r.gagnant ? Math.round(r.gagnant/10) : 0;
